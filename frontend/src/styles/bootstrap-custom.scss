@@ -1,0 +1,9 @@
+// styles/bootstrap-custom.scss
+$primary:   #2d8c47;   // vert AgriCéréales
+$secondary: #c8963e;   // or/doré
+$success:   #1a5c2a;
+$danger:    #c0392b;
+$font-family-base: 'DM Sans', sans-serif;
+
+// Toujours APRÈS vos variables
+@import 'bootstrap/scss/bootstrap';

@@ -1,0 +1,155 @@
+/* ============================================================
+   AgroConnect — User Avatar Styles
+   src/components/UserAvatar.css
+   ============================================================ */
+
+.user-avatar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 10px;
+  padding: 0;
+}
+
+.user-avatar.clickable {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.user-avatar.clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Size Variants */
+.user-avatar.size-small {
+  gap: 8px;
+}
+
+.user-avatar.size-medium {
+  gap: 12px;
+}
+
+.user-avatar.size-large {
+  gap: 15px;
+}
+
+/* Avatar Image/Initials */
+.user-avatar .avatar-image,
+.user-avatar .avatar-initials {
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+/* Size-specific dimensions */
+.user-avatar.size-small .avatar-image,
+.user-avatar.size-small .avatar-initials {
+  width: 32px;
+  height: 32px;
+  font-size: 12px;
+}
+
+.user-avatar.size-medium .avatar-image,
+.user-avatar.size-medium .avatar-initials {
+  width: 48px;
+  height: 48px;
+  font-size: 16px;
+}
+
+.user-avatar.size-large .avatar-image,
+.user-avatar.size-large .avatar-initials {
+  width: 64px;
+  height: 64px;
+  font-size: 20px;
+}
+
+/* Avatar Colors (based on user ID hash) */
+.avatar-initials.bg-color-0 {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.avatar-initials.bg-color-1 {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.avatar-initials.bg-color-2 {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.avatar-initials.bg-color-3 {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.avatar-initials.bg-color-4 {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+.avatar-initials.bg-color-5 {
+  background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+}
+
+/* User Info */
+.user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-avatar.size-small .user-info {
+  display: none;
+}
+
+.user-name {
+  margin: 0;
+  font-weight: 600;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-avatar.size-small .user-name {
+  font-size: 12px;
+}
+
+.user-avatar.size-medium .user-name {
+  font-size: 14px;
+}
+
+.user-avatar.size-large .user-name {
+  font-size: 16px;
+}
+
+/* Rating */
+.user-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.rating-number {
+  color: #999;
+  font-weight: 500;
+  font-size: 11px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .user-avatar.size-large {
+    gap: 12px;
+  }
+
+  .user-avatar.size-large .avatar-image,
+  .user-avatar.size-large .avatar-initials {
+    width: 56px;
+    height: 56px;
+    font-size: 18px;
+  }
+}
