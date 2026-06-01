@@ -4,79 +4,47 @@ import { Link } from 'react-router-dom';
 import {
   ChevronLeft, ChevronRight, ArrowRight,
   Truck, User, Users, Shield, TrendingUp,
-  Newspaper, MapPin, Star, ArrowUpRight
+  Newspaper, MapPin, ArrowUpRight, Wheat
 } from 'lucide-react';
+import ProductService from '../../services/product.service';
+import TransportService from '../../services/transport.service';
 
-// ===== MOCK DATA =====
+// ===== SLIDES ÉDITORIAUX (contenu plateforme, pas données utilisateurs) =====
 const slides = [
   {
     id: 1,
-    title: 'Le Bénin dpci explique les raisons de la hausse des prix des céréales',
-    description: 'Découvrez les facteurs qui influencent le marché céréalier au Bénin.',
-    image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=1400&q=80',
+    title: 'Céréales de qualité directement des coopératives du Bénin',
+    description: 'Maïs, riz, soja — achetez en direct auprès des producteurs locaux.',
+    image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=1400&q=80',
     bg: 'linear-gradient(135deg, rgba(10,40,15,0.88) 0%, rgba(26,92,42,0.72) 100%)',
-    cta: "Lire l'article", ctaLink: '/news',
+    cta: 'Voir les produits', ctaLink: '/products',
   },
   {
     id: 2,
-    title: 'Des céréales de qualité directement des coopératives du Bénin',
-    description: 'Maïs, riz, soja — achetez en direct auprès des producteurs locaux.',
-    image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=1400&q=80',
-    bg: 'linear-gradient(135deg, rgba(30,20,5,0.88) 0%, rgba(120,80,10,0.72) 100%)',
-    cta: "lire l'article", ctaLink: '/products',
+    title: 'Réseau de transporteurs vérifiés dans tout le Bénin',
+    description: 'Livraison sécurisée de vos céréales — pick-up, camion 5t, 10t et plus.',
+    image: 'https://images.unsplash.com/photo-1592838064575-70ed626d3a0e?w=1400&q=80',
+    bg: 'linear-gradient(135deg, rgba(5,20,40,0.88) 0%, rgba(10,60,100,0.72) 100%)',
+    cta: 'Trouver un transporteur', ctaLink: '/transporters',
   },
   {
     id: 3,
-    title: "l'evolution du transport routier   pour la  livraison agricole",
-    description: 'Réseau de transporteurs vérifiés disponibles dans tout le Bénin.',
-    image: 'https://images.unsplash.com/photo-1592838064575-70ed626d3a0e?w=1400&q=80',
-    bg: 'linear-gradient(135deg, rgba(5,20,40,0.88) 0%, rgba(10,60,100,0.72) 100%)',
-    cta: "Lire l'article", ctaLink: '/transporters',
+    title: 'Rejoignez la plateforme agricole numéro 1 du Bénin',
+    description: 'Vendeurs, acheteurs, transporteurs — créez votre espace en 2 minutes.',
+    image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=1400&q=80',
+    bg: 'linear-gradient(135deg, rgba(30,20,5,0.88) 0%, rgba(120,80,10,0.72) 100%)',
+    cta: "S'inscrire gratuitement", ctaLink: '/auth/register',
   },
 ];
 
 const features = [
-    { icon: Truck, label: 'Livraison rurale', to: '/transporters', desc: "Bénéficiez d'un transport adapté à vos marchandises", color: '#1a5c2a' },
-    { icon: User, label: 'Mon AgroCompte', to: '/login', desc: "Gérez vos offres et commandes en un clic", color: '#2563eb' },
-    { icon: Users, label: 'Coopératives', to: '/cooperatives', desc: "Localisez les partenaires agricoles proches", color: '#7c3aed' },
-    { icon: Shield, label: 'Paiements', to: '/payments', desc: "MTN, Moov, Celtis — paiement 100% sécurisé", color: '#d97706' },
-    { icon: TrendingUp, label: 'Prix', to: '/market-prices', desc: "Consultez les prix du marché en temps réel", color: '#dc2626' },
-    { icon: Newspaper, label: 'Actualités', to: '/news', desc: "Découvrez les dernières tendances du secteur", color: '#0891b2' },
-  ];
-
-const products = [
-  { id: 1, nom: 'Maïs 2t',  localisation: 'Bankoura', prix: 1000000, image: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=400&q=80' },
-  { id: 2, nom: 'Riz 3t',   localisation: 'Parakou',  prix: 1160000, image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&q=80' },
-  { id: 3, nom: 'Soja 1t',  localisation: 'Nikki',    prix: 67000,   image: 'https://triomphemag.com/wp-content/uploads/2023/09/soja-1.jpg' },
+  { icon: Truck,      label: 'Livraison',    to: '/transporters',          desc: "Transport adapté à vos marchandises",      color: '#1a5c2a' },
+  { icon: User,       label: 'Mon espace',   to: '/auth/login',            desc: "Gérez vos offres et commandes",            color: '#2563eb' },
+  { icon: Users,      label: 'Coopératives', to: '/auth/register?role=SELLER', desc: "Rejoignez ou créez une coopérative",  color: '#7c3aed' },
+  { icon: Shield,     label: 'Paiements',    to: '/finance/wallet',        desc: "MTN, Moov, Celtis — paiement sécurisé",   color: '#d97706' },
+  { icon: TrendingUp, label: 'Prix marché',  to: '/market-prices',         desc: "Consultez les prix en temps réel",        color: '#dc2626' },
+  { icon: Newspaper,  label: 'Actualités',   to: '/news',                  desc: "Tendances du secteur agricole",           color: '#0891b2' },
 ];
-
-// ===== TRANSPORTEURS (CORRIGÉ + AVATARS AFRICAINS) =====
-const transporteurs = [
-    {
-      id: 1,
-      nom: "Moussa T.",
-      image: "https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=200&q=80",
-      vehicule: "Camion 10t",
-      localisation: "Banikora",
-      statut: "Disponible",
-    },
-    {
-      id: 2,
-      nom: "Kofi A.",
-      image: "https://img.magnific.com/photos-premium/portrait-conducteur-professionnel-noir-regardant-camera-fond-camion-bokeh_1104566-200.jpg",
-      vehicule: "Camion 8t",
-      localisation: "Parakou",
-      statut: "Disponible",
-    },
-    {
-      id: 3,
-      nom: "Sèna B.",
-      image: "https://auto-escola.cfcnovaferrari.com.br/blog/doutor/uploads/6/blog/2024/12/blog-cnh-categoria-d-preco-tudo-que-voce-precisa-saber-e2f7dc00a0.png",
-      vehicule: "Camion 5t",
-      localisation: "Cotonou",
-      statut: "Disponible",
-    },
-  ];
 
 // ===== VARIANTS =====
 const slideVariants = {
@@ -90,11 +58,67 @@ const fadeUp = {
   show:   { y: 0,  opacity: 1 },
 };
 
+const getInitials = (name = '') =>
+  name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('') || 'TR';
+
 // ===== COMPOSANT PRINCIPAL =====
 export default function Home() {
   const [current,   setCurrent]   = useState(0);
   const [direction, setDirection] = useState(1);
   const [paused,    setPaused]    = useState(false);
+
+  const [products,      setProducts]      = useState([]);
+  const [transporteurs, setTransporteurs] = useState([]);
+  const [loadingData,   setLoadingData]   = useState(true);
+
+  // Chargement des vraies données
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const [prodRes, transpRes] = await Promise.allSettled([
+          ProductService.liste({ page_size: 3 }),
+          TransportService.getTransporters({ page: 1 }),
+        ]);
+
+        if (!active) return;
+
+        if (prodRes.status === 'fulfilled') {
+          const items = prodRes.value.results || prodRes.value || [];
+          setProducts(items.slice(0, 3).map((p) => ({
+            id:           p.id,
+            nom:          p.nom,
+            localisation: p.ville || p.localisation || 'Bénin',
+            prix:         Number(p.prix || 0),
+            image:        p.images?.find((i) => i.est_principale)?.image
+                          || p.images?.[0]?.image
+                          || 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=400&q=80',
+            dispo:        p.est_disponible,
+          })));
+        }
+
+        if (transpRes.status === 'fulfilled') {
+          const items = transpRes.value.transporteurs || transpRes.value.results || transpRes.value || [];
+          setTransporteurs(items.slice(0, 3).map((u) => ({
+            id:           u.id,
+            nom:          u.nom_complet || `${u.prenom} ${u.nom}`,
+            localisation: u.ville || 'Bénin',
+            statut:       u.transporter_profile?.est_disponible ? 'Disponible' : 'En mission',
+            vehicule:     u.transporter_profile?.zones?.[0] || '',
+            verifie:      u.transporter_profile?.est_certifie || false,
+          })));
+        }
+      } finally {
+        if (active) setLoadingData(false);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (paused) return;
@@ -240,10 +264,10 @@ export default function Home() {
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.08, duration: 0.45 }}
                 >
-                 <Link to="/auth/login" style={{ textDecoration: 'none' }}>
+                 <Link to={f.to} style={{ textDecoration: 'none' }}>
                     <motion.div
                      style={styles.featCard}
-                     whileHover={{ y: -6, boxShadow: '0 12px 32px rgba(0,0,0,0.12)' }}
+                     whileHover={{ y: -6, boxShadow: `0 0 0 2px ${f.color}, 0 0 18px ${f.color}30, 0 12px 32px rgba(0,0,0,0.10)` }}
                      >
                        <div style={{ ...styles.featIcon, background: f.color + '18' }}>
                        <Icon size={26} color={f.color} strokeWidth={1.8} />
@@ -274,58 +298,68 @@ export default function Home() {
               </Link>
             </div>
 
-            <div className="row g-3">
-              {products.map((p, i) => (
-                <motion.div
-                  key={p.id}
-                  className="col-12 col-sm-6 col-md-4"
-                  variants={fadeUp}
-                  initial="hidden"
-                  whileInView="show"
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                >
+            {loadingData ? (
+              <div className="row g-3">
+                {[1,2,3].map((n) => (
+                  <div key={n} className="col-12 col-sm-6 col-md-4">
+                    <div style={{ ...styles.productCard, height: '240px', background: '#f3f4f6', animation: 'pulse 1.5s infinite' }} />
+                  </div>
+                ))}
+              </div>
+            ) : products.length === 0 ? (
+              <div style={styles.emptyState}>
+                <Wheat size={40} color="#d1d5db" />
+                <p style={{ color: '#9ca3af', marginTop: '0.8rem', fontWeight: '600' }}>Aucun produit pour le moment</p>
+                <p style={{ color: '#d1d5db', fontSize: '0.85rem' }}>Les vendeurs publient leurs céréales ici</p>
+                <Link to="/auth/register?role=SELLER" style={styles.btnEmptyAction}>Devenir vendeur</Link>
+              </div>
+            ) : (
+              <div className="row g-3">
+                {products.map((p, i) => (
                   <motion.div
-                    style={styles.productCard}
-                    whileHover={{ y: -5, boxShadow: '0 16px 40px rgba(0,0,0,0.13)' }}
+                    key={p.id}
+                    className="col-12 col-sm-6 col-md-4"
+                    variants={fadeUp}
+                    initial="hidden"
+                    whileInView="show"
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1 }}
                   >
-                    {/* IMAGE */}
-                    <div style={styles.productImgWrap}>
-                      <img
-                        src={p.image}
-                        alt={p.nom}
-                        style={styles.productImg}
-                        onError={(e) => { e.target.src = 'https://via.placeholder.com/300x180?text=Produit'; }}
-                      />
-                      <span style={styles.productBadge}>Disponible</span>
-                    </div>
-
-                    {/* INFOS */}
-                    <div style={{ padding: '1rem' }}>
-                      <h3 style={styles.productName}>{p.nom}</h3>
-                      <div style={styles.productLoc}>
-                        <MapPin size={13} color="#6b7280" />
-                        <span>Localisation : {p.localisation}</span>
+                    <motion.div
+                      style={styles.productCard}
+                      whileHover={{ y: -6, boxShadow: '0 0 0 2px #1a5c2a, 0 0 20px rgba(26,92,42,0.20), 0 16px 40px rgba(0,0,0,0.12)' }}
+                    >
+                      <div style={styles.productImgWrap}>
+                        <img
+                          src={p.image}
+                          alt={p.nom}
+                          style={styles.productImg}
+                          onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=400&q=80'; }}
+                        />
+                        {p.dispo && <span style={styles.productBadge}>Disponible</span>}
                       </div>
-                      <div style={styles.productFooter}>
-                        <span style={styles.productPrice}>
-                          {p.prix.toLocaleString('fr-FR')} FCFA
-                        </span>
-                        <Link to="/auth/login" style={{ textDecoration: 'none' }}>
-                         <motion.button
-                           style={styles.btnAcheter}
-                          whileHover={{ scale: 1.05 }}
-                           whileTap={{ scale: 0.95 }}
-                         >
-                           Acheter
-                         </motion.button>
-                        </Link>
+                      <div style={{ padding: '1rem' }}>
+                        <h3 style={styles.productName}>{p.nom}</h3>
+                        <div style={styles.productLoc}>
+                          <MapPin size={13} color="#6b7280" />
+                          <span>{p.localisation}</span>
+                        </div>
+                        <div style={styles.productFooter}>
+                          <span style={styles.productPrice}>
+                            {p.prix.toLocaleString('fr-FR')} FCFA
+                          </span>
+                          <Link to={`/products/${p.id}`} style={{ textDecoration: 'none' }}>
+                            <motion.button style={styles.btnAcheter} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                              Voir
+                            </motion.button>
+                          </Link>
+                        </div>
                       </div>
-                    </div>
+                    </motion.div>
                   </motion.div>
-                </motion.div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* ---- TRANSPORTEURS ---- */}
@@ -337,55 +371,67 @@ export default function Home() {
               </Link>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {transporteurs.map((t, i) => (
-                <motion.div
-                  key={t.id}
-                  variants={fadeUp}
-                  initial="hidden"
-                  whileInView="show"
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                >
+            {loadingData ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {[1,2,3].map((n) => (
+                  <div key={n} style={{ ...styles.transportCard, height: '80px', background: '#f3f4f6', animation: 'pulse 1.5s infinite' }} />
+                ))}
+              </div>
+            ) : transporteurs.length === 0 ? (
+              <div style={styles.emptyState}>
+                <Truck size={36} color="#d1d5db" />
+                <p style={{ color: '#9ca3af', marginTop: '0.8rem', fontWeight: '600' }}>Aucun transporteur inscrit</p>
+                <p style={{ color: '#d1d5db', fontSize: '0.85rem' }}>Les transporteurs rejoignent la plateforme ici</p>
+                <Link to="/auth/register?role=TRANSPORTER" style={styles.btnEmptyAction}>Devenir transporteur</Link>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {transporteurs.map((t, i) => (
                   <motion.div
-                    style={styles.transportCard}
-                    whileHover={{ x: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.10)' }}
+                    key={t.id}
+                    variants={fadeUp}
+                    initial="hidden"
+                    whileInView="show"
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1 }}
                   >
-                    {/* AVATAR */}
-                    <img src={t.image} alt={t.nom} style={styles.avatar} />
-
-                    {/* INFOS */}
-                    <div style={{ flex: 1 }}>
-                      <div style={styles.transportName}>{t.nom}</div>
-                      <div style={styles.transportInfo}>{t.vehicule}</div>
-                      <div style={styles.transportLoc}>
-                        <MapPin size={11} color="#6b7280" />
-                        <span>{t.localisation}</span>
+                    <motion.div
+                      style={styles.transportCard}
+                      whileHover={{ x: 4, boxShadow: '0 0 0 2px #1a5c2a, 0 0 18px rgba(26,92,42,0.18), 0 8px 24px rgba(0,0,0,0.08)' }}
+                    >
+                      <div style={styles.initialsAvatar}>{getInitials(t.nom)}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={styles.transportName}>
+                          {t.nom}
+                          {t.verifie && <span style={{ marginLeft: '6px', color: '#16a34a', fontSize: '0.72rem' }}>✓ Vérifié</span>}
+                        </div>
+                        <div style={styles.transportLoc}>
+                          <MapPin size={11} color="#6b7280" />
+                          <span>{t.localisation}</span>
+                        </div>
                       </div>
-                    </div>
-
-                    {/* STATUT */}
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={styles.statutBadge}>
-                        <span style={styles.statutDot} />
-                        {t.statut}
-                      </span>
-                      <Link to="/auth/login" style={{ textDecoration: 'none', display: 'block', width: '100%' }}>
-                        <motion.button
-                         style={styles.btnContacter}
-                         whileHover={{ scale: 1.05 }}
-                         whileTap={{ scale: 0.95 }}
-                         >
-                          Contacter
-                        </motion.button>
-                      </Link>
-                    </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{
+                          ...styles.statutBadge,
+                          background: t.statut === 'Disponible' ? '#dcfce7' : '#fef9c3',
+                          color:      t.statut === 'Disponible' ? '#166534' : '#854d0e',
+                        }}>
+                          <span style={{ ...styles.statutDot, background: t.statut === 'Disponible' ? '#16a34a' : '#ca8a04' }} />
+                          {t.statut}
+                        </span>
+                        <Link to="/transporters" style={{ textDecoration: 'none', display: 'block' }}>
+                          <motion.button style={styles.btnContacter} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                            Contacter
+                          </motion.button>
+                        </Link>
+                      </div>
+                    </motion.div>
                   </motion.div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
+                ))}
+              </div>
+            )}
 
+          </div>
         </div>
       </div>
 
@@ -572,6 +618,26 @@ const styles = {
     gap: '4px',
   },
 
+  // ÉTATS VIDES
+  emptyState: {
+    textAlign: 'center',
+    padding: '2.5rem 1rem',
+    background: 'white',
+    borderRadius: '16px',
+    border: '1.5px dashed #e5e7eb',
+  },
+  btnEmptyAction: {
+    display: 'inline-block',
+    marginTop: '1rem',
+    background: '#1a5c2a',
+    color: 'white',
+    padding: '0.5rem 1.4rem',
+    borderRadius: '20px',
+    textDecoration: 'none',
+    fontSize: '0.85rem',
+    fontWeight: '600',
+  },
+
   // PRODUITS
   productCard: {
     background: 'white',
@@ -657,6 +723,20 @@ const styles = {
     objectFit: 'cover',
     border: '2px solid #f0c040',
     flexShrink: 0,
+  },
+  initialsAvatar: {
+    width: '52px',
+    height: '52px',
+    borderRadius: '50%',
+    background: '#eef7ef',
+    color: '#1a5c2a',
+    border: '2px solid #f0c040',
+    flexShrink: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: '800',
+    fontSize: '0.9rem',
   },
   transportName: {
     fontWeight: '700',

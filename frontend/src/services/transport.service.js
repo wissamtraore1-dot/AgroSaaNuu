@@ -8,14 +8,9 @@ const TransportService = {
 
   // Public — list available transporters
   getTransporters: async ({ page = 1, region = '', vehicle_type = '' } = {}) => {
-    const { data } = await api.get('/transport/transporters/', {
+    const { data } = await api.get('/transport/transporteurs/', {
       params: { page, region, vehicle_type },
     });
-    return data;
-  },
-
-  getTransporter: async (id) => {
-    const { data } = await api.get(`/transport/transporters/${id}/`);
     return data;
   },
 
@@ -49,8 +44,8 @@ const TransportService = {
     return data;
   },
 
-  setAvailability: async (payload) => {
-    const { data } = await api.post('/transport/disponibilite/', payload);
+  setAvailability: async (estDisponible) => {
+    const { data } = await api.post('/transport/disponibilite/', { est_disponible: estDisponible });
     return data;
   },
 
@@ -62,8 +57,11 @@ const TransportService = {
     return data;
   },
 
-  updateMissionStatus: async (id, status) => {
-    const { data } = await api.post(`/transport/mes-missions/${id}/update-status/`, { status });
+  updateMissionStatus: async (id, newStatus) => {
+    const endpoint = newStatus === 'ACCEPTEE'
+      ? `/transport/missions/${id}/accepter/`
+      : `/transport/missions/${id}/refuser/`;
+    const { data } = await api.post(endpoint);
     return data;
   },
 
@@ -75,13 +73,13 @@ const TransportService = {
 
   // Accept mission
   acceptMission: async (id) => {
-    const { data } = await api.post(`/transport/mes-missions/${id}/accepter/`);
+    const { data } = await api.post(`/transport/missions/${id}/accepter/`);
     return data;
   },
 
-  // Decline mission  
+  // Decline mission
   declineMission: async (id) => {
-    const { data } = await api.post(`/transport/mes-missions/${id}/refuser/`);
+    const { data } = await api.post(`/transport/missions/${id}/refuser/`);
     return data;
   },
 };

@@ -4,7 +4,7 @@
 // ============================================================
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '../context/AuthContext';
-import ProtectedRoute from '../components/common/ProtectedRoute';
+import ProtectedRoute from '../Components/common/ProtectedRoute';
 
 // Layouts
 import PublicLayout  from '../Components/layout/PublicLayout';
@@ -13,6 +13,7 @@ import AuthLayout    from '../Components/layout/AuthLayout';
 // Pages publiques
 import Home          from '../pages/public/Home';
 import Products      from '../pages/public/Products';
+import ProductDetail from '../pages/public/ProductDetail';
 import Transporters  from '../pages/public/Transporters';
 import News          from '../pages/public/News';
 import MarketPrices  from '../pages/public/MarketPrices';
@@ -29,11 +30,15 @@ import SMSAuth       from '../pages/auth/SMSAuth';  // NOUVEAU
 import BuyerDashboard   from '../pages/buyer/Dashboard';
 import BuyerProfile     from '../pages/buyer/Profile';
 import BuyerCheckout    from '../pages/buyer/Checkout';
+import BuyerOrders      from '../pages/buyer/Orders';
+import BuyerOrderDetail from '../pages/buyer/OrderDetail';
 import BuyerOrderTracking from '../pages/buyer/OrderTracking';
 
 // Seller
 import SellerDashboard  from '../pages/seller/Dashboard';
 import SellerProfile    from '../pages/seller/Profile';
+import SellerOrders     from '../pages/seller/Orders';
+import SellerOrderDetail from '../pages/seller/OrderDetail';
 
 // Transporter
 import TransporterDashboard from '../pages/transporter/Dashboard';
@@ -58,6 +63,7 @@ export default function AppRouter() {
           <Route element={<PublicLayout />}>
             <Route path="/"              element={<Home />}         />
             <Route path="/products"      element={<Products />}     />
+            <Route path="/products/:id"  element={<ProductDetail />} />
             <Route path="/transporters"  element={<Transporters />} />
             <Route path="/news"          element={<News />}         />
             <Route path="/market-prices" element={<MarketPrices />} />
@@ -83,6 +89,12 @@ export default function AppRouter() {
           <Route path="/buyer/checkout"
             element={<ProtectedRoute roles={['BUYER']}><BuyerCheckout /></ProtectedRoute>}
           />
+          <Route path="/buyer/orders"
+            element={<ProtectedRoute roles={['BUYER']}><BuyerOrders /></ProtectedRoute>}
+          />
+          <Route path="/buyer/orders/:id"
+            element={<ProtectedRoute roles={['BUYER']}><BuyerOrderDetail /></ProtectedRoute>}
+          />
           <Route path="/buyer/order-tracking"
             element={<ProtectedRoute roles={['BUYER']}><BuyerOrderTracking /></ProtectedRoute>}
           />
@@ -93,6 +105,12 @@ export default function AppRouter() {
           />
           <Route path="/seller/profile"
             element={<ProtectedRoute roles={['SELLER']}><SellerProfile /></ProtectedRoute>}
+          />
+          <Route path="/seller/orders"
+            element={<ProtectedRoute roles={['SELLER']}><SellerOrders /></ProtectedRoute>}
+          />
+          <Route path="/seller/orders/:id"
+            element={<ProtectedRoute roles={['SELLER']}><SellerOrderDetail /></ProtectedRoute>}
           />
 
           {/* ===== TRANSPORTER — protégé ===== */}

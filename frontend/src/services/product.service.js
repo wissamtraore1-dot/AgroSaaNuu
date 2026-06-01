@@ -11,6 +11,10 @@ const ProductService = {
     return response.data;
   },
 
+  async getAll(params = {}) {
+    return this.liste(params);
+  },
+
   async detail(id) {
     const response = await api.get(`/products/${id}/`);
     return response.data;
@@ -19,6 +23,10 @@ const ProductService = {
   async categories() {
     const response = await api.get('/products/categories/');
     return response.data;
+  },
+
+  async getCategories() {
+    return this.categories();
   },
 
   async mesProduits() {

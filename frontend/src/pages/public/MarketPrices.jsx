@@ -1,476 +1,314 @@
-import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
   TrendingUp, TrendingDown, Minus,
-  Search, MapPin, Calendar, RefreshCw,
-  BarChart2, ArrowUpRight, ArrowDownRight,
-  Filter, ChevronUp, ChevronDown, X
+  Search, MapPin, RefreshCw, BarChart2,
+  ChevronUp, ChevronDown, X, AlertCircle
 } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
+import api from '../../services/api';
 
-// ===== MOCK DATA =====
-const prix = [
-  { id: 1, produit: 'Maïs blanc',   categorie: 'Maïs',  unite: 'tonne', prix: 180000, variation: +5.2,  min: 160000, max: 200000, ville: 'Cotonou',     date: '10 Mai 2026' },
-  { id: 2, produit: 'Maïs jaune',   categorie: 'Maïs',  unite: 'tonne', prix: 175000, variation: +2.1,  min: 155000, max: 195000, ville: 'Parakou',     date: '10 Mai 2026' },
-  { id: 3, produit: 'Riz local',    categorie: 'Riz',   unite: 'tonne', prix: 320000, variation: -1.5,  min: 300000, max: 340000, ville: 'Cotonou',     date: '10 Mai 2026' },
-  { id: 4, produit: 'Riz importé',  categorie: 'Riz',   unite: 'tonne', prix: 450000, variation: +3.8,  min: 420000, max: 480000, ville: 'Porto-Novo',  date: '10 Mai 2026' },
-  { id: 5, produit: 'Soja certifié',categorie: 'Soja',  unite: 'tonne', prix: 280000, variation: 0,     min: 260000, max: 300000, ville: 'Natitingou',  date: '10 Mai 2026' },
-  { id: 6, produit: 'Soja bio',     categorie: 'Soja',  unite: 'tonne', prix: 350000, variation: +7.1,  min: 320000, max: 380000, ville: 'Nikki',       date: '10 Mai 2026' },
-  { id: 7, produit: 'Mil rouge',    categorie: 'Mil',   unite: 'tonne', prix: 210000, variation: -3.2,  min: 190000, max: 230000, ville: 'Djougou',     date: '10 Mai 2026' },
-  { id: 8, produit: 'Mil blanc',    categorie: 'Mil',   unite: 'tonne', prix: 195000, variation: +1.4,  min: 175000, max: 215000, ville: 'Kandi',       date: '10 Mai 2026' },
-  { id: 9, produit: 'Sorgho rouge', categorie: 'Sorgho',unite: 'tonne', prix: 160000, variation: -0.8,  min: 140000, max: 180000, ville: 'Banikoara',   date: '10 Mai 2026' },
-  { id: 10,produit: 'Niébé',        categorie: 'Niébé', unite: 'tonne', prix: 420000, variation: +4.5,  min: 390000, max: 450000, ville: 'Parakou',     date: '10 Mai 2026' },
-];
-
-const historique = [
-  { date: 'Jan', mais: 160000, riz: 300000, soja: 250000, mil: 180000 },
-  { date: 'Fév', mais: 165000, riz: 310000, soja: 260000, mil: 185000 },
-  { date: 'Mar', mais: 170000, riz: 305000, soja: 270000, mil: 190000 },
-  { date: 'Avr', mais: 172000, riz: 315000, soja: 265000, mil: 200000 },
-  { date: 'Mai', mais: 180000, riz: 320000, soja: 280000, mil: 210000 },
-];
-
-const categories = ['Tous', 'Maïs', 'Riz', 'Soja', 'Mil', 'Sorgho', 'Niébé'];
-
-const villes = ['Toutes', 'Cotonou', 'Parakou', 'Porto-Novo', 'Natitingou', 'Nikki', 'Djougou', 'Kandi', 'Banikoara'];
-
-const fadeUp = {
-  hidden: { y: 20, opacity: 0 },
-  show:   { y: 0,  opacity: 1 },
+const COULEURS_PRODUITS = {
+  'Maïs blanc':     '#f59e0b',
+  'Maïs jaune':     '#f97316',
+  'Riz local':      '#3b82f6',
+  'Riz importé':    '#6366f1',
+  'Soja certifié':  '#10b981',
+  'Soja bio':       '#059669',
+  'Mil rouge':      '#ef4444',
+  'Mil blanc':      '#f87171',
+  'Sorgho rouge':   '#8b5cf6',
+  'Niébé blanc':    '#ec4899',
+  'Arachide coque': '#d97706',
 };
 
+const CHART_PRODUITS = [
+  { key: 'Maïs blanc',    color: '#f59e0b' },
+  { key: 'Riz local',     color: '#3b82f6' },
+  { key: 'Soja certifié', color: '#10b981' },
+  { key: 'Mil rouge',     color: '#ef4444' },
+  { key: 'Niébé blanc',   color: '#ec4899' },
+];
+
+const MOIS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+
+const fmt = (n) => Number(n).toLocaleString('fr-FR');
+
+function VariationBadge({ v }) {
+  const val = Number(v);
+  if (val > 0)  return <span style={{ color: '#16a34a', fontWeight: '700', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '2px' }}><TrendingUp size={13} />+{val.toFixed(1)}%</span>;
+  if (val < 0)  return <span style={{ color: '#dc2626', fontWeight: '700', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '2px' }}><TrendingDown size={13} />{val.toFixed(1)}%</span>;
+  return <span style={{ color: '#6b7280', fontWeight: '700', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '2px' }}><Minus size={13} />0%</span>;
+}
+
 export default function MarketPrices() {
+  const [prixData,    setPrixData]    = useState([]);
+  const [histData,    setHistData]    = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState('');
+  const [lastUpdate,  setLastUpdate]  = useState('');
   const [search,      setSearch]      = useState('');
   const [categorie,   setCategorie]   = useState('Tous');
   const [ville,       setVille]       = useState('Toutes');
   const [sortField,   setSortField]   = useState('produit');
   const [sortDir,     setSortDir]     = useState('asc');
-  const [lastUpdate]                  = useState('10 Mai 2026 — 08:00');
+  const [refreshing,  setRefreshing]  = useState(false);
 
+  const charger = async () => {
+    try {
+      setLoading(true); setError('');
+      const [prixRes, histRes] = await Promise.all([
+        api.get('/market-prices/'),
+        api.get('/market-prices/historique/', { params: { produit: 'Maïs blanc', ville: 'Cotonou' } }),
+      ]);
+
+      const items = prixRes.data.results || prixRes.data || [];
+      setPrixData(items.map(p => ({
+        id:        p.id,
+        produit:   p.produit,
+        categorie: p.categorie,
+        ville:     p.ville,
+        prix:      Number(p.prix),
+        prix_min:  Number(p.prix_min),
+        prix_max:  Number(p.prix_max),
+        unite:     p.unite,
+        variation: Number(p.variation),
+        date:      p.date_marche,
+        source:    p.source,
+      })));
+
+      // Construire les données du graphique depuis l'historique
+      const hist = histRes.data?.historique || [];
+      if (hist.length > 0) {
+        const chartData = hist.map(h => ({
+          date:  MOIS[new Date(h.date_marche).getMonth()],
+          prix:  Number(h.prix),
+        }));
+        setHistData(chartData);
+      }
+
+      if (items.length > 0) {
+        const d = new Date(items[0].date_marche || items[0].created_at);
+        setLastUpdate(d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }));
+      }
+    } catch (err) {
+      setError(!err.response ? 'Serveur inaccessible. Démarrez le backend Django.' : 'Impossible de charger les prix.');
+    } finally {
+      setLoading(false); setRefreshing(false);
+    }
+  };
+
+  useEffect(() => { charger(); }, []);
+
+  const handleRefresh = () => { setRefreshing(true); charger(); };
   const handleSort = (field) => {
-    if (sortField === field) setSortDir((d) => d === 'asc' ? 'desc' : 'asc');
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortField(field); setSortDir('asc'); }
   };
 
-  const prixFiltres = useMemo(() => {
-    let result = [...prix];
-    if (search)               result = result.filter((p) => p.produit.toLowerCase().includes(search.toLowerCase()));
-    if (categorie !== 'Tous') result = result.filter((p) => p.categorie === categorie);
-    if (ville !== 'Toutes')   result = result.filter((p) => p.ville === ville);
-    result.sort((a, b) => {
-      const va = a[sortField];
-      const vb = b[sortField];
-      return sortDir === 'asc'
-        ? (typeof va === 'string' ? va.localeCompare(vb) : va - vb)
-        : (typeof va === 'string' ? vb.localeCompare(va) : vb - va);
-    });
-    return result;
-  }, [search, categorie, ville, sortField, sortDir]);
+  // Valeurs uniques pour les filtres
+  const categories = useMemo(() => ['Tous',    ...new Set(prixData.map(p => p.categorie))], [prixData]);
+  const villes     = useMemo(() => ['Toutes', ...new Set(prixData.map(p => p.ville))],     [prixData]);
 
-  // STATS RAPIDES
-  const hausses  = prix.filter((p) => p.variation > 0).length;
-  const baisses  = prix.filter((p) => p.variation < 0).length;
-  const stables  = prix.filter((p) => p.variation === 0).length;
-  const maxHausse = [...prix].sort((a, b) => b.variation - a.variation)[0];
-  const maxBaisse = [...prix].sort((a, b) => a.variation - b.variation)[0];
+  const prixFiltres = useMemo(() => {
+    let r = [...prixData];
+    if (search)               r = r.filter(p => p.produit.toLowerCase().includes(search.toLowerCase()) || p.ville.toLowerCase().includes(search.toLowerCase()));
+    if (categorie !== 'Tous') r = r.filter(p => p.categorie === categorie);
+    if (ville !== 'Toutes')   r = r.filter(p => p.ville === ville);
+    r.sort((a, b) => {
+      const va = a[sortField], vb = b[sortField];
+      return sortDir === 'asc' ? (typeof va === 'string' ? va.localeCompare(vb) : va - vb) : (typeof va === 'string' ? vb.localeCompare(va) : vb - va);
+    });
+    return r;
+  }, [prixData, search, categorie, ville, sortField, sortDir]);
+
+  // Stats rapides
+  const hausses  = prixData.filter(p => p.variation > 0).length;
+  const baisses  = prixData.filter(p => p.variation < 0).length;
+  const stables  = prixData.filter(p => p.variation === 0).length;
+  const maxHausse = [...prixData].sort((a,b) => b.variation - a.variation)[0];
+  const maxBaisse = [...prixData].sort((a,b) => a.variation - b.variation)[0];
 
   const SortIcon = ({ field }) => {
-    if (sortField !== field) return <ChevronUp size={14} color="#d1d5db" />;
-    return sortDir === 'asc'
-      ? <ChevronUp   size={14} color="#1a5c2a" />
-      : <ChevronDown size={14} color="#1a5c2a" />;
+    if (sortField !== field) return <ChevronUp size={13} color="#d1d5db" />;
+    return sortDir === 'asc' ? <ChevronUp size={13} color="#1a5c2a" /> : <ChevronDown size={13} color="#1a5c2a" />;
   };
 
   return (
     <div style={{ background: '#f8f9f4', minHeight: '100vh' }}>
 
-      {/* ===== HERO ===== */}
-      <div style={styles.hero}>
+      {/* HERO */}
+      <div style={{ background: 'linear-gradient(135deg, #0d2b14 0%, #1a5c2a 60%, #2d8c47 100%)', padding: '2.5rem 0 2rem' }}>
         <div className="container-fluid px-4 px-lg-5">
-          <motion.div
-            initial={{ y: 30, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div style={styles.heroBreadcrumb}>
-              <Link to="/" style={styles.breadLink}>Accueil</Link>
-              <span style={{ color: 'rgba(255,255,255,0.5)' }}>/</span>
-              <span style={{ color: 'white' }}>Prix du marché</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', marginBottom: '1rem', color: 'rgba(255,255,255,0.6)' }}>
+            <Link to="/" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>Accueil</Link>
+            <span>/</span><span style={{ color: 'white' }}>Prix du marché</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h1 style={{ color: 'white', fontSize: 'clamp(1.4rem, 3vw, 2rem)', fontWeight: '800', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <BarChart2 size={26} color="#f0c040" /> Prix du marché
+              </h1>
+              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.88rem', margin: 0 }}>
+                {lastUpdate ? `Mise à jour : ${lastUpdate} · Source : MAEP / ONASA Bénin` : 'Chargement…'}
+              </p>
             </div>
-            <h1 style={styles.heroTitle}>📊 Prix du marché</h1>
-            <p style={styles.heroSub}>
-              Cours des céréales en temps réel au Bénin
-            </p>
-            <div style={styles.lastUpdate}>
-              <RefreshCw size={14} />
-              Dernière mise à jour : {lastUpdate}
+            <motion.button onClick={handleRefresh} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '10px', padding: '8px 16px', color: 'white', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer' }} whileHover={{ background: 'rgba(255,255,255,0.2)' }} whileTap={{ scale: 0.96 }}>
+              <motion.div animate={{ rotate: refreshing ? 360 : 0 }} transition={{ duration: 0.8, repeat: refreshing ? Infinity : 0, ease: 'linear' }}><RefreshCw size={15} /></motion.div>
+              Actualiser
+            </motion.button>
+          </div>
+
+          {/* Stats rapides */}
+          {!loading && prixData.length > 0 && (
+            <div style={{ display: 'flex', gap: '12px', marginTop: '1.5rem', flexWrap: 'wrap' }}>
+              {[
+                { label: 'En hausse', value: hausses, color: '#4ade80', bg: 'rgba(74,222,128,0.15)' },
+                { label: 'En baisse', value: baisses, color: '#f87171', bg: 'rgba(248,113,113,0.15)' },
+                { label: 'Stables',   value: stables, color: '#94a3b8', bg: 'rgba(148,163,184,0.15)' },
+                { label: 'Produits',  value: prixData.length, color: '#f0c040', bg: 'rgba(240,192,64,0.15)' },
+              ].map((s) => (
+                <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.color}30`, borderRadius: '12px', padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ color: s.color, fontWeight: '800', fontSize: '1.1rem' }}>{s.value}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem' }}>{s.label}</span>
+                </div>
+              ))}
+              {maxHausse && <div style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: '12px', padding: '0.6rem 1rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)' }}>
+                Plus forte hausse : <strong style={{ color: '#4ade80' }}>{maxHausse.produit} +{Number(maxHausse.variation).toFixed(1)}%</strong>
+              </div>}
             </div>
-          </motion.div>
+          )}
         </div>
       </div>
 
       <div className="container-fluid px-4 px-lg-5 py-4">
 
-        {/* ===== STATS RAPIDES ===== */}
-        <div className="row g-3 mb-4">
-          {[
-            { label: 'En hausse',  value: hausses,  icon: TrendingUp,   color: '#16a34a', bg: '#dcfce7', suffix: ' produits' },
-            { label: 'En baisse',  value: baisses,  icon: TrendingDown, color: '#dc2626', bg: '#fee2e2', suffix: ' produits' },
-            { label: 'Stables',    value: stables,  icon: Minus,        color: '#6b7280', bg: '#f3f4f6', suffix: ' produits' },
-            { label: 'Plus forte hausse', value: `+${maxHausse.variation}%`, icon: ArrowUpRight,   color: '#d97706', bg: '#fffbeb', suffix: ` (${maxHausse.produit})` },
-            { label: 'Plus forte baisse', value: `${maxBaisse.variation}%`,  icon: ArrowDownRight, color: '#7c3aed', bg: '#f5f3ff', suffix: ` (${maxBaisse.produit})` },
-          ].map((s, i) => {
-            const Icon = s.icon;
-            return (
-              <motion.div
-                key={i}
-                className="col-6 col-lg"
-                variants={fadeUp}
-                initial="hidden"
-                animate="show"
-                transition={{ delay: i * 0.08 }}
-              >
-                <div style={styles.statCard}>
-                  <div style={{ ...styles.statIcon, background: s.bg }}>
-                    <Icon size={20} color={s.color} />
-                  </div>
-                  <div style={{ ...styles.statValue, color: s.color }}>{s.value}</div>
-                  <div style={styles.statLabel}>{s.label}</div>
-                  <div style={styles.statSuffix}>{s.suffix}</div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
+        {/* Erreur */}
+        {error && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '1rem 1.5rem', color: '#dc2626', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <AlertCircle size={18} /> {error}
+          </div>
+        )}
 
-        {/* ===== GRAPHIQUE ÉVOLUTION ===== */}
-        <motion.div
-          className="mb-4"
-          variants={fadeUp}
-          initial="hidden"
-          animate="show"
-          transition={{ delay: 0.3 }}
-        >
-          <div style={styles.card}>
-            <div style={styles.cardHeader}>
-              <h3 style={styles.cardTitle}>
-                <BarChart2 size={18} color="#1a5c2a" />
-                Évolution des prix — 5 derniers mois (FCFA/tonne)
-              </h3>
-            </div>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={historique}>
+        {/* Graphique historique */}
+        {!loading && histData.length > 0 && (
+          <div style={{ background: 'white', borderRadius: '16px', padding: '1.5rem', border: '1px solid #e5e7eb', marginBottom: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#1a2e10', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <TrendingUp size={18} color="#1a5c2a" /> Évolution Maïs blanc — Cotonou (6 mois)
+            </h3>
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={histData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v/1000}k`} />
-                <Tooltip
-                  formatter={(v, name) => [`${v.toLocaleString('fr-FR')} FCFA`, name.charAt(0).toUpperCase() + name.slice(1)]}
-                  contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }}
-                />
-                <Legend formatter={(v) => v.charAt(0).toUpperCase() + v.slice(1)} />
-                <Line type="monotone" dataKey="mais"  stroke="#1a5c2a" strokeWidth={2.5} dot={{ r: 4 }} name="Maïs"  />
-                <Line type="monotone" dataKey="riz"   stroke="#2563eb" strokeWidth={2.5} dot={{ r: 4 }} name="Riz"   />
-                <Line type="monotone" dataKey="soja"  stroke="#d97706" strokeWidth={2.5} dot={{ r: 4 }} name="Soja"  />
-                <Line type="monotone" dataKey="mil"   stroke="#7c3aed" strokeWidth={2.5} dot={{ r: 4 }} name="Mil"   />
+                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
+                <Tooltip formatter={(v) => [`${fmt(v)} FCFA`, 'Prix/tonne']} />
+                <Line type="monotone" dataKey="prix" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </motion.div>
+        )}
 
-        {/* ===== FILTRES ===== */}
-        <motion.div
-          className="mb-3"
-          variants={fadeUp}
-          initial="hidden"
-          animate="show"
-          transition={{ delay: 0.4 }}
-        >
-          <div style={styles.filtersBar}>
-
-            {/* RECHERCHE */}
-            <div style={styles.searchWrap}>
-              <Search size={16} color="#9ca3af" style={{ position: 'absolute', left: '12px' }} />
-              <input
-                type="text"
-                placeholder="Rechercher un produit..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                style={styles.searchInput}
-              />
-              {search && (
-                <button onClick={() => setSearch('')} style={styles.clearBtn}>
-                  <X size={14} color="#9ca3af" />
-                </button>
-              )}
-            </div>
-
-            {/* CATÉGORIES */}
-            <div style={styles.catsWrap}>
-              {categories.map((c) => (
-                <motion.button
-                  key={c}
-                  style={{
-                    ...styles.catBtn,
-                    background:  categorie === c ? '#1a5c2a' : 'white',
-                    color:       categorie === c ? 'white'   : '#374151',
-                    borderColor: categorie === c ? '#1a5c2a' : '#e5e7eb',
-                  }}
-                  onClick={() => setCategorie(c)}
-                  whileHover={{ y: -1 }}
-                  whileTap={{ scale: 0.97 }}
-                >
-                  {c}
-                </motion.button>
-              ))}
-            </div>
-
-            {/* VILLE */}
-            <select
-              value={ville}
-              onChange={(e) => setVille(e.target.value)}
-              style={styles.villeSelect}
-            >
-              {villes.map((v) => (
-                <option key={v} value={v}>{v}</option>
-              ))}
-            </select>
-
+        {/* Filtres */}
+        <div style={{ background: 'white', borderRadius: '14px', padding: '1rem', border: '1px solid #e5e7eb', marginBottom: '1.5rem', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* Recherche */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f9fafb', borderRadius: '10px', padding: '0.5rem 1rem', flex: 1, minWidth: '200px' }}>
+            <Search size={16} color="#9ca3af" />
+            <input type="text" placeholder="Rechercher un produit, une ville..." value={search} onChange={e => setSearch(e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.88rem', flex: 1 }} />
+            {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: 0 }}><X size={15} color="#9ca3af" /></button>}
           </div>
-        </motion.div>
+          {/* Catégorie */}
+          <select value={categorie} onChange={e => setCategorie(e.target.value)} style={{ padding: '0.5rem 0.8rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.85rem', outline: 'none', background: 'white', cursor: 'pointer' }}>
+            {categories.map(c => <option key={c}>{c}</option>)}
+          </select>
+          {/* Ville */}
+          <select value={ville} onChange={e => setVille(e.target.value)} style={{ padding: '0.5rem 0.8rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.85rem', outline: 'none', background: 'white', cursor: 'pointer' }}>
+            {villes.map(v => <option key={v}>{v}</option>)}
+          </select>
+          <span style={{ fontSize: '0.82rem', color: '#9ca3af', marginLeft: 'auto' }}>
+            {loading ? 'Chargement…' : `${prixFiltres.length} résultat${prixFiltres.length > 1 ? 's' : ''}`}
+          </span>
+        </div>
 
-        {/* ===== TABLEAU DES PRIX ===== */}
-        <motion.div
-          variants={fadeUp}
-          initial="hidden"
-          animate="show"
-          transition={{ delay: 0.5 }}
-        >
-          <div style={styles.card}>
-            <div style={styles.cardHeader}>
-              <h3 style={styles.cardTitle}>
-                <Filter size={16} color="#1a5c2a" />
-                Cours des céréales
-                <span style={styles.resultBadge}>{prixFiltres.length} résultats</span>
-              </h3>
-            </div>
-
+        {/* Tableau */}
+        {loading ? (
+          <div style={{ background: 'white', borderRadius: '16px', padding: '3rem', textAlign: 'center', border: '1px solid #e5e7eb' }}>
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-flex' }}>
+              <RefreshCw size={32} color="#1a5c2a" />
+            </motion.div>
+            <p style={{ color: '#6b7280', marginTop: '1rem' }}>Chargement des prix du marché…</p>
+          </div>
+        ) : prixFiltres.length === 0 ? (
+          <div style={{ background: 'white', borderRadius: '16px', padding: '3rem', textAlign: 'center', border: '1.5px dashed #e5e7eb' }}>
+            <BarChart2 size={48} color="#d1d5db" />
+            <p style={{ color: '#6b7280', marginTop: '1rem', fontWeight: '600' }}>Aucun prix trouvé</p>
+          </div>
+        ) : (
+          <div style={{ background: 'white', borderRadius: '16px', border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
             <div style={{ overflowX: 'auto' }}>
-              <table style={styles.table}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={styles.thead}>
+                  <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
                     {[
-                      { label: 'Produit',    field: 'produit'   },
-                      { label: 'Catégorie',  field: 'categorie' },
-                      { label: 'Ville',      field: 'ville'     },
-                      { label: 'Prix/tonne', field: 'prix'      },
-                      { label: 'Variation',  field: 'variation' },
-                      { label: 'Min',        field: 'min'       },
-                      { label: 'Max',        field: 'max'       },
-                      { label: 'Date',       field: 'date'      },
-                    ].map((col) => (
-                      <th
-                        key={col.field}
-                        style={styles.th}
-                        onClick={() => handleSort(col.field)}
-                      >
-                        <div style={styles.thInner}>
-                          {col.label}
-                          <SortIcon field={col.field} />
-                        </div>
+                      { label: 'Produit',    field: 'produit'    },
+                      { label: 'Catégorie',  field: 'categorie'  },
+                      { label: 'Ville',      field: 'ville'      },
+                      { label: 'Prix/tonne', field: 'prix'       },
+                      { label: 'Min',        field: 'prix_min'   },
+                      { label: 'Max',        field: 'prix_max'   },
+                      { label: 'Variation',  field: 'variation'  },
+                    ].map(({ label, field }) => (
+                      <th key={field} onClick={() => handleSort(field)} style={{ padding: '0.85rem 1rem', textAlign: 'left', fontSize: '0.78rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em', cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          {label} <SortIcon field={field} />
+                        </span>
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  <AnimatePresence>
-                    {prixFiltres.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
-                          🔍 Aucun résultat pour cette recherche
-                        </td>
-                      </tr>
-                    ) : (
-                      prixFiltres.map((p, i) => (
-                        <motion.tr
-                          key={p.id}
-                          style={styles.tr}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: i * 0.04 }}
-                          whileHover={{ background: '#f9fafb' }}
-                        >
-                          {/* PRODUIT */}
-                          <td style={styles.td}>
-                            <span style={styles.produitNom}>{p.produit}</span>
-                          </td>
-
-                          {/* CATÉGORIE */}
-                          <td style={styles.td}>
-                            <span style={styles.catBadge}>{p.categorie}</span>
-                          </td>
-
-                          {/* VILLE */}
-                          <td style={styles.td}>
-                            <div style={styles.villeWrap}>
-                              <MapPin size={13} color="#6b7280" />
-                              {p.ville}
-                            </div>
-                          </td>
-
-                          {/* PRIX */}
-                          <td style={styles.td}>
-                            <strong style={styles.prixValue}>
-                              {p.prix.toLocaleString('fr-FR')} FCFA
-                            </strong>
-                          </td>
-
-                          {/* VARIATION */}
-                          <td style={styles.td}>
-                            <span style={{
-                              ...styles.variationBadge,
-                              background: p.variation > 0 ? '#dcfce7' : p.variation < 0 ? '#fee2e2' : '#f3f4f6',
-                              color:      p.variation > 0 ? '#16a34a' : p.variation < 0 ? '#dc2626' : '#6b7280',
-                            }}>
-                              {p.variation > 0
-                                ? <TrendingUp   size={13} />
-                                : p.variation < 0
-                                ? <TrendingDown size={13} />
-                                : <Minus        size={13} />
-                              }
-                              {p.variation > 0 ? '+' : ''}{p.variation}%
-                            </span>
-                          </td>
-
-                          {/* MIN */}
-                          <td style={{ ...styles.td, color: '#dc2626', fontSize: '0.85rem' }}>
-                            {p.min.toLocaleString('fr-FR')}
-                          </td>
-
-                          {/* MAX */}
-                          <td style={{ ...styles.td, color: '#16a34a', fontSize: '0.85rem' }}>
-                            {p.max.toLocaleString('fr-FR')}
-                          </td>
-
-                          {/* DATE */}
-                          <td style={{ ...styles.td, color: '#6b7280', fontSize: '0.8rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <Calendar size={12} />
-                              {p.date}
-                            </div>
-                          </td>
-
-                        </motion.tr>
-                      ))
-                    )}
-                  </AnimatePresence>
+                  {prixFiltres.map((p, i) => (
+                    <motion.tr
+                      key={p.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: i * 0.03 }}
+                      style={{ borderBottom: '1px solid #f3f4f6', transition: 'background 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#f9fdf9'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <td style={{ padding: '0.85rem 1rem', fontWeight: '700', color: '#1a2e10', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                        <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: COULEURS_PRODUITS[p.produit] || '#1a5c2a', marginRight: '8px' }} />
+                        {p.produit}
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem' }}>
+                        <span style={{ background: '#f0fdf4', color: '#1a5c2a', padding: '2px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: '600' }}>{p.categorie}</span>
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: '#374151', whiteSpace: 'nowrap' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={12} color="#9ca3af" />{p.ville}</span>
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', fontWeight: '800', color: '#1a5c2a', fontSize: '0.95rem', whiteSpace: 'nowrap' }}>
+                        {fmt(p.prix)} <span style={{ fontSize: '0.72rem', color: '#9ca3af', fontWeight: '500' }}>FCFA</span>
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#6b7280', whiteSpace: 'nowrap' }}>{fmt(p.prix_min)}</td>
+                      <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#6b7280', whiteSpace: 'nowrap' }}>{fmt(p.prix_max)}</td>
+                      <td style={{ padding: '0.85rem 1rem' }}><VariationBadge v={p.variation} /></td>
+                    </motion.tr>
+                  ))}
                 </tbody>
               </table>
             </div>
-
-          </div>
-        </motion.div>
-
-        {/* ===== ALERTE PRIX ===== */}
-        <motion.div
-          className="mt-4"
-          variants={fadeUp}
-          initial="hidden"
-          animate="show"
-          transition={{ delay: 0.6 }}
-        >
-          <div style={styles.alertCard}>
-            <div style={styles.alertLeft}>
-              <div style={styles.alertIcon}>🔔</div>
-              <div>
-                <h4 style={styles.alertTitle}>Recevez les alertes prix</h4>
-                <p style={styles.alertDesc}>
-                  Soyez notifié dès que le prix d'un produit change significativement
-                </p>
-              </div>
-            </div>
-            <div style={styles.alertRight}>
-              <input
-                type="email"
-                placeholder="votre@email.com"
-                style={styles.alertInput}
-              />
-              <motion.button
-                style={styles.alertBtn}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-              >
-                S'abonner
-              </motion.button>
+            <div style={{ padding: '0.8rem 1rem', background: '#f9fafb', borderTop: '1px solid #e5e7eb', fontSize: '0.78rem', color: '#9ca3af', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <BarChart2 size={13} />
+              Source : MAEP / ONASA Bénin — Prix en FCFA par tonne
             </div>
           </div>
-        </motion.div>
+        )}
 
       </div>
     </div>
   );
 }
-
-// ===== STYLES =====
-const styles = {
-  // HERO
-  hero: {
-    background: 'linear-gradient(135deg, #0d2b14 0%, #1a5c2a 60%, #2d8c47 100%)',
-    padding: '3rem 0 2rem',
-  },
-  heroBreadcrumb: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', marginBottom: '1rem', color: 'rgba(255,255,255,0.6)' },
-  breadLink:      { color: 'rgba(255,255,255,0.6)', textDecoration: 'none' },
-  heroTitle:      { color: 'white', fontSize: 'clamp(1.5rem, 3vw, 2.2rem)', fontWeight: '800', marginBottom: '0.4rem' },
-  heroSub:        { color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginBottom: '0.8rem' },
-  lastUpdate:     { display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.9)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: '500' },
-
-  // STATS
-  statCard:   { background: 'white', borderRadius: '14px', padding: '1rem', border: '1px solid #f0f0f0', textAlign: 'center' },
-  statIcon:   { width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.7rem' },
-  statValue:  { fontSize: '1.3rem', fontWeight: '800', marginBottom: '2px' },
-  statLabel:  { fontSize: '0.78rem', color: '#6b7280', fontWeight: '600' },
-  statSuffix: { fontSize: '0.72rem', color: '#9ca3af', marginTop: '2px' },
-
-  // CARD
-  card:       { background: 'white', borderRadius: '16px', padding: '1.2rem', border: '1px solid #e5e7eb' },
-  cardHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' },
-  cardTitle:  { fontSize: '0.95rem', fontWeight: '700', color: '#1a2e10', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 },
-  resultBadge:{ background: '#f0fdf4', color: '#1a5c2a', fontSize: '0.75rem', fontWeight: '700', padding: '2px 10px', borderRadius: '20px' },
-
-  // FILTRES
-  filtersBar:  { display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', background: 'white', padding: '1rem', borderRadius: '14px', border: '1px solid #e5e7eb' },
-  searchWrap:  { position: 'relative', display: 'flex', alignItems: 'center', flex: '1', minWidth: '180px' },
-  searchInput: { width: '100%', padding: '0.55rem 2rem 0.55rem 2.2rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.87rem', outline: 'none', background: '#fafafa' },
-  clearBtn:    { position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex' },
-  catsWrap:    { display: 'flex', gap: '6px', flexWrap: 'wrap' },
-  catBtn:      { padding: '0.38rem 0.9rem', borderRadius: '20px', border: '1.5px solid', fontSize: '0.82rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', background: 'none' },
-  villeSelect: { padding: '0.5rem 0.8rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.85rem', outline: 'none', background: 'white', cursor: 'pointer' },
-
-  // TABLEAU
-  table:  { width: '100%', borderCollapse: 'collapse', fontSize: '0.87rem' },
-  thead:  { background: '#f9fafb' },
-  th:     { padding: '0.75rem 1rem', textAlign: 'left', color: '#374151', fontWeight: '700', fontSize: '0.8rem', borderBottom: '2px solid #e5e7eb', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' },
-  thInner:{ display: 'flex', alignItems: 'center', gap: '4px' },
-  tr:     { borderBottom: '1px solid #f5f5f5', transition: 'background 0.15s' },
-  td:     { padding: '0.85rem 1rem', color: '#374151', whiteSpace: 'nowrap', verticalAlign: 'middle' },
-
-  // CONTENU TABLEAU
-  produitNom:      { fontWeight: '700', color: '#1a2e10' },
-  catBadge:        { background: '#f0fdf4', color: '#1a5c2a', fontSize: '0.75rem', fontWeight: '700', padding: '3px 10px', borderRadius: '20px' },
-  villeWrap:       { display: 'flex', alignItems: 'center', gap: '4px', color: '#6b7280', fontSize: '0.85rem' },
-  prixValue:       { color: '#1a5c2a', fontSize: '0.95rem' },
-  variationBadge:  { display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: '700' },
-
-  // ALERTE
-  alertCard:  { background: 'linear-gradient(135deg, #1a5c2a, #2d8c47)', borderRadius: '16px', padding: '1.5rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' },
-  alertLeft:  { display: 'flex', alignItems: 'center', gap: '16px' },
-  alertIcon:  { fontSize: '2rem' },
-  alertTitle: { color: 'white', fontWeight: '800', fontSize: '1.05rem', margin: '0 0 4px' },
-  alertDesc:  { color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 },
-  alertRight: { display: 'flex', gap: '10px', alignItems: 'center' },
-  alertInput: { padding: '0.6rem 1rem', borderRadius: '10px', border: 'none', fontSize: '0.88rem', outline: 'none', minWidth: '220px' },
-  alertBtn:   { background: '#f0c040', color: '#1a2e10', border: 'none', borderRadius: '10px', padding: '0.6rem 1.4rem', fontWeight: '700', fontSize: '0.88rem', cursor: 'pointer', whiteSpace: 'nowrap' },
-};

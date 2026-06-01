@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Search, SlidersHorizontal, MapPin, Star,
   ShoppingCart, Heart, ChevronDown, X,
@@ -8,22 +8,7 @@ import {
 } from 'lucide-react';
 import ProductService from '../../services/product.service';
 
-// ===== MOCK DATA =====
-const produits = [
-  { id: 1,  nom: 'Maïs blanc 2t',   categorie: 'Maïs',  localisation: 'Bankoura',    prix: 1000000, note: 4.8, vendeur: 'Moussa K.', image: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=400&q=80',  dispo: true  },
-  { id: 2,  nom: 'Riz local 3t',    categorie: 'Riz',   localisation: 'Parakou',     prix: 1160000, note: 4.5, vendeur: 'Kofi A.',   image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&q=80',  dispo: true  },
-  { id: 3,  nom: 'Soja certifié 1t',categorie: 'Soja',  localisation: 'Nikki',       prix: 670000,  note: 4.7, vendeur: 'Sèna B.',   image: 'https://images.unsplash.com/photo-1599579773853-3b3e1b43f7d5?w=400&q=80',  dispo: true  },
-  { id: 4,  nom: 'Mil rouge 2t',    categorie: 'Mil',   localisation: 'Natitingou',  prix: 800000,  note: 4.3, vendeur: 'Yao D.',    image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400&q=80',  dispo: false },
-  { id: 5,  nom: 'Maïs jaune 5t',   categorie: 'Maïs',  localisation: 'Cotonou',     prix: 2500000, note: 4.9, vendeur: 'Afi K.',    image: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=400&q=80',  dispo: true  },
-  { id: 6,  nom: 'Riz parfumé 2t',  categorie: 'Riz',   localisation: 'Abomey',      prix: 900000,  note: 4.6, vendeur: 'Moussa K.', image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&q=80',  dispo: true  },
-  { id: 7,  nom: 'Soja bio 500kg',  categorie: 'Soja',  localisation: 'Kandi',       prix: 350000,  note: 4.4, vendeur: 'Kofi A.',   image: 'https://images.unsplash.com/photo-1599579773853-3b3e1b43f7d5?w=400&q=80',  dispo: true  },
-  { id: 8,  nom: 'Mil blanc 3t',    categorie: 'Mil',   localisation: 'Djougou',     prix: 1200000, note: 4.2, vendeur: 'Sèna B.',   image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400&q=80',  dispo: true  },
-  { id: 9,  nom: 'Maïs doux 1t',    categorie: 'Maïs',  localisation: 'Ouidah',      prix: 500000,  note: 4.7, vendeur: 'Yao D.',    image: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=400&q=80',  dispo: true  },
-];
-
-const categories  = ['Tous', 'Maïs', 'Riz', 'Soja', 'Mil'];
-const villes      = ['Toutes', 'Bankoura', 'Parakou', 'Nikki', 'Natitingou', 'Cotonou', 'Abomey', 'Kandi', 'Djougou', 'Ouidah'];
-const tris        = [
+const tris = [
   { label: 'Plus récents',      value: 'recent'    },
   { label: 'Prix croissant',    value: 'prix_asc'  },
   { label: 'Prix décroissant',  value: 'prix_desc' },
@@ -36,7 +21,8 @@ const fadeUp = {
 };
 
 export default function Products() {
-  const [search,      setSearch]      = useState('');
+  const [searchParams] = useSearchParams();
+  const [search,      setSearch]      = useState(searchParams.get('search') || '');
   const [categorie,   setCategorie]   = useState('Tous');
   const [ville,       setVille]       = useState('Toutes');
   const [tri,         setTri]         = useState('recent');
@@ -59,8 +45,8 @@ export default function Products() {
         setLoading(true);
         setError('');
         const [productsResponse, categoriesResponse] = await Promise.all([
-          ProductService.getAll({ search }),
-          ProductService.getCategories(),
+          ProductService.liste({ search }),
+          ProductService.categories(),
         ]);
 
         if (!active) return;
@@ -82,9 +68,14 @@ export default function Products() {
         setProduitsData(mappedProducts);
         setCategoriesData(['Tous', ...categoryItems.map((cat) => cat.nom)]);
         setVillesData(['Toutes', ...Array.from(new Set(mappedProducts.map((p) => p.localisation).filter(Boolean)))]);
-      } catch {
+      } catch (err) {
         if (active) {
-          setError('Impossible de charger les produits depuis le backend.');
+          const isNetworkError = !err.response;
+          setError(
+            isNetworkError
+              ? 'Serveur inaccessible. Démarrez le backend Django et réessayez.'
+              : 'Erreur lors du chargement des produits.'
+          );
           setProduitsData([]);
         }
       } finally {
@@ -574,22 +565,26 @@ function ProductCardGrille({ p, favoris, toggleFavori }) {
             {p.prix.toLocaleString('fr-FR')} <span style={{ fontSize: '0.75rem' }}>FCFA</span>
           </div>
           <div style={{ display: 'flex', gap: '6px' }}>
-            <motion.button style={styles.btnVoir} whileHover={{ scale: 1.05 }}>
-              <Eye size={14} />
-            </motion.button>
-            <motion.button
-              style={{
-                ...styles.btnAcheter,
-                opacity: p.dispo ? 1 : 0.5,
-                cursor:  p.dispo ? 'pointer' : 'not-allowed',
-              }}
-              whileHover={{ scale: p.dispo ? 1.05 : 1 }}
-              whileTap={{ scale: p.dispo ? 0.95 : 1 }}
-              disabled={!p.dispo}
-            >
-              <ShoppingCart size={14} />
-              Commander
-            </motion.button>
+            <Link to={`/products/${p.id}`} style={{ textDecoration: 'none' }}>
+              <motion.button style={styles.btnVoir} whileHover={{ scale: 1.05 }}>
+                <Eye size={14} />
+              </motion.button>
+            </Link>
+            <Link to={`/buyer/checkout?product=${p.id}`} style={{ textDecoration: 'none', pointerEvents: p.dispo ? 'auto' : 'none' }}>
+              <motion.button
+                style={{
+                  ...styles.btnAcheter,
+                  opacity: p.dispo ? 1 : 0.5,
+                  cursor:  p.dispo ? 'pointer' : 'not-allowed',
+                }}
+                whileHover={{ scale: p.dispo ? 1.05 : 1 }}
+                whileTap={{ scale: p.dispo ? 0.95 : 1 }}
+                disabled={!p.dispo}
+              >
+                <ShoppingCart size={14} />
+                Commander
+              </motion.button>
+            </Link>
           </div>
         </div>
       </div>
@@ -632,17 +627,21 @@ function ProductCardListe({ p, favoris, toggleFavori }) {
           {p.dispo ? '✓ Dispo' : '✗ Indispo'}
         </span>
         <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
-          <motion.button style={styles.btnVoir} whileHover={{ scale: 1.05 }}>
-            <Eye size={14} />
-          </motion.button>
-          <motion.button
-            style={{ ...styles.btnAcheter, opacity: p.dispo ? 1 : 0.5 }}
-            disabled={!p.dispo}
-            whileHover={{ scale: p.dispo ? 1.05 : 1 }}
-          >
-            <ShoppingCart size={14} />
-            Commander
-          </motion.button>
+          <Link to={`/products/${p.id}`} style={{ textDecoration: 'none' }}>
+            <motion.button style={styles.btnVoir} whileHover={{ scale: 1.05 }}>
+              <Eye size={14} />
+            </motion.button>
+          </Link>
+          <Link to={`/buyer/checkout?product=${p.id}`} style={{ textDecoration: 'none', pointerEvents: p.dispo ? 'auto' : 'none' }}>
+            <motion.button
+              style={{ ...styles.btnAcheter, opacity: p.dispo ? 1 : 0.5 }}
+              disabled={!p.dispo}
+              whileHover={{ scale: p.dispo ? 1.05 : 1 }}
+            >
+              <ShoppingCart size={14} />
+              Commander
+            </motion.button>
+          </Link>
         </div>
         <motion.button
           style={styles.favoriListBtn}

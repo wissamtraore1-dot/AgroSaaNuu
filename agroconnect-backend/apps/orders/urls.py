@@ -16,6 +16,7 @@ urlpatterns = [
     path('payment/initiate/',                views.InitiatePaiementView.as_view()),
     path('payment/confirm/',                 views.ConfirmPaiementView.as_view()),
     path('payment/release/',                 views.ReleasePaiementView.as_view()),
+    path('payment/<uuid:pk>/',               views.DetailPaiementView.as_view()),
     
     # ===== SELLER WITHDRAWAL ENDPOINTS =====
     path('withdrawal/request/',              views.DemandedRetaitVendeurView.as_view()),

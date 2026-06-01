@@ -20,8 +20,8 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
         BANNED   = 'BANNED',   _('Banni')
         PENDING  = 'PENDING',  _('En attente')
 
-    email       = models.EmailField(unique=True, null=True, blank=True)  # Optional
-    telephone = PhoneNumberField(unique=True, region='BJ') 
+    email     = models.EmailField(unique=True)
+    telephone = PhoneNumberField(unique=True, region='BJ', null=True, blank=True)
     prenom = models.CharField(max_length=100, blank=True)
     nom         = models.CharField(max_length=100)
     cip = models.CharField(max_length=12, unique=True, blank=True, null=True)
@@ -37,7 +37,7 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
     cip_verifie = models.BooleanField(default=False)
     last_login_at = models.DateTimeField(null=True, blank=True)
 
-    USERNAME_FIELD  = 'telephone'
+    USERNAME_FIELD  = 'email'
     REQUIRED_FIELDS = ['nom']
 
     objects = UserManager()

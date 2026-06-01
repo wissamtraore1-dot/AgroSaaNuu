@@ -4,7 +4,7 @@
 // ============================================================
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Badge from '../../components/ui/Badge';
+import Badge from '../../Components/ui/Badge';
 import { formatPrice, formatDate } from '../../utils/formatPrice';
 import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../../utils/constants';
 import OrderService from '../../services/order.service';
@@ -29,7 +29,7 @@ const SellerOrders = () => {
     try {
       setLoading(true);
       const data = await OrderService.getSellerOrders({ status: activeTab });
-      setOrders(data.results || []);
+      setOrders(data.results || data || []);
     } finally {
       setLoading(false);
     }

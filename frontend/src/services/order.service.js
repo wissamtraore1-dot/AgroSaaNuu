@@ -16,8 +16,18 @@ const OrderService = {
     return response.data;
   },
 
+  async getBuyerOrders(params = {}) {
+    const response = await api.get('/orders/mes-commandes/', { params });
+    return response.data;
+  },
+
   async commandesRecues() {
     const response = await api.get('/orders/commandes-recues/');
+    return response.data;
+  },
+
+  async getSellerOrders(params = {}) {
+    const response = await api.get('/orders/commandes-recues/', { params });
     return response.data;
   },
 

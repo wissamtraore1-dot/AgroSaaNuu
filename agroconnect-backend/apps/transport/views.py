@@ -75,8 +75,15 @@ class MesMissionsView(generics.ListAPIView):
 
 
 class MettreAJourDisponibiliteView(APIView):
-    """POST /api/v1/transport/disponibilite/"""
+    """GET/POST /api/v1/transport/disponibilite/"""
     permission_classes = [IsTransporter]
+
+    def get(self, request):
+        profil = request.user.transporter_profile
+        return Response({
+            'success':        True,
+            'est_disponible': profil.est_disponible,
+        })
 
     def post(self, request):
         est_disponible = request.data.get('est_disponible', True)
@@ -87,4 +94,61 @@ class MettreAJourDisponibiliteView(APIView):
             'success':        True,
             'est_disponible': est_disponible,
             'message':        'Disponibilité mise à jour.',
+        })
+
+
+class ModifierVehiculeView(APIView):
+    """PUT /api/v1/transport/vehicules/<id>/modifier/"""
+    permission_classes = [IsTransporter]
+
+    def put(self, request, pk):
+        vehicule = get_object_or_404(Vehicule, pk=pk, transporteur=request.user)
+        serializer = VehiculeSerializer(vehicule, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                'success':  True,
+                'message':  'Véhicule mis à jour.',
+                'vehicule': serializer.data,
+            })
+        return Response({'success': False, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AccepterMissionView(APIView):
+    """POST /api/v1/transport/missions/<id>/accepter/"""
+    permission_classes = [IsTransporter]
+
+    def post(self, request, pk):
+        mission = get_object_or_404(MissionTransport, pk=pk, transporteur=request.user)
+        if mission.statut != MissionTransport.Statut.EN_ATTENTE:
+            return Response({
+                'success': False,
+                'message': 'Seules les missions en attente peuvent être acceptées.',
+            }, status=status.HTTP_400_BAD_REQUEST)
+        mission.statut = MissionTransport.Statut.ACCEPTEE
+        mission.save(update_fields=['statut'])
+        return Response({
+            'success': True,
+            'message': 'Mission acceptée.',
+            'mission': MissionTransportSerializer(mission).data,
+        })
+
+
+class RefuserMissionView(APIView):
+    """POST /api/v1/transport/missions/<id>/refuser/"""
+    permission_classes = [IsTransporter]
+
+    def post(self, request, pk):
+        mission = get_object_or_404(MissionTransport, pk=pk, transporteur=request.user)
+        if mission.statut not in [MissionTransport.Statut.EN_ATTENTE, MissionTransport.Statut.ACCEPTEE]:
+            return Response({
+                'success': False,
+                'message': 'Mission ne peut plus être refusée.',
+            }, status=status.HTTP_400_BAD_REQUEST)
+        mission.statut = MissionTransport.Statut.ANNULEE
+        mission.save(update_fields=['statut'])
+        return Response({
+            'success': True,
+            'message': 'Mission refusée.',
+            'mission': MissionTransportSerializer(mission).data,
         })

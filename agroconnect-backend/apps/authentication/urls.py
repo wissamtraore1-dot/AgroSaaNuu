@@ -25,6 +25,10 @@ urlpatterns = [
     path('sms/resend-otp/',           sms_auth_views.ResendOTPView.as_view(), name='resend-otp'),
     path('complete-profile/',         sms_auth_views.CompleteProfileView.as_view(), name='complete-profile'),
     
+    # ===== PROFILS SPÉCIALISÉS =====
+    path('seller-profile/',           views.SellerProfileView.as_view(), name='seller-profile'),
+    path('transporter-profile/',      views.TransporterProfileView.as_view(), name='transporter-profile'),
+
     # ===== KYC VERIFICATION ENDPOINTS =====
     path('kyc/upload-document/',      views.UploadKYCDocumentView.as_view(), name='upload-kyc-document'),
     path('kyc/status/',               views.GetKYCStatusView.as_view(), name='get-kyc-status'),

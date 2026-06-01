@@ -24,18 +24,18 @@ const LoyaltyService = {
 
   // Redeem points → convert to wallet credit
   redeemPoints: async (points) => {
-    const { data } = await api.post('/loyalty/redeem/', { points });
+    const { data } = await api.post('/loyalty/utiliser/', { points });
     return data;
-    // returns { redeemed_points, fcfa_credited, new_balance }
+    // returns { points_echanges, fcfa_credite, nouveau_solde }
   },
 
   // Calculate max points usable for a given order amount
   calcUsablePoints: async (orderAmount) => {
-    const { data } = await api.get('/loyalty/calc-usable/', {
+    const { data } = await api.get('/loyalty/calculer/', {
       params: { amount: orderAmount },
     });
     return data;
-    // returns { max_points, max_discount_fcfa }
+    // returns { points_dispo, max_points, max_remise_fcfa, fcfa_par_point }
   },
 };
 

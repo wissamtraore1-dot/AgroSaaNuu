@@ -11,6 +11,7 @@ from .serializers import (
     PasserCommandeSerializer,
     ConfirmerReceptionSerializer,
     LitigeSerializer,
+    PaiementSerializer,
 )
 from apps.authentication.permissions import IsBuyer, IsSeller
 
@@ -443,3 +444,20 @@ class AdminApproveWithdrawalView(APIView):
                 'statut': retrait.statut,
             }
         })
+
+
+class DetailPaiementView(APIView):
+    """GET /api/v1/orders/payment/<id>/"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            paiement = Paiement.objects.select_related('commande').get(pk=pk)
+        except Paiement.DoesNotExist:
+            return Response({'success': False, 'message': 'Paiement non trouvé.'}, status=status.HTTP_404_NOT_FOUND)
+
+        commande = paiement.commande
+        if commande.acheteur != request.user and commande.vendeur != request.user and not request.user.is_staff:
+            return Response({'success': False, 'message': 'Accès non autorisé.'}, status=status.HTTP_403_FORBIDDEN)
+
+        return Response({'success': True, 'paiement': PaiementSerializer(paiement).data})

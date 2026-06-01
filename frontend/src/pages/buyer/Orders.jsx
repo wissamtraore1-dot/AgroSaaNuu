@@ -4,7 +4,7 @@
 // ============================================================
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Badge from '../../components/ui/Badge';
+import Badge from '../../Components/ui/Badge';
 import { formatPrice, formatDate } from '../../utils/formatPrice';
 import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../../utils/constants';
 import OrderService from '../../services/order.service';
@@ -29,7 +29,7 @@ const BuyerOrders = () => {
     try {
       setLoading(true);
       const data = await OrderService.getBuyerOrders({ status: activeTab });
-      setOrders(data.results || []);
+      setOrders(data.results || data || []);
     } finally {
       setLoading(false);
     }
@@ -63,7 +63,7 @@ const BuyerOrders = () => {
         <div style={styles.empty}>
           <div style={{ fontSize: '40px' }}>📦</div>
           <div style={styles.emptyText}>No orders yet</div>
-          <button style={styles.shopBtn} onClick={() => navigate('/buyer/catalog')}>
+          <button style={styles.shopBtn} onClick={() => navigate('/products')}>
             Start Shopping
           </button>
         </div>

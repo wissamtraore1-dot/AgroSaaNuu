@@ -5,27 +5,31 @@
 
 // ─── Order Statuses ──────────────────────────────────────────
 export const ORDER_STATUS = {
-    PENDING:       'pending',
-    PAID:          'paid',
-    PREPARING:     'preparing',
-    SHIPPED:       'shipped',
-    IN_DELIVERY:   'in_delivery',
-    DELIVERED:     'delivered',
-    CANCELLED:     'cancelled',
-    DISPUTED:      'disputed',
-    REFUNDED:      'refunded',
+    PENDING:       'PAIEMENT_EN_ATTENTE',
+    PAID:          'PAIEMENT_RECU',
+    PREPARING:     'EN_PREPARATION',
+    SHIPPED:       'EN_LIVRAISON',
+    IN_DELIVERY:   'EN_LIVRAISON',
+    DELIVERED:     'LIVREE',
+    RECEIVED:      'CONFIRMEE_RECEPTION',
+    RELEASED:      'PAIEMENT_LIBERE',
+    CANCELLED:     'ANNULEE',
+    DISPUTED:      'LITIGE',
+    REFUNDED:      'REMBOURSEE',
   };
   
   export const ORDER_STATUS_LABELS = {
-    [ORDER_STATUS.PENDING]:     'Awaiting payment',
-    [ORDER_STATUS.PAID]:        'Payment secured',
-    [ORDER_STATUS.PREPARING]:   'Being prepared',
-    [ORDER_STATUS.SHIPPED]:     'Shipped',
-    [ORDER_STATUS.IN_DELIVERY]: 'Out for delivery',
-    [ORDER_STATUS.DELIVERED]:   'Delivered',
-    [ORDER_STATUS.CANCELLED]:   'Cancelled',
-    [ORDER_STATUS.DISPUTED]:    'Under dispute',
-    [ORDER_STATUS.REFUNDED]:    'Refunded',
+    [ORDER_STATUS.PENDING]:     'Paiement en attente',
+    [ORDER_STATUS.PAID]:        'Paiement securise',
+    [ORDER_STATUS.PREPARING]:   'En preparation',
+    [ORDER_STATUS.SHIPPED]:     'En livraison',
+    [ORDER_STATUS.IN_DELIVERY]: 'En livraison',
+    [ORDER_STATUS.DELIVERED]:   'Livree',
+    [ORDER_STATUS.RECEIVED]:    'Reception confirmee',
+    [ORDER_STATUS.RELEASED]:    'Vendeur paye',
+    [ORDER_STATUS.CANCELLED]:   'Annulee',
+    [ORDER_STATUS.DISPUTED]:    'En litige',
+    [ORDER_STATUS.REFUNDED]:    'Remboursee',
   };
   
   export const ORDER_STATUS_COLORS = {
@@ -138,38 +142,39 @@ export const TRANSACTION_TYPE_ICONS = {
   
   // ─── Loyalty / Points System ─────────────────────────────────
   export const LOYALTY = {
-    POINTS_PER_100_FCFA:      1,    // 1 point per 100 FCFA spent
-    MIN_POINTS_TO_REDEEM:   500,    // minimum points to convert to cash
-    FCFA_PER_POINT:           5,    // 1 point = 5 FCFA
-    MAX_POINTS_USAGE_PERCENT: 30,   // max 30% of order payable with points
-  
+    POINTS_PER_1000_FCFA:     1,    // 1 point par 1000 FCFA dépensés (aligné backend)
+    MIN_POINTS_TO_REDEEM:   500,    // minimum requis pour convertir en FCFA
+    FCFA_PER_POINT:           5,    // 1 point = 5 FCFA lors de l'échange
+    MAX_POINTS_USAGE_PERCENT: 30,   // max 30% d'une commande payable en points
+
+    // Clés = valeurs retournées par le backend (PointsFidelite.Niveau)
     TIERS: {
-      BRONZE: { name: 'Bronze', min: 0,    max: 499,  color: '#CD7F32', badge: '🥉' },
-      SILVER: { name: 'Silver', min: 500,  max: 1999, color: '#A8A9AD', badge: '🥈' },
-      GOLD:   { name: 'Gold',   min: 2000, max: 4999, color: '#FFD700', badge: '🥇' },
-      ELITE:  { name: 'Elite',  min: 5000, max: null, color: '#4F46E5', badge: '💎' },
+      BRONZE:  { name: 'Bronze',  min: 0,    max: 499,  color: '#CD7F32', badge: '🥉' },
+      ARGENT:  { name: 'Argent',  min: 500,  max: 1999, color: '#A8A9AD', badge: '🥈' },
+      OR:      { name: 'Or',      min: 2000, max: 4999, color: '#FFD700', badge: '🥇' },
+      PLATINE: { name: 'Platine', min: 5000, max: null, color: '#4F46E5', badge: '💎' },
     },
-  
+
     TIER_MULTIPLIERS: {
-      BRONZE: 1,
-      SILVER: 1.5,
-      GOLD:   2,
-      ELITE:  3,
+      BRONZE:  1,
+      ARGENT:  1.5,
+      OR:      2,
+      PLATINE: 3,
     },
   };
-  
-  // Helper — points earned for a purchase
+
+  // Helper — points gagnés pour un achat
   export const calcPointsEarned = (amountFcfa, tierKey = 'BRONZE') => {
-    const base = Math.floor(amountFcfa / 100) * LOYALTY.POINTS_PER_100_FCFA;
+    const base = Math.floor(amountFcfa / 1000) * LOYALTY.POINTS_PER_1000_FCFA;
     const multiplier = LOYALTY.TIER_MULTIPLIERS[tierKey] ?? 1;
     return Math.floor(base * multiplier);
   };
-  
-  // Helper — convert points to FCFA value
+
+  // Helper — valeur FCFA d'un nombre de points
   export const calcPointsValue = (points) =>
     points * LOYALTY.FCFA_PER_POINT;
-  
-  // Helper — get tier object from total points
+
+  // Helper — tier à partir du total de points (calcul local)
   export const getTier = (totalPoints) => {
     const entries = Object.entries(LOYALTY.TIERS);
     for (let i = entries.length - 1; i >= 0; i--) {
@@ -178,8 +183,8 @@ export const TRANSACTION_TYPE_ICONS = {
     }
     return { key: 'BRONZE', ...LOYALTY.TIERS.BRONZE };
   };
-  
-  // Helper — progress % toward next tier
+
+  // Helper — progression vers le prochain tier (%)
   export const getTierProgress = (totalPoints) => {
     const tier = getTier(totalPoints);
     if (!tier.max) return 100;

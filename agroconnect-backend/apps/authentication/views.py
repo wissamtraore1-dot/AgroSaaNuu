@@ -20,6 +20,8 @@ from .serializers import (
     VerifierOTPSerializer,
     ReinitialisationMDPSerializer,
     ConfirmerReinitialisationSerializer,
+    SellerProfileSerializer,
+    TransporterProfileSerializer,
 )
 
 
@@ -278,6 +280,62 @@ class ConfirmerReinitialisationView(APIView):
             'success': False,
             'errors':  serializer.errors,
         }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ===== PROFILS SPÉCIALISÉS =====
+
+class SellerProfileView(APIView):
+    """GET/PUT /api/v1/auth/seller-profile/"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != User.Role.SELLER:
+            return Response({'success': False, 'message': 'Réservé aux vendeurs.'}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            profil = request.user.seller_profile
+        except SellerProfile.DoesNotExist:
+            profil = SellerProfile.objects.create(user=request.user)
+        return Response({'success': True, 'profil': SellerProfileSerializer(profil).data})
+
+    def put(self, request):
+        if request.user.role != User.Role.SELLER:
+            return Response({'success': False, 'message': 'Réservé aux vendeurs.'}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            profil = request.user.seller_profile
+        except SellerProfile.DoesNotExist:
+            profil = SellerProfile.objects.create(user=request.user)
+        serializer = SellerProfileSerializer(profil, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'success': True, 'message': 'Profil vendeur mis à jour.', 'profil': serializer.data})
+        return Response({'success': False, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TransporterProfileView(APIView):
+    """GET/PUT /api/v1/auth/transporter-profile/"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != User.Role.TRANSPORTER:
+            return Response({'success': False, 'message': 'Réservé aux transporteurs.'}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            profil = request.user.transporter_profile
+        except TransporterProfile.DoesNotExist:
+            profil = TransporterProfile.objects.create(user=request.user)
+        return Response({'success': True, 'profil': TransporterProfileSerializer(profil).data})
+
+    def put(self, request):
+        if request.user.role != User.Role.TRANSPORTER:
+            return Response({'success': False, 'message': 'Réservé aux transporteurs.'}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            profil = request.user.transporter_profile
+        except TransporterProfile.DoesNotExist:
+            profil = TransporterProfile.objects.create(user=request.user)
+        serializer = TransporterProfileSerializer(profil, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'success': True, 'message': 'Profil transporteur mis à jour.', 'profil': serializer.data})
+        return Response({'success': False, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
 # ===== KYC VERIFICATION ENDPOINTS =====
