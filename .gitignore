@@ -1,70 +1,135 @@
-# =========================
-# Python / Django
-# =========================
+# ════════════════════════════════════════════════════════════════
+# AGROSAANUU — .gitignore
+# ════════════════════════════════════════════════════════════════
+
+# ── Python / Django ───────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+*.pyc
+*.pdb
 
+# Environnements virtuels
 venv/
 env/
 .venv/
 ENV/
+.env/
 
+# Variables d'environnement (JAMAIS committer le .env)
 .env
 .env.*
 !.env.example
 
+# Base de données locale
 *.sqlite3
 db.sqlite3
 
+# Fichiers uploadés (media) + statiques compilés
 media/
 staticfiles/
+uploads/
 
+# Logs
 *.log
 logs/
+vite-dev.log
+vite-direct.log
+pip-log.txt
 
+# Tests / couverture
 .coverage
 htmlcov/
 .pytest_cache/
+.tox/
+coverage.xml
+*.cover
 
+# Oeufs / distributions Python
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# Celery
 celerybeat-schedule
+celerybeat-schedule.db
 celerybeat.pid
+celerybeat.db
 
-# =========================
-# Node / React / Vite
-# =========================
+# Redis
+dump.rdb
+redis-data/
+*.rdb
+
+# Cloudinary / stockage cloud (clés locales)
+cloudinary.env
+.cloudinary
+
+# Certificats SSL
+*.pem
+*.key
+*.crt
+*.p12
+secrets/
+credentials/
+
+# Pyenv / Python version
+.python-version
+
+# mypy / type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ── Node / React / Vite ───────────────────────────────────────────────────────
 node_modules/
 dist/
 build/
 dist-ssr/
-
 .vite/
 
+# Vite env locaux
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+frontend/.env*
+!frontend/.env.example
 
+# Logs npm / yarn / pnpm
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# =========================
-# IDE
-# =========================
+# Cache npm
+.npm/
+.yarn/
+
+# ── IDE ────────────────────────────────────────────────────────────────────────
 .vscode/
 .idea/
-
-# =========================
-# OS
-# =========================
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
 .DS_Store
 Thumbs.db
+ehthumbs.db
+desktop.ini
 
-# =========================
-# Misc
-# =========================
+# ── Divers ─────────────────────────────────────────────────────────────────────
 *.local
+*.bak
+*.tmp
+*.temp
+*.orig
+.cache/
+tmp/

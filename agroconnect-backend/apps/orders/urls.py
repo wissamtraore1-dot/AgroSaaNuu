@@ -22,4 +22,9 @@ urlpatterns = [
     path('withdrawal/request/',              views.DemandedRetaitVendeurView.as_view()),
     path('withdrawal/list/',                 views.MesRetaitsVendeurView.as_view()),
     path('withdrawal/admin-approve/',        views.AdminApproveWithdrawalView.as_view()),
+
+    # ===== NOUVELLES FONCTIONNALITÉS =====
+    path('<uuid:pk>/noter-vendeur/',         views.NoterVendeurView.as_view()),
+    path('<uuid:pk>/messages/',              views.MessagesCommandeView.as_view()),
+    path('<uuid:pk>/recu/',                  views.RecuCommandeView.as_view()),
 ]

@@ -82,6 +82,61 @@ const TransportService = {
     const { data } = await api.post(`/transport/missions/${id}/refuser/`);
     return data;
   },
+
+  // ─── NOUVELLES MÉTHODES ───────────────────────────────────────────────────
+
+  // Transporteurs disponibles filtrés par trajet + capacité
+  getTransporteursDisponibles: async ({ ville_depart = '', ville_arrivee = '', tonnes = 1 } = {}) => {
+    const { data } = await api.get('/transport/disponibles/', {
+      params: { ville_depart, ville_arrivee, tonnes },
+    });
+    return data;
+  },
+
+  // Estimation de coût
+  estimerCout: async ({ ville_depart, ville_arrivee, tonnes }) => {
+    const { data } = await api.get('/transport/estimation/', {
+      params: { ville_depart, ville_arrivee, tonnes },
+    });
+    return data;
+  },
+
+  // Assigner un transporteur à une commande
+  assignerTransporteur: async (payload) => {
+    // payload: { commande_id, transporteur_id, vehicule_id?, ville_depart, ville_arrivee, date_depart? }
+    const { data } = await api.post('/transport/assigner/', payload);
+    return data;
+  },
+
+  // Mission d'une commande spécifique
+  getMissionDeCommande: async (commandeId) => {
+    const { data } = await api.get(`/transport/commande/${commandeId}/mission/`);
+    return data;
+  },
+
+  // Détail mission
+  getMission: async (id) => {
+    const { data } = await api.get(`/transport/missions/${id}/`);
+    return data;
+  },
+
+  // Démarrer une mission (transporteur)
+  demarrerMission: async (id) => {
+    const { data } = await api.post(`/transport/missions/${id}/demarrer/`);
+    return data;
+  },
+
+  // Terminer une mission (transporteur)
+  terminerMission: async (id) => {
+    const { data } = await api.post(`/transport/missions/${id}/terminer/`);
+    return data;
+  },
+
+  // Noter le transporteur (acheteur/vendeur)
+  noterTransporteur: async (missionId, { note, commentaire = '' }) => {
+    const { data } = await api.post(`/transport/missions/${missionId}/noter/`, { note, commentaire });
+    return data;
+  },
 };
 
 export default TransportService;

@@ -7,7 +7,28 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=800&q=80';
+// Pool d'images agricoles variées — chaque article en tire une différente
+const FALLBACK_IMAGES = [
+  'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80',
+  'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800&q=80',
+  'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800&q=80',
+  'https://images.unsplash.com/photo-1509099863731-ef4bff19e808?w=800&q=80',
+  'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=800&q=80',
+  'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=800&q=80',
+  'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=800&q=80',
+  'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=800&q=80',
+  'https://images.unsplash.com/photo-1535540878298-b9897bed1ad9?w=800&q=80',
+  'https://images.unsplash.com/photo-1489824904134-891ab64532f1?w=800&q=80',
+];
+
+// Hash simple du titre pour choisir une image de secours de façon stable
+function fallbackForArticle(idOrTitre = '') {
+  let h = 0;
+  for (let i = 0; i < idOrTitre.length; i++) {
+    h = (Math.imul(31, h) + idOrTitre.charCodeAt(i)) | 0;
+  }
+  return FALLBACK_IMAGES[Math.abs(h) % FALLBACK_IMAGES.length];
+}
 
 const fadeUp = {
   hidden: { y: 20, opacity: 0 },
@@ -196,10 +217,10 @@ export default function News() {
             <div style={{ background: 'white', borderRadius: '20px', overflow: 'hidden', border: '1px solid #e5e7eb', display: 'flex', flexDirection: 'row', minHeight: '240px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }} className="flex-column flex-md-row">
               <div style={{ flex: '0 0 42%', minHeight: '220px', position: 'relative', overflow: 'hidden' }} className="w-100">
                 <img
-                  src={vedette.image || FALLBACK_IMAGE}
+                  src={vedette.image || fallbackForArticle(vedette.id || vedette.titre)}
                   alt={vedette.titre}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', minHeight: '220px' }}
-                  onError={(e) => { e.target.src = FALLBACK_IMAGE; }}
+                  onError={(e) => { e.target.src = fallbackForArticle(vedette.id || vedette.titre); }}
                 />
                 <span style={{ position: 'absolute', top: '12px', left: '12px', background: '#f0c040', color: '#1a2e10', fontSize: '0.72rem', fontWeight: '800', padding: '4px 12px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   À la une
@@ -243,10 +264,10 @@ export default function News() {
                     {/* Image */}
                     <div style={{ position: 'relative', height: '180px', overflow: 'hidden', flexShrink: 0 }}>
                       <img
-                        src={article.image || FALLBACK_IMAGE}
+                        src={article.image || fallbackForArticle(article.id || article.titre)}
                         alt={article.titre}
                         style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s' }}
-                        onError={(e) => { e.target.src = FALLBACK_IMAGE; }}
+                        onError={(e) => { e.target.src = fallbackForArticle(article.id || article.titre); }}
                       />
                     </div>
 

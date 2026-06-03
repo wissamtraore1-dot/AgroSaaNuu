@@ -6,6 +6,7 @@ import {
   LayoutDashboard, ChevronDown, X, Mic, SlidersHorizontal
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import LanguageSwitcher from '../common/LanguageSwitcher';
 import logo from '../../assets/images/logo.jpeg';
 
 const DASHBOARD = {
@@ -361,6 +362,9 @@ export default function Navbar() {
               </Link>
             </div>
           )}
+
+          {/* Switcher FR / EN */}
+          <LanguageSwitcher />
         </div>
 
         {/* ── NAV LINKS ── */}

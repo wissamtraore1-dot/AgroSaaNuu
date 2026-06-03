@@ -24,7 +24,8 @@ import Contact       from '../pages/public/Contact';
 import Login         from '../pages/auth/Login';
 import Register      from '../pages/auth/Register';
 import ForgotPassword from '../pages/auth/ForgotPassword';
-import SMSAuth       from '../pages/auth/SMSAuth';  // NOUVEAU
+import SMSAuth       from '../pages/auth/SMSAuth';
+import Auth          from '../pages/auth/Auth';     // Nouvelle page unifiée
 
 // Buyer
 import BuyerDashboard   from '../pages/buyer/Dashboard';
@@ -33,6 +34,7 @@ import BuyerCheckout    from '../pages/buyer/Checkout';
 import BuyerOrders      from '../pages/buyer/Orders';
 import BuyerOrderDetail from '../pages/buyer/OrderDetail';
 import BuyerOrderTracking from '../pages/buyer/OrderTracking';
+import Receipt          from '../pages/buyer/Receipt';
 
 // Seller
 import SellerDashboard  from '../pages/seller/Dashboard';
@@ -73,10 +75,11 @@ export default function AppRouter() {
 
           {/* ===== AUTH ===== */}
           <Route element={<AuthLayout />}>
-            <Route path="/auth/login"           element={<Login />}          />
-            <Route path="/auth/register"        element={<Register />}       />
+            {/* Page unifiée style 1xBet — point d'entrée principal */}
+            <Route path="/auth"                 element={<Auth />}           />
+            <Route path="/auth/login"           element={<Auth />}           />
+            <Route path="/auth/register"        element={<Auth />}           />
             <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-            <Route path="/auth/sms"             element={<SMSAuth />}        />  {/* NOUVEAU */}
           </Route>
 
           {/* ===== BUYER — protégé ===== */}
@@ -97,6 +100,9 @@ export default function AppRouter() {
           />
           <Route path="/buyer/order-tracking"
             element={<ProtectedRoute roles={['BUYER']}><BuyerOrderTracking /></ProtectedRoute>}
+          />
+          <Route path="/buyer/orders/:id/recu"
+            element={<ProtectedRoute roles={['BUYER']}><Receipt /></ProtectedRoute>}
           />
 
           {/* ===== SELLER — protégé ===== */}

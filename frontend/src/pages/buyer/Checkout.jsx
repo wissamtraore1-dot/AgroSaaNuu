@@ -7,6 +7,8 @@ import {
 import DashboardLayout from '../../Components/layout/DashboardLayout';
 import ProductService from '../../services/product.service';
 import OrderService from '../../services/order.service';
+import CompleteProfileModal, { isProfileComplete } from '../../Components/common/CompleteProfileModal';
+import { useAuth } from '../../context/AuthContext';
 
 const modesPaiement = [
   { id: 'MTN', label: 'MTN Mobile Money', frais: 1 },
@@ -31,8 +33,10 @@ const normalizeProduct = (data) => {
 
 export default function Checkout() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const productId = searchParams.get('product');
+  const [showProfileModal, setShowProfileModal] = useState(!isProfileComplete(user));
 
   const [product, setProduct] = useState(null);
   const [step, setStep] = useState(1);
@@ -135,6 +139,13 @@ export default function Checkout() {
 
   return (
     <DashboardLayout role="buyer">
+      {/* Modal de complétion de profil si CIP / nom manquant */}
+      {showProfileModal && (
+        <CompleteProfileModal
+          onComplete={() => setShowProfileModal(false)}
+          onClose={() => navigate(-1)}
+        />
+      )}
       <div style={styles.page}>
         <button style={styles.backBtn} onClick={() => navigate(-1)}>
           <ArrowLeft size={16} /> Retour

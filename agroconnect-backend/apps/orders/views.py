@@ -5,13 +5,14 @@ from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
-from .models import Commande, LitigeCommande, Paiement, RetaitVendeur
+from .models import Commande, LitigeCommande, Paiement, RetaitVendeur, Message
 from .serializers import (
     CommandeSerializer,
     PasserCommandeSerializer,
     ConfirmerReceptionSerializer,
     LitigeSerializer,
     PaiementSerializer,
+    MessageSerializer,
 )
 from apps.authentication.permissions import IsBuyer, IsSeller
 
@@ -461,3 +462,141 @@ class DetailPaiementView(APIView):
             return Response({'success': False, 'message': 'Accès non autorisé.'}, status=status.HTTP_403_FORBIDDEN)
 
         return Response({'success': True, 'paiement': PaiementSerializer(paiement).data})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NOUVELLES VUES
+# ─────────────────────────────────────────────────────────────────────────────
+
+class NoterVendeurView(APIView):
+    """
+    POST /api/v1/orders/<id>/noter-vendeur/
+    Body: { note: 1-5, commentaire: '' }
+    Acheteur note le vendeur après livraison confirmée.
+    """
+    permission_classes = [IsBuyer]
+
+    def post(self, request, pk):
+        commande = get_object_or_404(Commande, pk=pk, acheteur=request.user)
+
+        if commande.statut not in [
+            Commande.Statut.CONFIRMEE_RECEPTION,
+            Commande.Statut.PAIEMENT_LIBERE,
+        ]:
+            return Response({'success': False, 'message': 'La réception n\'a pas encore été confirmée.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        if commande.note_vendeur:
+            return Response({'success': False, 'message': 'Vendeur déjà noté.'}, status=400)
+
+        note        = int(request.data.get('note', 0))
+        commentaire = request.data.get('commentaire', '')
+
+        if not 1 <= note <= 5:
+            return Response({'success': False, 'message': 'Note entre 1 et 5.'}, status=400)
+
+        commande.note_vendeur        = note
+        commande.commentaire_vendeur = commentaire
+        commande.save(update_fields=['note_vendeur', 'commentaire_vendeur'])
+
+        # Recalculer note moyenne vendeur
+        try:
+            from apps.authentication.models import SellerProfile
+            profil = commande.vendeur.seller_profile
+            commandes_notees = Commande.objects.filter(
+                vendeur=commande.vendeur, note_vendeur__isnull=False
+            )
+            total = sum(c.note_vendeur for c in commandes_notees)
+            profil.note_moyenne = total / commandes_notees.count()
+            profil.save(update_fields=['note_moyenne'])
+        except Exception:
+            pass
+
+        return Response({'success': True, 'message': 'Vendeur noté. Merci pour votre évaluation !'})
+
+
+class MessagesCommandeView(APIView):
+    """
+    GET  /api/v1/orders/<id>/messages/ — Liste les messages
+    POST /api/v1/orders/<id>/messages/ — Envoie un message
+    Accessible à l'acheteur, au vendeur et au transporteur de la commande.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def _get_commande(self, request, pk):
+        commande = get_object_or_404(Commande, pk=pk)
+        participants = [commande.acheteur, commande.vendeur]
+        if hasattr(commande, 'mission_transport'):
+            participants.append(commande.mission_transport.transporteur)
+        if request.user not in participants:
+            return None, commande
+        return commande, None
+
+    def get(self, request, pk):
+        commande, err = self._get_commande(request, pk)
+        if err:
+            return Response({'success': False, 'message': 'Accès non autorisé.'}, status=403)
+
+        messages = commande.messages.select_related('expediteur').all()
+        # Marquer les messages non lus comme lus (pour cet utilisateur)
+        commande.messages.exclude(expediteur=request.user).filter(est_lu=False).update(est_lu=True)
+
+        return Response({
+            'success':  True,
+            'messages': MessageSerializer(messages, many=True).data,
+        })
+
+    def post(self, request, pk):
+        commande, err = self._get_commande(request, pk)
+        if err:
+            return Response({'success': False, 'message': 'Accès non autorisé.'}, status=403)
+
+        contenu = request.data.get('contenu', '').strip()
+        if not contenu:
+            return Response({'success': False, 'message': 'Message vide.'}, status=400)
+
+        message = Message.objects.create(
+            commande   = commande,
+            expediteur = request.user,
+            contenu    = contenu,
+        )
+        return Response({
+            'success': True,
+            'message': MessageSerializer(message).data,
+        }, status=status.HTTP_201_CREATED)
+
+
+class RecuCommandeView(APIView):
+    """
+    GET /api/v1/orders/<id>/recu/
+    Retourne les données du reçu numérique (commande + paiement + mission).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        commande = get_object_or_404(Commande, pk=pk)
+        if request.user not in [commande.acheteur, commande.vendeur] and not request.user.is_staff:
+            return Response({'success': False, 'message': 'Accès non autorisé.'}, status=403)
+
+        paiement = None
+        try:
+            paiement = PaiementSerializer(commande.paiement).data
+        except Paiement.DoesNotExist:
+            pass
+
+        mission = None
+        try:
+            from apps.transport.serializers import MissionTransportSerializer
+            mission = MissionTransportSerializer(commande.mission_transport).data
+        except Exception:
+            pass
+
+        return Response({
+            'success':  True,
+            'recu': {
+                'commande': CommandeSerializer(commande).data,
+                'paiement': paiement,
+                'mission':  mission,
+                'genere_le': timezone.now().isoformat(),
+            },
+        })

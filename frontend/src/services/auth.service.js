@@ -68,6 +68,7 @@ const AuthService = {
   },
 
   async verifyOTPAndRegister(data) {
+    // data: { phone, code, role, password? }
     const response = await api.post('/auth/sms/verify-and-register/', data);
     const { tokens, user } = response.data;
     localStorage.setItem('access_token',  tokens.access);
@@ -92,7 +93,16 @@ const AuthService = {
 
   async completeProfile(data) {
     const response = await api.put('/auth/complete-profile/', data);
+    const { user } = response.data;
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+    }
     return response.data;
+  },
+
+  async isProfileComplete() {
+    const user = this.getUser();
+    return !!(user?.prenom && user?.cip);
   },
 
   // ===== NOUVELLES MÉTHODES KYC =====

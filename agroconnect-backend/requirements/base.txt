@@ -9,3 +9,23 @@ django-filter==23.3
 drf-spectacular==0.26.5
 django-phonenumber-field==7.2.0
 phonenumbers==8.13.25
+requests>=2.30.0
+
+# ── SMS (Afrique/Bénin) ──────────────────────────────────────────────────────
+africastalking==2.0.2
+
+# ── Paiement Mobile Money (Bénin) ────────────────────────────────────────────
+fedapay==0.3.0
+
+# ── Flux RSS ─────────────────────────────────────────────────────────────────
+feedparser==6.0.12
+
+# ── Tâches asynchrones ───────────────────────────────────────────────────────
+celery[redis]==5.6.3
+redis==6.4.0
+django-celery-beat==2.9.0
+django-celery-results==2.6.0
+
+# ── Stockage cloud (images) ──────────────────────────────────────────────────
+cloudinary==1.44.2
+django-storages==1.14.6

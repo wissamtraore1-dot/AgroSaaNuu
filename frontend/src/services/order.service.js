@@ -117,6 +117,28 @@ const OrderService = {
     });
     return response.data;
   },
+
+  // ===== NOUVELLES MÉTHODES =====
+
+  async noterVendeur(commandeId, { note, commentaire = '' }) {
+    const response = await api.post(`/orders/${commandeId}/noter-vendeur/`, { note, commentaire });
+    return response.data;
+  },
+
+  async getMessages(commandeId) {
+    const response = await api.get(`/orders/${commandeId}/messages/`);
+    return response.data;
+  },
+
+  async envoyerMessage(commandeId, contenu) {
+    const response = await api.post(`/orders/${commandeId}/messages/`, { contenu });
+    return response.data;
+  },
+
+  async getRecu(commandeId) {
+    const response = await api.get(`/orders/${commandeId}/recu/`);
+    return response.data;
+  },
 };
 
 export default OrderService;

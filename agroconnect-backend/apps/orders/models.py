@@ -60,8 +60,12 @@ class Commande(TimeStampedModel):
     date_reception  = models.DateTimeField(null=True, blank=True)
     
     # ESCROW: Track if payment is held or released
-    paiement_en_escrow = models.BooleanField(default=True)  # Payment held in escrow
-    paiement_libere_le = models.DateTimeField(null=True, blank=True)  # When payment released to seller
+    paiement_en_escrow = models.BooleanField(default=True)
+    paiement_libere_le = models.DateTimeField(null=True, blank=True)
+
+    # ÉVALUATION VENDEUR par l'acheteur
+    note_vendeur        = models.PositiveSmallIntegerField(null=True, blank=True)
+    commentaire_vendeur = models.TextField(blank=True, default='')
 
     class Meta:
         db_table            = 'commandes'
@@ -76,6 +80,22 @@ class Commande(TimeStampedModel):
         if not self.reference:
             self.reference = generer_reference('CMD')
         super().save(*args, **kwargs)
+
+
+class Message(TimeStampedModel):
+    """Messagerie interne entre acheteur, vendeur et transporteur."""
+
+    commande    = models.ForeignKey(Commande, on_delete=models.CASCADE, related_name='messages')
+    expediteur  = models.ForeignKey(User, on_delete=models.CASCADE, related_name='messages_envoyes')
+    contenu     = models.TextField()
+    est_lu      = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'messages_commande'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Message de {self.expediteur.nom_complet} — {self.commande.reference}"
 
 
 class LitigeCommande(TimeStampedModel):

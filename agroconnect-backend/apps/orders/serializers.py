@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.conf import settings
 from apps.common.utils import calculer_frais, calculer_commission
-from .models import Commande, LitigeCommande, Paiement, RetaitVendeur
+from .models import Commande, LitigeCommande, Paiement, RetaitVendeur, Message
 from apps.products.models import Produit
 
 
@@ -208,7 +208,7 @@ class AdminApproveWithdrawalSerializer(serializers.Serializer):
     retrait_id = serializers.UUIDField()
     action = serializers.ChoiceField(choices=['approve', 'reject'])
     notes = serializers.CharField(required=False, allow_blank=True, default='')
-    
+
     def validate_retrait_id(self, value):
         try:
             retrait = RetaitVendeur.objects.get(pk=value)
@@ -216,3 +216,16 @@ class AdminApproveWithdrawalSerializer(serializers.Serializer):
             return value
         except RetaitVendeur.DoesNotExist:
             raise serializers.ValidationError('Retrait non trouvé.')
+
+
+class MessageSerializer(serializers.ModelSerializer):
+    expediteur_nom  = serializers.CharField(source='expediteur.nom_complet', read_only=True)
+    expediteur_role = serializers.CharField(source='expediteur.role',         read_only=True)
+
+    class Meta:
+        model  = Message
+        fields = [
+            'id', 'commande', 'expediteur', 'expediteur_nom', 'expediteur_role',
+            'contenu', 'est_lu', 'created_at',
+        ]
+        read_only_fields = ['id', 'commande', 'expediteur', 'est_lu', 'created_at']

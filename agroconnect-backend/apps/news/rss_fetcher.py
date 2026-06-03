@@ -1,19 +1,16 @@
 """
 Récupération et parsing de flux RSS — actualités agricoles Bénin / Afrique de l'Ouest.
+Utilise feedparser (bien meilleure extraction d'images et compatibilité RSS/Atom).
 """
 import re
 import html
 import hashlib
-import requests
-import xml.etree.ElementTree as ET
+import feedparser
 from datetime import datetime, timezone
-from email.utils import parsedate_to_datetime
+from time import mktime
 
-HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (compatible; AgroSaaNuu/1.0)',
-    'Accept': 'application/rss+xml, application/xml, text/xml, */*',
-}
 TIMEOUT = 8
+feedparser.USER_AGENT = 'AgroSaaNuu/1.0 +https://agrosaanuu.com'
 
 # ── Mots-clés OBLIGATOIRES (au moins 1 doit être présent) ──────
 KEYWORDS_REQUIS = [
@@ -100,19 +97,49 @@ RSS_SOURCES = [
 
 # Images de secours contextuelles par mot-clé
 IMAGES_CONTEXTE = {
-    'maïs':      'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=800&q=80',
-    'mais':      'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=800&q=80',
-    'riz':       'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=800&q=80',
-    'soja':      'https://images.unsplash.com/photo-1599579773853-3b3e1b43f7d5?w=800&q=80',
-    'mil':       'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=800&q=80',
-    'sorgho':    'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=800&q=80',
-    'arachide':  'https://images.unsplash.com/photo-1608797178974-15b35a64ede9?w=800&q=80',
-    'irrigation':'https://images.unsplash.com/photo-1592838064575-70ed626d3a0e?w=800&q=80',
-    'coopérative':'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80',
-    'engrais':   'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80',
-    'récolte':   'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=800&q=80',
-    'default':   'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80',
+    'maïs':        'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=800&q=80',
+    'mais':        'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=800&q=80',
+    'riz':         'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=800&q=80',
+    'soja':        'https://images.unsplash.com/photo-1599579773853-3b3e1b43f7d5?w=800&q=80',
+    'mil':         'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=800&q=80',
+    'sorgho':      'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=800&q=80',
+    'arachide':    'https://images.unsplash.com/photo-1608797178974-15b35a64ede9?w=800&q=80',
+    'irrigation':  'https://images.unsplash.com/photo-1592838064575-70ed626d3a0e?w=800&q=80',
+    'coopérative': 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800&q=80',
+    'cooperative': 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800&q=80',
+    'engrais':     'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80',
+    'fertilisant': 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80',
+    'récolte':     'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800&q=80',
+    'marché':      'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=800&q=80',
+    'marche':      'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=800&q=80',
+    'haricot':     'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80',
+    'niébé':       'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80',
+    'manioc':      'https://images.unsplash.com/photo-1536304993881-ff6e9eefa2a6?w=800&q=80',
+    'coton':       'https://images.unsplash.com/photo-1535540878298-b9897bed1ad9?w=800&q=80',
+    'élevage':     'https://images.unsplash.com/photo-1516467508483-a7212febe31a?w=800&q=80',
+    'pêche':       'https://images.unsplash.com/photo-1518639192441-8fce0a366e2e?w=800&q=80',
+    'bénin':       'https://images.unsplash.com/photo-1509099863731-ef4bff19e808?w=800&q=80',
+    'benin':       'https://images.unsplash.com/photo-1509099863731-ef4bff19e808?w=800&q=80',
+    'afrique':     'https://images.unsplash.com/photo-1489824904134-891ab64532f1?w=800&q=80',
+    'paysan':      'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800&q=80',
+    'agriculteur': 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800&q=80',
+    'fao':         'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800&q=80',
+    'alimentaire': 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=800&q=80',
 }
+
+# Pool d'images de secours variées (utilisées quand aucun mot-clé ne correspond)
+IMAGES_DEFAUT = [
+    'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80',
+    'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800&q=80',
+    'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800&q=80',
+    'https://images.unsplash.com/photo-1509099863731-ef4bff19e808?w=800&q=80',
+    'https://images.unsplash.com/photo-1489824904134-891ab64532f1?w=800&q=80',
+    'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=800&q=80',
+    'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=800&q=80',
+    'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=800&q=80',
+    'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=800&q=80',
+    'https://images.unsplash.com/photo-1535540878298-b9897bed1ad9?w=800&q=80',
+]
 
 
 def _clean(text):
@@ -125,108 +152,109 @@ def _clean(text):
     return text
 
 
-def _extract_image(item_elem):
-    """Extrait l'URL d'image d'un item RSS."""
-    # media:content / media:thumbnail
-    for tag in [
-        '{http://search.yahoo.com/mrss/}content',
-        '{http://search.yahoo.com/mrss/}thumbnail',
-    ]:
-        el = item_elem.find(tag)
-        if el is not None:
-            url = el.get('url', '')
-            if url.startswith('http') and any(e in url.lower() for e in ['.jpg', '.jpeg', '.png', '.webp', 'image']):
-                return url
-
-    # enclosure
-    enc = item_elem.find('enclosure')
-    if enc is not None:
-        url = enc.get('url', '')
-        if url.startswith('http') and any(e in url.lower() for e in ['.jpg', '.jpeg', '.png', '.webp']):
+def _extract_image_entry(entry):
+    """
+    Extrait l'URL d'image d'un article feedparser (meilleure compatibilité).
+    Feedparser normalise déjà media:content, enclosures, etc.
+    """
+    # 1. media_content (media:content) — le plus courant
+    for m in getattr(entry, 'media_content', []):
+        url = m.get('url', '')
+        if url.startswith('http') and any(e in url.lower() for e in ['.jpg', '.jpeg', '.png', '.webp', '.gif', 'image']):
             return url
 
-    # img dans description HTML
-    for tag in ['description', '{http://purl.org/rss/1.0/modules/content/}encoded']:
-        el = item_elem.find(tag)
-        if el is not None and el.text:
-            m = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', el.text)
+    # 2. media_thumbnail (media:thumbnail)
+    for m in getattr(entry, 'media_thumbnail', []):
+        url = m.get('url', '')
+        if url.startswith('http'):
+            return url
+
+    # 3. enclosures (podcasts et sites news)
+    for enc in getattr(entry, 'enclosures', []):
+        url  = enc.get('url', '')
+        typ  = enc.get('type', '')
+        if url.startswith('http') and ('image' in typ or any(e in url.lower() for e in ['.jpg', '.jpeg', '.png', '.webp'])):
+            return url
+
+    # 4. img dans content ou summary (HTML brut)
+    for field in ['content', 'summary']:
+        val = entry.get(field)
+        if isinstance(val, list):
+            val = val[0].get('value', '') if val else ''
+        txt = val or ''
+        if txt:
+            m = re.search(r'<img[^>]+src=["\']([^"\']{10,})["\']', txt, re.IGNORECASE)
             if m:
-                url = m.group(1)
+                url = html.unescape(m.group(1))
                 if url.startswith('http'):
                     return url
+
     return None
 
 
-def _fallback_image(titre):
-    """Choisit une image de secours cohérente avec le sujet."""
+def _fallback_image(titre, article_id=''):
+    """
+    Choisit une image de secours cohérente avec le sujet.
+    Si aucun mot-clé ne correspond, utilise le hash de l'id pour
+    varier les images et éviter que tous les articles aient la même.
+    """
     titre_lower = titre.lower()
     for keyword, url in IMAGES_CONTEXTE.items():
         if keyword in titre_lower:
             return url
-    return IMAGES_CONTEXTE['default']
+    idx = int(hashlib.md5(article_id.encode()).hexdigest(), 16) % len(IMAGES_DEFAUT)
+    return IMAGES_DEFAUT[idx]
 
 
-def _parse_date(date_str):
-    if not date_str:
-        return datetime.now(timezone.utc)
-    try:
-        return parsedate_to_datetime(date_str.strip())
-    except Exception:
-        for fmt in ('%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%dT%H:%M:%S%z'):
-            try:
-                return datetime.strptime(date_str.strip(), fmt)
-            except ValueError:
-                continue
+def _parse_date_struct(time_struct):
+    """Convertit un time.struct_time feedparser en datetime UTC."""
+    if time_struct:
+        try:
+            return datetime.fromtimestamp(mktime(time_struct), tz=timezone.utc)
+        except Exception:
+            pass
     return datetime.now(timezone.utc)
 
 
 def _est_pertinent(titre, description, strict=True):
     """Vérifie si l'article est agricole/alimentaire."""
     texte = (titre + ' ' + description).lower()
-
-    # Exclure immédiatement les sujets hors-champ
     for exclu in KEYWORDS_EXCLUS:
         if exclu in texte:
             return False
-
     if not strict:
-        return True  # Sources déjà spécialisées agriculture
-
-    # Pour les sources généralistes : exiger au moins 1 mot-clé agricole
+        return True
     return any(kw in texte for kw in KEYWORDS_REQUIS)
 
 
 def fetch_rss(source_info):
+    """Parse un flux RSS avec feedparser — gère RSS 1.0/2.0 et Atom."""
     articles = []
     try:
-        resp = requests.get(source_info['url'], headers=HEADERS, timeout=TIMEOUT)
-        resp.raise_for_status()
-        root    = ET.fromstring(resp.content)
-        channel = root.find('channel') or root
-        items   = channel.findall('item')
+        feed = feedparser.parse(
+            source_info['url'],
+            request_headers={'User-Agent': 'AgroSaaNuu/1.0'},
+            timeout=TIMEOUT,
+        )
+        if feed.bozo and not feed.entries:
+            return articles
 
-        for item in items[:30]:
-            titre_el  = item.find('title')
-            desc_el   = item.find('description')
-            link_el   = item.find('link')
-            date_el   = item.find('pubDate') or item.find('{http://purl.org/dc/elements/1.1/}date')
-
-            titre = _clean(titre_el.text  if titre_el is not None  else '')
-            desc  = _clean(desc_el.text   if desc_el  is not None  else '')
-            lien  = (link_el.text or '').strip() if link_el is not None else ''
-            date_str = (date_el.text or '').strip() if date_el is not None else ''
+        for entry in feed.entries[:30]:
+            titre = _clean(entry.get('title', ''))
+            desc  = _clean(entry.get('summary', '') or entry.get('description', ''))
+            lien  = entry.get('link', '').strip()
 
             if not titre or not lien:
                 continue
-
             if not _est_pertinent(titre, desc, strict=source_info.get('strict', True)):
                 continue
 
-            image    = _extract_image(item) or _fallback_image(titre)
-            date_obj = _parse_date(date_str)
+            article_id = hashlib.md5(f"{source_info['source']}:{titre}".encode()).hexdigest()[:12]
+            image      = _extract_image_entry(entry) or _fallback_image(titre, article_id)
+            date_obj   = _parse_date_struct(entry.get('published_parsed') or entry.get('updated_parsed'))
 
             articles.append({
-                'id':           hashlib.md5(f"{source_info['source']}:{titre}".encode()).hexdigest()[:12],
+                'id':           article_id,
                 'titre':        titre,
                 'extrait':      desc[:280] if desc else f'Lire sur {source_info["source"]}',
                 'lien':         lien,

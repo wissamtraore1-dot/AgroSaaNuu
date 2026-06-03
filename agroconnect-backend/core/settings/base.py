@@ -30,6 +30,12 @@ THIRD_PARTY_APPS = [
     'django_filters',
     'drf_spectacular',
     'phonenumber_field',
+    # Tâches asynchrones
+    'django_celery_beat',
+    'django_celery_results',
+    # Stockage cloud
+    'cloudinary',
+    'cloudinary_storage',
 ]
 
 LOCAL_APPS = [
@@ -164,6 +170,62 @@ CELTIS_FRAIS_RATE    = 0.005
 POINTS_PER_1000_FCFA = 1
 
 # ===== FIDÉLITÉ =====
-FCFA_PAR_POINT      = 5    # 1 point = 5 FCFA lors de l'échange
-MIN_POINTS_ECHANGE  = 500  # minimum requis pour échanger
-MAX_POINTS_USAGE_PC = 30   # % max d'une commande payable en points
+FCFA_PAR_POINT      = 5
+MIN_POINTS_ECHANGE  = 500
+MAX_POINTS_USAGE_PC = 30
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# APIS EXTERNES GRATUITS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ── Africa's Talking (SMS — Sandbox gratuit) ──────────────────────────────────
+# Créer un compte sur https://africastalking.com/ → Sandbox gratuit
+# Passer en LIVE quand prêt (acheter des crédits SMS)
+AFRICASTALKING_USERNAME = env('AFRICASTALKING_USERNAME', default='sandbox')
+AFRICASTALKING_API_KEY  = env('AFRICASTALKING_API_KEY',  default='')
+AFRICASTALKING_SANDBOX  = env.bool('AFRICASTALKING_SANDBOX', default=True)
+
+# ── FedaPay (Mobile Money Bénin — MTN, Moov, Celtis) ─────────────────────────
+# Créer un compte sur https://fedapay.com/ → Sandbox gratuit
+# Dashboard → API Keys → Copier la clé sandbox
+FEDAPAY_SECRET_KEY = env('FEDAPAY_SECRET_KEY', default='')
+FEDAPAY_SANDBOX    = env.bool('FEDAPAY_SANDBOX', default=True)
+FEDAPAY_BASE_URL   = 'https://sandbox-api.fedapay.com' if env.bool('FEDAPAY_SANDBOX', default=True) else 'https://api.fedapay.com'
+
+# ── Twilio (SMS fallback — si Africa's Talking indisponible) ──────────────────
+TWILIO_ACCOUNT_SID  = env('TWILIO_ACCOUNT_SID',  default='')
+TWILIO_AUTH_TOKEN   = env('TWILIO_AUTH_TOKEN',   default='')
+TWILIO_PHONE_NUMBER = env('TWILIO_PHONE_NUMBER', default='')
+
+# ── Cloudinary (stockage images — 25 GB gratuit) ─────────────────────────────
+# Créer un compte sur https://cloudinary.com/ → Plan gratuit
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME', default=''),
+    'API_KEY':    env('CLOUDINARY_API_KEY',    default=''),
+    'API_SECRET': env('CLOUDINARY_API_SECRET', default=''),
+}
+# Activer Cloudinary seulement si configuré
+if env('CLOUDINARY_CLOUD_NAME', default=''):
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+# ── Celery (tâches asynchrones — avec Redis) ──────────────────────────────────
+# Redis doit tourner en local : https://redis.io/
+# Windows : utiliser Redis via WSL ou Docker
+CELERY_BROKER_URL        = env('REDIS_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND    = 'django-db'   # Stockage résultats dans Django DB
+CELERY_CACHE_BACKEND     = 'default'
+CELERY_ACCEPT_CONTENT    = ['json']
+CELERY_TASK_SERIALIZER   = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE          = 'Africa/Porto-Novo'
+CELERY_BEAT_SCHEDULER    = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# ── Email (Gmail SMTP — gratuit) ──────────────────────────────────────────────
+# Activer dans Gmail : Paramètres → Sécurité → Mots de passe des applications
+EMAIL_BACKEND       = env('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST          = env('EMAIL_HOST',    default='smtp.gmail.com')
+EMAIL_PORT          = env.int('EMAIL_PORT', default=587)
+EMAIL_USE_TLS       = env.bool('EMAIL_USE_TLS', default=True)
+EMAIL_HOST_USER     = env('EMAIL_HOST_USER',     default='')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL  = env('DEFAULT_FROM_EMAIL',  default='AgroSaaNuu <noreply@agrosaanuu.com>')
