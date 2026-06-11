@@ -7,9 +7,7 @@ import {
   Wheat, Eye, EyeOff, AlertCircle, Loader,
   User, Mail, Phone, Lock, MapPin, Building,
   ChevronRight, ChevronLeft, Check, ArrowLeft, ShoppingCart,
-  Truck,
-  Store,
-  ShieldCheck,
+  Truck, Store, ShieldCheck, XCircle, CheckCircle,
 } from 'lucide-react';
 
 // ===== VILLES DU BÉNIN =====
@@ -278,6 +276,7 @@ export default function Register() {
           <AnimatePresence>
             {error && (
               <motion.div
+                key="register-error"
                 style={styles.errorBox}
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -532,10 +531,10 @@ export default function Register() {
                             ))}
                           </div>
                           <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                            {form.password.length < 4 ? '🔴 Très faible'
-                              : form.password.length < 6 ? '🟠 Faible'
-                              : form.password.length < 8 ? '🟡 Moyen'
-                              : '🟢 Fort'}
+                            {form.password.length < 4 ? 'Très faible'
+                              : form.password.length < 6 ? 'Faible'
+                              : form.password.length < 8 ? 'Moyen'
+                              : 'Fort'}
                           </span>
                         </div>
                       )}
@@ -570,13 +569,13 @@ export default function Register() {
                         </button>
                       </div>
                       {form.confirm && form.confirm !== form.password && (
-                        <span style={{ fontSize: '0.78rem', color: '#ef4444', marginTop: '4px' }}>
-                          ❌ Les mots de passe ne correspondent pas
+                        <span style={{ fontSize: '0.78rem', color: '#ef4444', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <XCircle size={13} /> Les mots de passe ne correspondent pas
                         </span>
                       )}
                       {form.confirm && form.confirm === form.password && (
-                        <span style={{ fontSize: '0.78rem', color: '#22c55e', marginTop: '4px' }}>
-                          ✅ Les mots de passe correspondent
+                        <span style={{ fontSize: '0.78rem', color: '#22c55e', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <CheckCircle size={13} /> Les mots de passe correspondent
                         </span>
                       )}
                     </div>

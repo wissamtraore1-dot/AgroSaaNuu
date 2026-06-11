@@ -89,7 +89,12 @@ class SellerProfile(TimeStampedModel):
     licence_business = models.FileField(upload_to='documents/business_license/', blank=True, null=True)
     kyc_status = models.CharField(max_length=20, choices=KYCStatus.choices, default=KYCStatus.PENDING)
     kyc_verified_at = models.DateTimeField(null=True, blank=True)
-    
+
+    # Vérification admin avant première publication
+    est_verifie = models.BooleanField(default=False)
+    date_demande_verification = models.DateTimeField(null=True, blank=True)
+    motif_rejet = models.TextField(blank=True, default='')
+
     # Bank account for payouts
     compte_bancaire = models.CharField(max_length=50, blank=True, null=True)
     nom_titulaire_compte = models.CharField(max_length=200, blank=True, null=True)
@@ -119,7 +124,12 @@ class TransporterProfile(TimeStampedModel):
     cip_photo = models.ImageField(upload_to='documents/cip/', blank=True, null=True)
     kyc_status = models.CharField(max_length=20, choices=KYCStatus.choices, default=KYCStatus.PENDING)
     kyc_verified_at = models.DateTimeField(null=True, blank=True)
-    
+
+    # Vérification admin avant première mission
+    est_verifie = models.BooleanField(default=False)
+    date_demande_verification = models.DateTimeField(null=True, blank=True)
+    motif_rejet = models.TextField(blank=True, default='')
+
     # Bank account for payouts
     compte_bancaire = models.CharField(max_length=50, blank=True, null=True)
     nom_titulaire_compte = models.CharField(max_length=200, blank=True, null=True)

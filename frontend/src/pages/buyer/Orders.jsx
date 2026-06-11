@@ -1,130 +1,168 @@
-// ============================================================
-// AgroConnect — Buyer Orders
-// src/pages/buyer/Orders.jsx
-// ============================================================
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Badge from '../../Components/ui/Badge';
-import { formatPrice, formatDate } from '../../utils/formatPrice';
-import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../../utils/constants';
+import { motion } from 'framer-motion';
+import { ShoppingCart, Clock, CheckCircle, XCircle, Navigation, Package } from 'lucide-react';
+import DashboardLayout from '../../Components/layout/DashboardLayout';
 import OrderService from '../../services/order.service';
+import { ORDER_STATUS } from '../../utils/constants';
+
+const STATUT_CONFIG = {
+  PAIEMENT_EN_ATTENTE: { label: 'Paiement en attente', bg: '#fef3c7', color: '#d97706', icon: Clock       },
+  PAIEMENT_RECU:       { label: 'Paiement sécurisé',   bg: '#dbeafe', color: '#2563eb', icon: CheckCircle },
+  EN_PREPARATION:      { label: 'En préparation',       bg: '#ede9fe', color: '#7c3aed', icon: Package     },
+  EN_LIVRAISON:        { label: 'En livraison',         bg: '#dbeafe', color: '#2563eb', icon: Navigation  },
+  LIVREE:              { label: 'Livrée',               bg: '#dcfce7', color: '#16a34a', icon: CheckCircle },
+  CONFIRMEE_RECEPTION: { label: 'Réception confirmée',  bg: '#dcfce7', color: '#16a34a', icon: CheckCircle },
+  PAIEMENT_LIBERE:     { label: 'Clôturée',             bg: '#dcfce7', color: '#16a34a', icon: CheckCircle },
+  ANNULEE:             { label: 'Annulée',              bg: '#fee2e2', color: '#dc2626', icon: XCircle     },
+  LITIGE:              { label: 'En litige',            bg: '#fee2e2', color: '#dc2626', icon: XCircle     },
+};
 
 const TABS = [
-  { label: 'All',         value: null },
-  { label: 'Pending',     value: ORDER_STATUS.PENDING },
-  { label: 'In Progress', value: ORDER_STATUS.PREPARING },
-  { label: 'Delivered',   value: ORDER_STATUS.DELIVERED },
-  { label: 'Cancelled',   value: ORDER_STATUS.CANCELLED },
+  { label: 'Toutes',          value: null },
+  { label: 'En attente',      value: ORDER_STATUS.PENDING },
+  { label: 'En cours',        value: ORDER_STATUS.PREPARING },
+  { label: 'Livrées',         value: ORDER_STATUS.DELIVERED },
+  { label: 'Annulées',        value: ORDER_STATUS.CANCELLED },
 ];
 
-const BuyerOrders = () => {
-  const navigate     = useNavigate();
-  const [orders,     setOrders]     = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [activeTab,  setActiveTab]  = useState(null);
+const BLEU    = '#1a5c2a';
+const fadeUp  = { hidden: { y: 20, opacity: 0 }, show: { y: 0, opacity: 1 } };
 
-  useEffect(() => { loadOrders(); }, [activeTab]);
+const formatDate = (d) => d
+  ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
+  : '—';
 
-  const loadOrders = async () => {
+export default function BuyerOrders() {
+  const navigate = useNavigate();
+  const [commandes, setCommandes] = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [tab,       setTab]       = useState(null);
+
+  useEffect(() => { charger(); }, [tab]);
+
+  const charger = async () => {
     try {
       setLoading(true);
-      const data = await OrderService.getBuyerOrders({ status: activeTab });
-      setOrders(data.results || data || []);
+      const data = await OrderService.getBuyerOrders({ status: tab });
+      setCommandes(data.results || data || []);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={styles.wrap}>
-      <h5 style={styles.title}>My Orders</h5>
+    <DashboardLayout role="buyer">
+      <div style={{ maxWidth: '760px', margin: '0 auto' }}>
 
-      {/* Tabs */}
-      <div style={styles.tabs}>
-        {TABS.map(tab => (
-          <button
-            key={String(tab.value)}
-            style={{
-              ...styles.tab,
-              background: activeTab === tab.value ? '#16A34A' : '#F3F4F6',
-              color:      activeTab === tab.value ? '#fff'     : '#374151',
-            }}
-            onClick={() => setActiveTab(tab.value)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+        {/* EN-TÊTE */}
+        <motion.div variants={fadeUp} initial="hidden" animate="show" style={{ marginBottom: '1.5rem' }}>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#1a2e10', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <ShoppingCart size={22} color={BLEU} /><span> Mes commandes</span>
+          </h1>
+          <p style={{ fontSize: '0.85rem', color: '#6b7280', margin: 0 }}>
+            Suivez l'état de toutes vos commandes
+          </p>
+        </motion.div>
 
-      {/* List */}
-      {loading ? (
-        [...Array(4)].map((_, i) => <div key={i} style={styles.skeleton} />)
-      ) : orders.length === 0 ? (
-        <div style={styles.empty}>
-          <div style={{ fontSize: '40px' }}>📦</div>
-          <div style={styles.emptyText}>No orders yet</div>
-          <button style={styles.shopBtn} onClick={() => navigate('/products')}>
-            Start Shopping
-          </button>
+        {/* ONGLETS */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '1.2rem', flexWrap: 'wrap' }}>
+          {TABS.map(t => (
+            <motion.button
+              key={String(t.value)}
+              onClick={() => setTab(t.value)}
+              style={{
+                padding: '0.45rem 1.1rem', borderRadius: '20px', border: '1.5px solid',
+                fontSize: '0.83rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s',
+                background:  tab === t.value ? BLEU   : 'white',
+                color:       tab === t.value ? 'white' : '#374151',
+                borderColor: tab === t.value ? BLEU   : '#e5e7eb',
+              }}
+              whileTap={{ scale: 0.97 }}
+            >
+              {t.label}
+            </motion.button>
+          ))}
         </div>
-      ) : (
-        orders.map(order => (
-          <div
-            key={order.id}
-            style={styles.orderCard}
-            onClick={() => navigate(`/buyer/orders/${order.id}`)}
-          >
-            <div style={styles.orderHeader}>
-              <div>
-                <div style={styles.orderId}>Order #{order.id}</div>
-                <div style={styles.orderDate}>{formatDate(order.created_at)}</div>
-              </div>
-              <Badge variant={ORDER_STATUS_COLORS[order.status]}>
-                {ORDER_STATUS_LABELS[order.status]}
-              </Badge>
-            </div>
 
-            <div style={styles.orderItems}>
-              {order.items?.slice(0, 2).map((item, i) => (
-                <span key={i} style={styles.itemChip}>{item.name}</span>
-              ))}
-              {order.items?.length > 2 && (
-                <span style={styles.itemChip}>+{order.items.length - 2} more</span>
-              )}
-            </div>
-
-            <div style={styles.orderFooter}>
-              <span style={styles.orderTotal}>{formatPrice(order.total)}</span>
-              {(order.status === ORDER_STATUS.SHIPPED ||
-                order.status === ORDER_STATUS.IN_DELIVERY) && (
-                <span style={styles.trackLink}>Track order →</span>
-              )}
-            </div>
+        {/* LISTE */}
+        {loading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {[...Array(4)].map((_, i) => <div key={i} style={{ height: '100px', borderRadius: '14px', background: '#f3f4f6' }} />)}
           </div>
-        ))
-      )}
-    </div>
+
+        ) : commandes.length === 0 ? (
+          <motion.div variants={fadeUp} initial="hidden" animate="show"
+            style={{ background: 'white', borderRadius: '20px', padding: '3rem', textAlign: 'center', border: '1px solid #e5e7eb' }}
+          >
+            <ShoppingCart size={48} color="#e5e7eb" style={{ marginBottom: '1rem' }} />
+            <p style={{ fontSize: '0.9rem', color: '#9ca3af', margin: '0 0 1.2rem' }}>Aucune commande trouvée</p>
+            <motion.button
+              onClick={() => navigate('/buyer/catalog')}
+              style={{ background: `linear-gradient(135deg, #0d2b14, ${BLEU})`, color: 'white', border: 'none', borderRadius: '12px', padding: '0.8rem 2rem', fontWeight: '700', cursor: 'pointer', fontSize: '0.9rem' }}
+              whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+            >
+              Parcourir le catalogue
+            </motion.button>
+          </motion.div>
+
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {commandes.map((c, i) => {
+              const cfg  = STATUT_CONFIG[c.status] || STATUT_CONFIG.PAIEMENT_EN_ATTENTE;
+              const Icon = cfg.icon;
+              const enLivraison = c.status === ORDER_STATUS.SHIPPED || c.status === ORDER_STATUS.IN_DELIVERY;
+
+              return (
+                <motion.div
+                  key={c.id || i}
+                  variants={fadeUp} initial="hidden" animate="show"
+                  transition={{ delay: i * 0.04 }}
+                  onClick={() => navigate(`/buyer/orders/${c.id}`)}
+                  style={{ background: 'white', borderRadius: '14px', padding: '1.1rem 1.2rem', border: '1px solid #e5e7eb', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+                  whileHover={{ y: -2 }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.7rem' }}>
+                    <div>
+                      <span style={{ fontWeight: '700', fontSize: '0.9rem', color: '#1a2e10' }}>Commande #{c.id}</span>
+                      <span style={{ marginLeft: '10px', fontSize: '0.78rem', color: '#9ca3af' }}>{formatDate(c.created_at)}</span>
+                    </div>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: '700', padding: '3px 10px', borderRadius: '20px', background: cfg.bg, color: cfg.color }}>
+                      <Icon size={12} /><span> {cfg.label}</span>
+                    </span>
+                  </div>
+
+                  {c.items?.length > 0 && (
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '0.7rem' }}>
+                      {c.items.slice(0, 2).map((item, j) => (
+                        <span key={j} style={{ background: '#f3f4f6', borderRadius: '20px', padding: '2px 10px', fontSize: '0.75rem', color: '#374151' }}>
+                          {item.nom || item.name}
+                        </span>
+                      ))}
+                      {c.items.length > 2 && (
+                        <span style={{ background: '#f3f4f6', borderRadius: '20px', padding: '2px 10px', fontSize: '0.75rem', color: '#6b7280' }}>
+                          +{c.items.length - 2} de plus
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: '700', fontSize: '0.9rem', color: '#1a5c2a' }}>
+                      {Number(c.total || 0).toLocaleString('fr-FR')} FCFA
+                    </span>
+                    {enLivraison && (
+                      <span style={{ fontSize: '0.78rem', color: BLEU, fontWeight: '600' }}>
+                        Suivre la livraison →
+                      </span>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </DashboardLayout>
   );
-};
-
-const styles = {
-  wrap:       { padding: '24px 16px', maxWidth: '760px', margin: '0 auto' },
-  title:      { fontSize: '22px', fontWeight: 700, color: '#1F2937', marginBottom: '16px' },
-  tabs:       { display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' },
-  tab:        { border: 'none', borderRadius: '20px', padding: '6px 14px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', transition: 'all .2s' },
-  orderCard:  { background: '#fff', borderRadius: '14px', padding: '16px', border: '1.5px solid #E5E7EB', marginBottom: '12px', cursor: 'pointer', transition: 'box-shadow .2s' },
-  orderHeader:{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' },
-  orderId:    { fontSize: '14px', fontWeight: 700, color: '#1F2937' },
-  orderDate:  { fontSize: '12px', color: '#6B7280', marginTop: '2px' },
-  orderItems: { display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' },
-  itemChip:   { background: '#F3F4F6', borderRadius: '20px', padding: '3px 10px', fontSize: '12px', color: '#374151' },
-  orderFooter:{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  orderTotal: { fontSize: '15px', fontWeight: 700, color: '#16A34A' },
-  trackLink:  { fontSize: '13px', color: '#16A34A', fontWeight: 500 },
-  skeleton:   { background: '#E5E7EB', borderRadius: '14px', height: '100px', marginBottom: '12px' },
-  empty:      { textAlign: 'center', padding: '60px 0' },
-  emptyText:  { fontSize: '15px', color: '#6B7280', margin: '12px 0 20px' },
-  shopBtn:    { padding: '12px 28px', background: '#16A34A', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 600, fontSize: '15px', cursor: 'pointer' },
-};
-
-export default BuyerOrders;
+}

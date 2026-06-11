@@ -3,6 +3,7 @@
 // src/components/UserAvatar.jsx
 // ============================================================
 import { useState } from 'react';
+import { Star } from 'lucide-react';
 import './UserAvatar.css';
 
 export default function UserAvatar({ 
@@ -43,8 +44,10 @@ export default function UserAvatar({
             {user?.first_name} {user?.last_name}
           </p>
           {user?.rating && (
-            <div className="user-rating">
-              {'⭐'.repeat(Math.floor(user.rating))}
+            <div className="user-rating" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+              {Array.from({ length: Math.floor(user.rating) }).map((_, i) => (
+                <Star key={i} size={12} color="#F59E0B" fill="#F59E0B" />
+              ))}
               <span className="rating-number">{user.rating.toFixed(1)}</span>
             </div>
           )}

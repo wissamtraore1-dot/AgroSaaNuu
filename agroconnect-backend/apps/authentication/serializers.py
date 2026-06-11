@@ -37,6 +37,8 @@ class InscriptionSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        from django.utils import timezone as tz
+        from apps.notifications.services import notifier_demande_verification
         association = validated_data.pop('association', '')
         validated_data.pop('password_confirm')
         password = validated_data.pop('password')
@@ -45,9 +47,11 @@ class InscriptionSerializer(serializers.ModelSerializer):
         user.status = User.Status.PENDING
         user.save()
         if user.role == User.Role.SELLER:
-            SellerProfile.objects.create(user=user, association=association)
+            SellerProfile.objects.create(user=user, association=association, date_demande_verification=tz.now())
+            notifier_demande_verification(user)
         elif user.role == User.Role.TRANSPORTER:
-            TransporterProfile.objects.create(user=user)
+            TransporterProfile.objects.create(user=user, date_demande_verification=tz.now())
+            notifier_demande_verification(user)
         return user
 
 
@@ -92,11 +96,20 @@ class UserSerializer(serializers.ModelSerializer):
         if obj.role == User.Role.SELLER:
             try:
                 p = obj.seller_profile
+                request = self.context.get('request')
+                def url(f):
+                    if not f: return None
+                    return request.build_absolute_uri(f.url) if request else f.url
                 return {
-                    'association': p.association,
-                    'note_moyenne': str(p.note_moyenne),
-                    'total_ventes': p.total_ventes,
-                    'est_certifie': p.est_certifie,
+                    'association':               p.association,
+                    'note_moyenne':              str(p.note_moyenne),
+                    'total_ventes':              p.total_ventes,
+                    'est_certifie':              p.est_certifie,
+                    'est_verifie':               p.est_verifie,
+                    'date_demande_verification': p.date_demande_verification.isoformat() if p.date_demande_verification else None,
+                    'motif_rejet':               p.motif_rejet,
+                    'cip_photo':                 url(p.cip_photo),
+                    'licence_business':          url(p.licence_business),
                 }
             except Exception:
                 return None
@@ -106,12 +119,20 @@ class UserSerializer(serializers.ModelSerializer):
         if obj.role == User.Role.TRANSPORTER:
             try:
                 p = obj.transporter_profile
+                request = self.context.get('request')
+                def url(f):
+                    if not f: return None
+                    return request.build_absolute_uri(f.url) if request else f.url
                 return {
-                    'note_moyenne':   str(p.note_moyenne),
-                    'total_missions': p.total_missions,
-                    'est_disponible': p.est_disponible,
-                    'zones':          p.zones,
-                    'est_certifie':   p.est_certifie,
+                    'note_moyenne':              str(p.note_moyenne),
+                    'total_missions':            p.total_missions,
+                    'est_disponible':            p.est_disponible,
+                    'zones':                     p.zones,
+                    'est_certifie':              p.est_certifie,
+                    'est_verifie':               p.est_verifie,
+                    'date_demande_verification': p.date_demande_verification.isoformat() if p.date_demande_verification else None,
+                    'motif_rejet':               p.motif_rejet,
+                    'cip_photo':                 url(p.cip_photo),
                 }
             except Exception:
                 return None

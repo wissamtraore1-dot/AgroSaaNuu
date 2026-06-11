@@ -3,6 +3,7 @@
 // src/components/AvatarUpload.jsx
 // ============================================================
 import { useState, useRef } from 'react';
+import { Camera, Loader, FolderOpen } from 'lucide-react';
 import AuthService from '../services/auth.service';
 import './AvatarUpload.css';
 
@@ -73,7 +74,7 @@ export default function AvatarUpload({ currentAvatar, onUploadSuccess }) {
           <img src={preview} alt="Avatar preview" className="preview-image" />
         ) : (
           <div className="preview-placeholder">
-            <span>📷</span>
+            <Camera size={32} color="#9CA3AF" />
             <p>Pas d'avatar</p>
           </div>
         )}
@@ -94,7 +95,10 @@ export default function AvatarUpload({ currentAvatar, onUploadSuccess }) {
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
         >
-          {uploading ? '⏳ Upload...' : '📁 Changer l\'avatar'}
+          {uploading
+            ? <><Loader size={14} style={{ marginRight: 4, verticalAlign: 'middle' }} /> Upload...</>
+            : <><FolderOpen size={14} style={{ marginRight: 4, verticalAlign: 'middle' }} /> Changer l'avatar</>
+          }
         </button>
 
         {error && <p className="error-text">{error}</p>}

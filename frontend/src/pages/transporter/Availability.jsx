@@ -1,124 +1,228 @@
-// ============================================================
-// AgroConnect — Transporter Availability
-// src/pages/transporter/Availability.jsx
-// ============================================================
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MapPin, CheckCircle, Save, Loader } from 'lucide-react';
+import DashboardLayout from '../../Components/layout/DashboardLayout';
 import TransportService from '../../services/transport.service';
-import { useNotificationContext } from '../../context/NotificationContext';
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const JOURS = [
+  { id: 'lundi',    label: 'Lun' },
+  { id: 'mardi',    label: 'Mar' },
+  { id: 'mercredi', label: 'Mer' },
+  { id: 'jeudi',    label: 'Jeu' },
+  { id: 'vendredi', label: 'Ven' },
+  { id: 'samedi',   label: 'Sam' },
+  { id: 'dimanche', label: 'Dim' },
+];
 
-const Availability = () => {
-  const { success, error: notifyError } = useNotificationContext();
-  const [availability, setAvailability] = useState({ days: [], regions: '', is_available: true });
-  const [loading,      setLoading]      = useState(true);
-  const [saving,       setSaving]       = useState(false);
+const VILLES = [
+  'Cotonou','Porto-Novo','Abomey-Calavi','Ouidah','Bohicon',
+  'Abomey','Lokossa','Parakou','Natitingou','Djougou',
+  'Kandi','Nikki','Banikoara','Malanville','Savè',
+];
+
+const ORANGE = '#d97706';
+const fadeUp = { hidden: { y: 20, opacity: 0 }, show: { y: 0, opacity: 1 } };
+
+export default function Availability() {
+  const [disponible, setDisponible] = useState(false);
+  const [joursActifs, setJoursActifs] = useState([]);
+  const [villesActives, setVillesActives] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving,  setSaving]  = useState(false);
+  const [saved,   setSaved]   = useState(false);
+  const [erreur,  setErreur]  = useState('');
 
   useEffect(() => {
     TransportService.getAvailability()
-      .then(data => setAvailability(data))
+      .then(data => {
+        setDisponible(data.est_disponible ?? false);
+        setJoursActifs(data.jours || []);
+        setVillesActives(data.villes || []);
+      })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  const toggleDay = (day) => {
-    setAvailability(prev => ({
-      ...prev,
-      days: prev.days.includes(day)
-        ? prev.days.filter(d => d !== day)
-        : [...prev.days, day],
-    }));
+  const toggleJour = (id) => {
+    setJoursActifs(prev =>
+      prev.includes(id) ? prev.filter(j => j !== id) : [...prev, id]
+    );
+  };
+
+  const toggleVille = (ville) => {
+    setVillesActives(prev =>
+      prev.includes(ville) ? prev.filter(v => v !== ville) : [...prev, ville]
+    );
+  };
+
+  const handleToggleDispo = async () => {
+    const newVal = !disponible;
+    setDisponible(newVal);
+    try {
+      await TransportService.setAvailability(newVal);
+    } catch {
+      setDisponible(!newVal);
+    }
   };
 
   const handleSave = async () => {
+    setSaving(true); setErreur('');
     try {
-      setSaving(true);
-      await TransportService.setAvailability(availability);
-      success('Availability updated!');
-    } catch { notifyError('Failed to update availability'); }
-    finally { setSaving(false); }
+      await TransportService.setAvailability(disponible);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch {
+      setErreur('Impossible de sauvegarder. Réessayez.');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#6B7280' }}>Loading...</div>;
+  if (loading) {
+    return (
+      <DashboardLayout role="transporter">
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+          <Loader size={28} color={ORANGE} />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
-    <div style={styles.wrap}>
-      <h5 style={styles.title}>My Availability</h5>
+    <DashboardLayout role="transporter">
+      <div style={{ maxWidth: '620px', margin: '0 auto' }}>
 
-      <div style={styles.card}>
-        {/* Active toggle */}
-        <div style={styles.toggleRow}>
+        {/* EN-TÊTE */}
+        <motion.div variants={fadeUp} initial="hidden" animate="show" style={{ marginBottom: '1.5rem' }}>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#1a2e10', margin: 0 }}>
+            Disponibilité
+          </h1>
+          <p style={{ fontSize: '0.85rem', color: '#6b7280', margin: 0 }}>
+            Gérez vos créneaux et zones de disponibilité
+          </p>
+        </motion.div>
+
+        {/* STATUT PRINCIPAL */}
+        <motion.div variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.05 }}
+          style={{ background: 'white', borderRadius: '16px', padding: '1.4rem', border: '1px solid #e5e7eb', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}
+        >
           <div>
-            <div style={styles.toggleLabel}>Available for missions</div>
-            <div style={styles.toggleSub}>Turn off to pause new mission requests</div>
+            <p style={{ margin: 0, fontWeight: '700', fontSize: '1rem', color: '#1a2e10' }}>
+              Disponible pour les missions
+            </p>
+            <p style={{ margin: 0, fontSize: '0.82rem', color: '#6b7280', marginTop: '3px' }}>
+              Désactivez pour suspendre les nouvelles demandes
+            </p>
           </div>
-          <div
-            style={{
-              ...styles.toggle,
-              background: availability.is_available ? '#16A34A' : '#D1D5DB',
-            }}
-            onClick={() => setAvailability(prev => ({ ...prev, is_available: !prev.is_available }))}
-          >
-            <div style={{
-              ...styles.toggleThumb,
-              transform: availability.is_available ? 'translateX(22px)' : 'translateX(0)',
-            }} />
-          </div>
-        </div>
-
-        {/* Days */}
-        <div style={styles.sectionTitle}>Available days</div>
-        <div style={styles.daysGrid}>
-          {DAYS.map(day => (
-            <div
-              key={day}
-              style={{
-                ...styles.dayChip,
-                background: availability.days.includes(day) ? '#16A34A' : '#F3F4F6',
-                color:      availability.days.includes(day) ? '#fff'     : '#374151',
-              }}
-              onClick={() => toggleDay(day)}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: '700', color: disponible ? '#16a34a' : '#9ca3af' }}>
+              {disponible ? 'Actif' : 'Inactif'}
+            </span>
+            <motion.div
+              style={{ width: '50px', height: '26px', borderRadius: '13px', background: disponible ? '#1a5c2a' : '#d1d5db', position: 'relative', cursor: 'pointer', flexShrink: 0 }}
+              onClick={handleToggleDispo}
+              whileTap={{ scale: 0.95 }}
             >
-              {day.slice(0, 3)}
-            </div>
-          ))}
-        </div>
+              <motion.div
+                style={{ position: 'absolute', top: '3px', width: '20px', height: '20px', borderRadius: '50%', background: 'white', boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }}
+                animate={{ x: disponible ? 27 : 3 }}
+                transition={{ duration: 0.2 }}
+              />
+            </motion.div>
+          </div>
+        </motion.div>
 
-        {/* Region */}
-        <div style={styles.sectionTitle}>Operating regions</div>
-        <textarea
-          value={availability.regions}
-          onChange={e => setAvailability(prev => ({ ...prev, regions: e.target.value }))}
-          placeholder="e.g. Cotonou, Abomey-Calavi, Porto-Novo..."
-          rows={3}
-          style={styles.textarea}
-        />
+        {/* JOURS */}
+        <motion.div variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.1 }}
+          style={{ background: 'white', borderRadius: '16px', padding: '1.4rem', border: '1px solid #e5e7eb', marginBottom: '1rem' }}
+        >
+          <h3 style={{ fontWeight: '700', fontSize: '0.95rem', color: '#1a2e10', marginBottom: '1rem' }}>
+            Jours disponibles
+          </h3>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {JOURS.map(j => {
+              const actif = joursActifs.includes(j.id);
+              return (
+                <motion.button
+                  key={j.id}
+                  onClick={() => toggleJour(j.id)}
+                  style={{ width: '52px', height: '52px', borderRadius: '12px', border: `2px solid ${actif ? ORANGE : '#e5e7eb'}`, background: actif ? '#fffbeb' : 'white', color: actif ? ORANGE : '#6b7280', fontWeight: '700', fontSize: '0.82rem', cursor: 'pointer', transition: 'all 0.2s' }}
+                  whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }}
+                >
+                  {j.label}
+                </motion.button>
+              );
+            })}
+          </div>
+        </motion.div>
 
-        <button
-          style={{ ...styles.saveBtn, opacity: saving ? 0.7 : 1 }}
+        {/* VILLES */}
+        <motion.div variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.15 }}
+          style={{ background: 'white', borderRadius: '16px', padding: '1.4rem', border: '1px solid #e5e7eb', marginBottom: '1.5rem' }}
+        >
+          <h3 style={{ fontWeight: '700', fontSize: '0.95rem', color: '#1a2e10', marginBottom: '0.4rem' }}>
+            Zones d'intervention
+          </h3>
+          <p style={{ fontSize: '0.82rem', color: '#6b7280', marginBottom: '1rem' }}>
+            Sélectionnez les villes où vous êtes disponible
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '1rem' }}>
+            {VILLES.map(ville => {
+              const actif = villesActives.includes(ville);
+              return (
+                <motion.button
+                  key={ville}
+                  onClick={() => toggleVille(ville)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0.45rem 0.9rem', borderRadius: '20px', border: `1.5px solid ${actif ? ORANGE : '#e5e7eb'}`, background: actif ? ORANGE : 'white', color: actif ? 'white' : '#374151', fontSize: '0.82rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
+                  whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}
+                >
+                  <MapPin size={12} /> {ville}
+                  {actif && <CheckCircle size={12} />}
+                </motion.button>
+              );
+            })}
+          </div>
+          {villesActives.length > 0 && (
+            <p style={{ fontSize: '0.78rem', color: ORANGE, fontWeight: '500', margin: 0 }}>
+              {villesActives.length} ville(s) sélectionnée(s)
+            </p>
+          )}
+        </motion.div>
+
+        {/* MESSAGES */}
+        {erreur && (
+          <p style={{ color: '#dc2626', fontSize: '0.84rem', marginBottom: '0.8rem' }}>{erreur}</p>
+        )}
+        {saved && (
+          <p style={{ color: '#16a34a', fontSize: '0.84rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <CheckCircle size={15} /> Disponibilité sauvegardée !
+          </p>
+        )}
+
+        {/* BOUTON SAVE */}
+        <motion.button
           onClick={handleSave}
           disabled={saving}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: `linear-gradient(135deg, ${ORANGE}, #f59e0b)`, color: 'white', border: 'none', borderRadius: '14px', padding: '0.9rem', fontWeight: '700', fontSize: '0.95rem', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.8 : 1, boxShadow: '0 4px 14px rgba(217,119,6,0.3)' }}
+          whileHover={{ scale: saving ? 1 : 1.02 }} whileTap={{ scale: saving ? 1 : 0.98 }}
         >
-          {saving ? 'Saving...' : 'Save Availability'}
-        </button>
+          <AnimatePresence mode="wait" initial={false}>
+            {saving ? (
+              <motion.span key="loading" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div>
+                <span> Sauvegarde…</span>
+              </motion.span>
+            ) : (
+              <motion.span key="idle" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                <Save size={16} /><span> Sauvegarder ma disponibilité</span>
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </motion.button>
+
       </div>
-    </div>
+    </DashboardLayout>
   );
-};
-
-const styles = {
-  wrap:         { padding: '24px 16px', maxWidth: '580px', margin: '0 auto' },
-  title:        { fontSize: '22px', fontWeight: 700, color: '#1F2937', marginBottom: '20px' },
-  card:         { background: '#fff', borderRadius: '16px', padding: '24px', border: '1.5px solid #E5E7EB' },
-  toggleRow:    { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
-  toggleLabel:  { fontSize: '14px', fontWeight: 600, color: '#1F2937' },
-  toggleSub:    { fontSize: '12px', color: '#6B7280', marginTop: '2px' },
-  toggle:       { width: '46px', height: '26px', borderRadius: '20px', position: 'relative', cursor: 'pointer', transition: 'background .2s', flexShrink: 0 },
-  toggleThumb:  { position: 'absolute', top: '3px', left: '3px', width: '20px', height: '20px', borderRadius: '50%', background: '#fff', transition: 'transform .2s' },
-  sectionTitle: { fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '10px' },
-  daysGrid:     { display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' },
-  dayChip:      { padding: '8px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', transition: 'all .2s' },
-  textarea:     { width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1.5px solid #D1D5DB', fontSize: '14px', outline: 'none', boxSizing: 'border-box', resize: 'vertical', marginBottom: '20px' },
-  saveBtn:      { width: '100%', padding: '13px', background: '#16A34A', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '15px', cursor: 'pointer' },
-};
-
-export default Availability;
+}

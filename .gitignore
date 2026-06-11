@@ -59,6 +59,10 @@ celerybeat-schedule.db
 celerybeat.pid
 celerybeat.db
 
+# Fichiers PID (Gunicorn, uWSGI, etc.)
+*.pid
+gunicorn.pid
+
 # Redis
 dump.rdb
 redis-data/
@@ -79,10 +83,22 @@ credentials/
 # Pyenv / Python version
 .python-version
 
+# direnv
+.envrc
+
+# Fichiers de traduction compilés Django
+*.mo
+
 # mypy / type checking
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# rope (refactoring Python)
+.ropeproject/
+
+# Profiling
+*.prof
 
 # ── Node / React / Vite ───────────────────────────────────────────────────────
 node_modules/
@@ -124,6 +140,7 @@ lerna-debug.log*
 Thumbs.db
 ehthumbs.db
 desktop.ini
+__MACOSX/
 
 # ── Divers ─────────────────────────────────────────────────────────────────────
 *.local

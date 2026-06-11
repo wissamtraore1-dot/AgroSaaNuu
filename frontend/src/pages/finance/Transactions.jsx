@@ -3,6 +3,7 @@
 // src/pages/finance/Transactions.jsx
 // ============================================================
 import React, { useEffect, useState } from 'react';
+import { ClipboardList } from 'lucide-react';
 import TransactionItem from '../../components/finance/TransactionItem';
 import useWallet from '../../hooks/useWallet';
 import { TRANSACTION_TYPE, TRANSACTION_TYPE_LABELS } from '../../utils/constants';
@@ -80,7 +81,7 @@ const Transactions = () => {
           ))
         ) : transactions.length === 0 ? (
           <div style={styles.empty}>
-            <div style={{ fontSize: '40px' }}>📋</div>
+            <div style={{ display: 'flex', justifyContent: 'center' }}><ClipboardList size={40} color="#d1d5db" /></div>
             <div style={styles.emptyText}>No transactions yet</div>
           </div>
         ) : (

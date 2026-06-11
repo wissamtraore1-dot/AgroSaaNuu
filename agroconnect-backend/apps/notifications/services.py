@@ -106,6 +106,107 @@ def notifier_livraison_effectuee(mission):
     )
 
 
+def notifier_litige_signale(litige):
+    """Notifie le vendeur + admin quand un problème est signalé."""
+    commande = litige.commande
+    envoyer_notification(
+        user=commande.vendeur,
+        titre='Problème signalé sur votre commande',
+        message=(
+            f'L\'acheteur {litige.plaignant.nom_complet} a signalé un problème '
+            f'sur la commande {commande.reference}. Notre équipe va examiner la situation.'
+        ),
+        type_notif=Notification.Type.COMMANDE,
+        lien=f'/seller/orders/{commande.id}',
+        data={'litige_id': str(litige.id)},
+    )
+    # Notifier tous les admins
+    from apps.authentication.models import User
+    for admin in User.objects.filter(is_staff=True):
+        envoyer_notification(
+            user=admin,
+            titre=f'Nouveau problème — Commande {commande.reference}',
+            message=(
+                f'{litige.plaignant.nom_complet} a signalé un problème avec '
+                f'{commande.vendeur.nom_complet} : {litige.description[:120]}'
+            ),
+            type_notif=Notification.Type.COMMANDE,
+            lien=f'/admin/orders/litigecommande/{litige.id}/change/',
+            data={'litige_id': str(litige.id)},
+        )
+
+
+def notifier_litige_resolu(litige):
+    """Notifie acheteur et vendeur quand un problème est résolu par l'admin."""
+    commande = litige.commande
+    label = 'résolu' if litige.statut == 'RESOLU' else 'fermé'
+    for user, lien in [
+        (commande.acheteur, f'/buyer/problemes'),
+        (commande.vendeur,  f'/seller/orders/{commande.id}'),
+    ]:
+        envoyer_notification(
+            user=user,
+            titre=f'Problème {label} — Commande {commande.reference}',
+            message=f'Le problème sur la commande {commande.reference} a été {label}. {litige.resolution[:120]}',
+            type_notif=Notification.Type.COMMANDE,
+            lien=lien,
+            data={'litige_id': str(litige.id)},
+        )
+
+
+def notifier_demande_verification(user):
+    """Notifie tous les admins qu'un vendeur/transporteur demande vérification."""
+    from apps.authentication.models import User as UserModel
+    role_label = 'Vendeur' if user.role == 'SELLER' else 'Transporteur'
+    lien = '/admin/verifications'
+    for admin in UserModel.objects.filter(is_staff=True):
+        envoyer_notification(
+            user=admin,
+            titre=f'Demande de vérification — {role_label}',
+            message=(
+                f'{user.nom_complet} ({user.telephone or user.email}) '
+                f'demande à être vérifié(e) avant sa première '
+                f'{"publication de produit" if user.role == "SELLER" else "mission de transport"}.'
+            ),
+            type_notif=Notification.Type.SYSTEME,
+            lien=lien,
+            data={'user_id': str(user.id), 'role': user.role},
+        )
+
+
+def notifier_verification_approuvee(user):
+    """Notifie l'utilisateur que son compte est vérifié et validé."""
+    role_label = 'publier vos produits' if user.role == 'SELLER' else 'accepter des missions'
+    lien = '/seller/dashboard' if user.role == 'SELLER' else '/transporter/dashboard'
+    envoyer_notification(
+        user=user,
+        titre='Compte vérifié — Vous êtes prêt(e) !',
+        message=(
+            f'Félicitations ! Votre compte a été vérifié par l\'équipe AgroSaaNuu. '
+            f'Vous pouvez maintenant {role_label} librement.'
+        ),
+        type_notif=Notification.Type.SYSTEME,
+        lien=lien,
+    )
+
+
+def notifier_verification_rejetee(user, motif=''):
+    """Notifie l'utilisateur que sa demande de vérification a été rejetée."""
+    lien = '/seller/completer-profil' if user.role == 'SELLER' else '/transporter/completer-profil'
+    motif_txt = f' Motif : {motif}' if motif else ''
+    envoyer_notification(
+        user=user,
+        titre='Vérification refusée',
+        message=(
+            f'Votre demande de vérification a été refusée par l\'équipe AgroSaaNuu.{motif_txt} '
+            f'Veuillez compléter vos documents et soumettre une nouvelle demande.'
+        ),
+        type_notif=Notification.Type.SYSTEME,
+        lien=lien,
+        data={'motif': motif},
+    )
+
+
 def notifier_nouveau_message(message):
     """Notify all participants of a new message (except sender)."""
     commande      = message.commande

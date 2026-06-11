@@ -3,12 +3,13 @@
 // src/components/loyalty/PointsHistory.jsx
 // ============================================================
 import React from 'react';
+import { Star, Coins, Gift } from 'lucide-react';
 import { formatPoints, formatDate } from '../../utils/formatPrice';
 
 const TYPE_CONFIG = {
-  points_credit: { icon: '⭐', label: 'Points earned',    color: '#3B6D11', sign: '+' },
-  points_redeem: { icon: '💰', label: 'Points converted', color: '#185FA5', sign: '-' },
-  bonus:         { icon: '🎁', label: 'Bonus points',     color: '#D97706', sign: '+' },
+  points_credit: { Icon: Star,  label: 'Points earned',    color: '#3B6D11', sign: '+', iconColor: '#F59E0B' },
+  points_redeem: { Icon: Coins, label: 'Points converted', color: '#185FA5', sign: '-', iconColor: '#185FA5' },
+  bonus:         { Icon: Gift,  label: 'Bonus points',     color: '#D97706', sign: '+', iconColor: '#D97706' },
 };
 
 const PointsHistory = ({ history = [], loading = false, onLoadMore, hasMore = false }) => {
@@ -32,7 +33,7 @@ const PointsHistory = ({ history = [], loading = false, onLoadMore, hasMore = fa
   if (!loading && history.length === 0) {
     return (
       <div style={styles.empty}>
-        <div style={{ fontSize: '36px' }}>⭐</div>
+        <div style={{ display: 'flex', justifyContent: 'center' }}><Star size={36} color="#F59E0B" /></div>
         <div style={styles.emptyText}>No points history yet</div>
         <div style={styles.emptySubtext}>
           Earn points by making purchases
@@ -46,12 +47,13 @@ const PointsHistory = ({ history = [], loading = false, onLoadMore, hasMore = fa
       {history.map((item, i) => {
         const cfg = TYPE_CONFIG[item.type] || TYPE_CONFIG.points_credit;
         const isEarn = cfg.sign === '+';
+        const CfgIcon = cfg.Icon;
 
         return (
           <div key={item.id || i} style={styles.row}>
             {/* Icon */}
             <div style={styles.iconWrap}>
-              <span style={{ fontSize: '18px' }}>{cfg.icon}</span>
+              <CfgIcon size={18} color={cfg.iconColor} />
             </div>
 
             {/* Info */}

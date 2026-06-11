@@ -1,307 +1,333 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   AlertCircle, ArrowLeft, CheckCircle, ChevronRight,
-  Loader, Lock, MapPin, Shield, ShoppingCart, Smartphone, Truck,
+  Loader, Lock, MapPin, Package, Shield, ShoppingBag, Smartphone, Truck,
 } from 'lucide-react';
 import DashboardLayout from '../../Components/layout/DashboardLayout';
-import ProductService from '../../services/product.service';
 import OrderService from '../../services/order.service';
-import CompleteProfileModal, { isProfileComplete } from '../../Components/common/CompleteProfileModal';
+import CartService from '../../services/cart.service';
 import { useAuth } from '../../context/AuthContext';
 
-const modesPaiement = [
-  { id: 'MTN', label: 'MTN Mobile Money', frais: 1 },
-  { id: 'MOOV', label: 'Moov Money', frais: 1 },
-  { id: 'CELTIS', label: 'Celtis Cash', frais: 0.5 },
-  { id: 'BANK', label: 'Virement bancaire', frais: 0 },
+const GREEN = '#1a5c2a';
+
+const MODES_PAIEMENT = [
+  { id: 'MTN',    label: 'MTN Mobile Money',  frais: 1   },
+  { id: 'MOOV',   label: 'Moov Money',         frais: 1   },
+  { id: 'CELTIS', label: 'Celtis Cash',         frais: 0.5 },
+  { id: 'BANK',   label: 'Virement bancaire',   frais: 0   },
 ];
 
-const normalizeProduct = (data) => {
-  const product = data?.produit || data;
-  const mainImage = product?.images?.find((img) => img.est_principale)?.image || product?.images?.[0]?.image;
-  return product ? {
-    id: product.id,
-    nom: product.nom,
-    vendeur: product.vendeur_nom || 'Vendeur',
-    localisation: product.ville || product.localisation || 'Benin',
-    prix: Number(product.prix || 0),
-    quantiteDisponible: Number(product.quantite || 0),
-    image: mainImage || 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=240&q=80',
-  } : null;
-};
+const FRAIS_LIVRAISON_PAR_COMMANDE = 5000;
 
 export default function Checkout() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const [searchParams] = useSearchParams();
-  const productId = searchParams.get('product');
-  const [showProfileModal, setShowProfileModal] = useState(!isProfileComplete(user));
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  const { user }  = useAuth();
 
-  const [product, setProduct] = useState(null);
-  const [step, setStep] = useState(1);
-  const [modeSelect, setModeSelect] = useState('MTN');
-  const [adresse, setAdresse] = useState('');
-  const [telephone, setTelephone] = useState('');
-  const [note, setNote] = useState('');
-  const [quantite, setQuantite] = useState(1);
-  const [createdOrder, setCreatedOrder] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [pageLoading, setPageLoading] = useState(true);
-  const [error, setError] = useState('');
+  /* Lignes passées depuis le panier */
+  const lignes = location.state?.lignes || [];
 
+  const [step,       setStep]       = useState(1); // 1=formulaire 2=traitement 3=succès
+  const [mode,       setMode]       = useState('MTN');
+  const [adresse,    setAdresse]    = useState('');
+  const [telephone,  setTelephone]  = useState(user?.telephone || '');
+  const [note,       setNote]       = useState('');
+  const [erreur,     setErreur]     = useState('');
+  const [commandes,  setCommandes]  = useState([]); // résultats après création
+
+  /* Calculs */
+  const modeActif      = MODES_PAIEMENT.find(m => m.id === mode);
+  const totalProduits  = lignes.reduce((s, l) => s + Number(l.sous_total || 0), 0);
+  const fraisLivraison = FRAIS_LIVRAISON_PAR_COMMANDE * lignes.length;
+  const fraisPaiement  = Math.round(totalProduits * (modeActif?.frais || 0) / 100);
+  const totalEstime    = totalProduits + fraisLivraison + fraisPaiement;
+
+  /* Redirection si on arrive sans lignes */
   useEffect(() => {
-    let active = true;
+    if (lignes.length === 0) navigate('/buyer/cart', { replace: true });
+  }, []); // eslint-disable-line
 
-    const loadProduct = async () => {
-      if (!productId) {
-        setError('Aucun produit selectionne.');
-        setPageLoading(false);
-        return;
-      }
+  /* ── Création des commandes ── */
+  const handleCommander = async () => {
+    if (!adresse.trim())    return setErreur('Veuillez saisir votre adresse de livraison.');
+    if (!telephone.trim())  return setErreur('Veuillez saisir votre numéro de téléphone.');
+    setErreur('');
+    setStep(2);
 
+    const creees = [];
+    for (const ligne of lignes) {
       try {
-        setPageLoading(true);
-        const data = await ProductService.detail(productId);
-        if (active) setProduct(normalizeProduct(data));
-      } catch {
-        if (active) setError('Impossible de charger ce produit.');
-      } finally {
-        if (active) setPageLoading(false);
+        const res = await OrderService.passerCommande({
+          produit_id:          ligne.produit_id,
+          quantite:            ligne.quantite,
+          mode_paiement:       mode,
+          adresse_livraison:   adresse.trim(),
+          telephone_livraison: telephone.trim(),
+          note_acheteur:       note.trim(),
+        });
+        creees.push({ ...res.commande, produit_nom: ligne.produit_nom, ok: true });
+      } catch (err) {
+        const msg = err.response?.data?.errors
+          ? Object.values(err.response.data.errors).flat().join(' ')
+          : err.response?.data?.message || 'Erreur inconnue';
+        creees.push({ produit_nom: ligne.produit_nom, ok: false, erreur: msg });
       }
-    };
-
-    loadProduct();
-    return () => {
-      active = false;
-    };
-  }, [productId]);
-
-  const modeActif = modesPaiement.find((m) => m.id === modeSelect);
-  const prixProduit = product ? product.prix * quantite : 0;
-  const fraisPaiement = modeActif ? Math.round(prixProduit * modeActif.frais / 100) : 0;
-  const fraisLivraison = 5000;
-  const total = prixProduit + fraisPaiement + fraisLivraison;
-
-  const canOrder = useMemo(
-    () => product && quantite > 0 && quantite <= product.quantiteDisponible,
-    [product, quantite],
-  );
-
-  const handleCreateOrder = async () => {
-    if (!adresse.trim()) return setError('Veuillez entrer votre adresse de livraison.');
-    if (!telephone.trim()) return setError('Veuillez entrer votre numero de telephone.');
-    if (!canOrder) return setError('Quantite indisponible.');
-
-    try {
-      setLoading(true);
-      setError('');
-      const orderData = await OrderService.passerCommande({
-        produit_id: product.id,
-        quantite,
-        mode_paiement: modeSelect,
-        adresse_livraison: adresse,
-        telephone_livraison: telephone,
-        note_acheteur: note,
-      });
-      setCreatedOrder(orderData.commande);
-      setStep(2);
-    } catch (err) {
-      const apiErrors = err.response?.data?.errors;
-      setError(apiErrors ? Object.values(apiErrors).flat().join(' ') : err.response?.data?.message || 'Commande impossible.');
-    } finally {
-      setLoading(false);
     }
+
+    setCommandes(creees);
+    /* Vider le panier si toutes les commandes ont réussi */
+    if (creees.every(c => c.ok)) {
+      try { await CartService.vider(); } catch { /* silencieux */ }
+    }
+    setStep(3);
   };
 
-  const handlePay = async () => {
-    if (!createdOrder) return;
-
-    try {
-      setLoading(true);
-      setError('');
-      const paymentData = await OrderService.initiatePaiement({
-        commande_id: createdOrder.id,
-        mode_paiement: modeSelect,
-      });
-      await OrderService.confirmPaiement({
-        paiement_id: paymentData.paiement.id,
-        transaction_id: `DEV-${Date.now()}`,
-      });
-      setStep(3);
-    } catch (err) {
-      const apiErrors = err.response?.data?.errors;
-      setError(apiErrors ? Object.values(apiErrors).flat().join(' ') : err.response?.data?.message || 'Paiement impossible.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  /* ── RENDU ── */
+  if (lignes.length === 0) return null;
 
   return (
     <DashboardLayout role="buyer">
-      {/* Modal de complétion de profil si CIP / nom manquant */}
-      {showProfileModal && (
-        <CompleteProfileModal
-          onComplete={() => setShowProfileModal(false)}
-          onClose={() => navigate(-1)}
-        />
-      )}
-      <div style={styles.page}>
-        <button style={styles.backBtn} onClick={() => navigate(-1)}>
-          <ArrowLeft size={16} /> Retour
+      <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+
+        {/* Retour */}
+        <button
+          onClick={() => navigate('/buyer/cart')}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '7px 14px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', color: '#374151', marginBottom: '1.2rem' }}
+        >
+          <ArrowLeft size={15} /> Retour au panier
         </button>
 
-        <div style={styles.header}>
-          <h1 style={styles.title}>Finaliser ma commande</h1>
-          <p style={styles.subtitle}>Le paiement est bloque en sequestre jusqu'a confirmation de livraison.</p>
-        </div>
+        <h1 style={{ fontSize: '1.3rem', fontWeight: '800', color: '#1a2e10', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <ShoppingBag size={20} color={GREEN} /> Finaliser la commande
+        </h1>
 
-        {pageLoading ? (
-          <div style={styles.card}><Loader size={18} /> Chargement du produit...</div>
-        ) : error && !product ? (
-          <div style={styles.errorBox}><AlertCircle size={16} /> {error}</div>
-        ) : (
-          <div className="row g-4">
-            <div className="col-12 col-lg-8">
-              {error && <div style={styles.errorBox}><AlertCircle size={16} /> {error}</div>}
+        {/* ══════════ ÉTAPE 1 : FORMULAIRE ══════════ */}
+        {step === 1 && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '20px', alignItems: 'start' }}>
 
-              {step === 1 && (
-                <div style={styles.card}>
-                  <h2 style={styles.cardTitle}><Truck size={18} /> Livraison</h2>
-                  <label style={styles.label}>Quantite</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max={product.quantiteDisponible || 1}
-                    value={quantite}
-                    onChange={(event) => setQuantite(Number(event.target.value))}
-                    style={styles.input}
-                  />
+            {/* Formulaire gauche */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-                  <label style={styles.label}>Adresse de livraison</label>
-                  <textarea
-                    value={adresse}
-                    onChange={(event) => setAdresse(event.target.value)}
-                    rows={3}
-                    style={styles.input}
-                    placeholder="Ville, quartier, repere..."
-                  />
-
-                  <label style={styles.label}>Telephone de contact</label>
-                  <input
-                    value={telephone}
-                    onChange={(event) => setTelephone(event.target.value)}
-                    style={styles.input}
-                    placeholder="+229 XX XX XX XX"
-                  />
-
-                  <label style={styles.label}>Note au vendeur</label>
-                  <textarea
-                    value={note}
-                    onChange={(event) => setNote(event.target.value)}
-                    rows={2}
-                    style={styles.input}
-                    placeholder="Instructions utiles pour la preparation..."
-                  />
-
-                  <div style={styles.infoBox}>
-                    <Shield size={18} />
-                    Votre argent reste protege jusqu'a la reception confirmee.
-                  </div>
-
-                  <button style={styles.primaryBtn} onClick={handleCreateOrder} disabled={loading}>
-                    {loading ? <Loader size={18} /> : <>Creer la commande <ChevronRight size={16} /></>}
-                  </button>
+              {erreur && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '10px', padding: '12px' }}>
+                  <AlertCircle size={15} /> {erreur}
                 </div>
               )}
 
-              {step === 2 && (
-                <div style={styles.card}>
-                  <h2 style={styles.cardTitle}><Lock size={18} /> Paiement</h2>
-                  <div style={styles.paymentGrid}>
-                    {modesPaiement.map((mode) => (
-                      <button
-                        key={mode.id}
-                        style={{
-                          ...styles.paymentMode,
-                          borderColor: modeSelect === mode.id ? '#1a5c2a' : '#e5e7eb',
-                          background: modeSelect === mode.id ? '#f0fdf4' : '#fff',
-                        }}
-                        onClick={() => setModeSelect(mode.id)}
-                      >
-                        <Smartphone size={17} />
-                        <span>{mode.label}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div style={styles.totalBox}>
-                    <div style={styles.totalRow}><span>Produit</span><strong>{prixProduit.toLocaleString('fr-FR')} FCFA</strong></div>
-                    <div style={styles.totalRow}><span>Livraison</span><strong>{fraisLivraison.toLocaleString('fr-FR')} FCFA</strong></div>
-                    <div style={styles.totalRow}><span>Frais paiement</span><strong>{fraisPaiement.toLocaleString('fr-FR')} FCFA</strong></div>
-                    <div style={styles.totalFinal}><span>Total</span><strong>{total.toLocaleString('fr-FR')} FCFA</strong></div>
-                  </div>
-
-                  <button style={styles.primaryBtn} onClick={handlePay} disabled={loading}>
-                    {loading ? <Loader size={18} /> : <>Payer et bloquer en sequestre <Lock size={16} /></>}
-                  </button>
+              {/* Articles commandés */}
+              <div style={{ background: 'white', borderRadius: '16px', border: '1.5px solid #e5e7eb', padding: '1.2rem' }}>
+                <p style={{ margin: '0 0 1rem', fontWeight: '800', fontSize: '0.95rem', color: '#1a2e10' }}>
+                  Articles ({lignes.length})
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {lignes.map(l => (
+                    <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingBottom: '10px', borderBottom: '1px solid #f3f4f6' }}>
+                      {l.produit_image ? (
+                        <img src={l.produit_image} alt={l.produit_nom} style={{ width: '52px', height: '52px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }} />
+                      ) : (
+                        <div style={{ width: '52px', height: '52px', borderRadius: '10px', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Package size={22} color="#d1d5db" />
+                        </div>
+                      )}
+                      <div style={{ flex: 1 }}>
+                        <p style={{ margin: 0, fontWeight: '700', fontSize: '0.88rem', color: '#1a2e10' }}>{l.produit_nom}</p>
+                        <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#6b7280' }}>Vendeur : {l.vendeur_nom} · Qté : {l.quantite}</p>
+                      </div>
+                      <p style={{ margin: 0, fontWeight: '800', color: GREEN, fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                        {Number(l.sous_total).toLocaleString('fr-FR')} FCFA
+                      </p>
+                    </div>
+                  ))}
                 </div>
-              )}
+              </div>
 
-              {step === 3 && (
-                <div style={{ ...styles.card, textAlign: 'center' }}>
-                  <div style={styles.successIcon}><CheckCircle size={42} /></div>
-                  <h2 style={styles.cardTitle}>Commande securisee</h2>
-                  <p style={styles.subtitle}>
-                    La commande {createdOrder?.reference} est payee et le montant est en sequestre.
-                    Le vendeur peut maintenant preparer la livraison.
-                  </p>
-                  <Link to="/buyer/orders" style={styles.linkBtn}>Voir mes commandes</Link>
+              {/* Livraison */}
+              <div style={{ background: 'white', borderRadius: '16px', border: '1.5px solid #e5e7eb', padding: '1.2rem' }}>
+                <p style={{ margin: '0 0 1rem', fontWeight: '800', fontSize: '0.95rem', color: '#1a2e10', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Truck size={16} color={GREEN} /> Livraison
+                </p>
+
+                <label style={lbl}>Adresse de livraison *</label>
+                <textarea
+                  value={adresse}
+                  onChange={e => setAdresse(e.target.value)}
+                  rows={3}
+                  placeholder="Ville, quartier, repère..."
+                  style={inp}
+                />
+
+                <label style={lbl}>Téléphone de contact *</label>
+                <input
+                  value={telephone}
+                  onChange={e => setTelephone(e.target.value)}
+                  placeholder="+229 XX XX XX XX"
+                  style={inp}
+                />
+
+                <label style={lbl}>Note au vendeur (optionnel)</label>
+                <textarea
+                  value={note}
+                  onChange={e => setNote(e.target.value)}
+                  rows={2}
+                  placeholder="Instructions utiles pour la préparation..."
+                  style={inp}
+                />
+              </div>
+
+              {/* Mode de paiement */}
+              <div style={{ background: 'white', borderRadius: '16px', border: '1.5px solid #e5e7eb', padding: '1.2rem' }}>
+                <p style={{ margin: '0 0 1rem', fontWeight: '800', fontSize: '0.95rem', color: '#1a2e10', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Smartphone size={16} color={GREEN} /> Mode de paiement
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  {MODES_PAIEMENT.map(m => (
+                    <button
+                      key={m.id}
+                      onClick={() => setMode(m.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        padding: '12px', borderRadius: '12px', cursor: 'pointer',
+                        border: `2px solid ${mode === m.id ? GREEN : '#e5e7eb'}`,
+                        background: mode === m.id ? '#f0fdf4' : 'white',
+                        fontWeight: '700', fontSize: '0.82rem', color: mode === m.id ? GREEN : '#374151',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      <Smartphone size={15} />
+                      <span>{m.label}</span>
+                      {m.frais > 0 && <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#9ca3af' }}>+{m.frais}%</span>}
+                    </button>
+                  ))}
                 </div>
-              )}
+              </div>
+
             </div>
 
-            <div className="col-12 col-lg-4">
-              <div style={styles.summary}>
-                <h2 style={styles.cardTitle}><ShoppingCart size={18} /> Ma commande</h2>
-                <img src={product.image} alt={product.nom} style={styles.productImage} />
-                <h3 style={styles.productName}>{product.nom}</h3>
-                <div style={styles.meta}><MapPin size={14} /> {product.localisation}</div>
-                <div style={styles.meta}>Vendeur: {product.vendeur}</div>
-                <div style={styles.meta}>Stock: {product.quantiteDisponible}</div>
-                <div style={styles.price}>{total.toLocaleString('fr-FR')} FCFA</div>
+            {/* Récapitulatif droite */}
+            <div style={{ background: 'white', borderRadius: '20px', border: '1.5px solid #e5e7eb', padding: '1.4rem', position: 'sticky', top: '80px' }}>
+              <p style={{ margin: '0 0 1rem', fontWeight: '800', fontSize: '0.95rem', color: '#1a2e10' }}>Récapitulatif</p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                <div style={row}>
+                  <span style={{ color: '#6b7280', fontSize: '0.83rem' }}>Produits ({lignes.length})</span>
+                  <span style={{ fontWeight: '700', fontSize: '0.83rem' }}>{totalProduits.toLocaleString('fr-FR')} FCFA</span>
+                </div>
+                <div style={row}>
+                  <span style={{ color: '#6b7280', fontSize: '0.83rem' }}>Livraison</span>
+                  <span style={{ fontWeight: '700', fontSize: '0.83rem' }}>{fraisLivraison.toLocaleString('fr-FR')} FCFA</span>
+                </div>
+                {fraisPaiement > 0 && (
+                  <div style={row}>
+                    <span style={{ color: '#6b7280', fontSize: '0.83rem' }}>Frais {modeActif?.label}</span>
+                    <span style={{ fontWeight: '700', fontSize: '0.83rem' }}>{fraisPaiement.toLocaleString('fr-FR')} FCFA</span>
+                  </div>
+                )}
               </div>
+
+              <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontWeight: '800', fontSize: '1rem', color: '#1a2e10', marginBottom: '1rem' }}>
+                <span>Total estimé</span>
+                <span style={{ color: GREEN }}>{totalEstime.toLocaleString('fr-FR')} FCFA</span>
+              </div>
+
+              <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '0.65rem 0.9rem', fontSize: '0.75rem', color: '#166534', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
+                <Lock size={12} /> Paiement sécurisé — fonds bloqués jusqu'à réception
+              </div>
+
+              <button
+                onClick={handleCommander}
+                style={{ width: '100%', background: `linear-gradient(135deg, ${GREEN}, #2d8c47)`, color: 'white', border: 'none', borderRadius: '12px', padding: '0.9rem', fontWeight: '700', fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 16px rgba(26,92,42,0.25)' }}
+              >
+                <ShoppingBag size={17} /> Passer la commande <ChevronRight size={16} />
+              </button>
+            </div>
+
+          </div>
+        )}
+
+        {/* ══════════ ÉTAPE 2 : TRAITEMENT ══════════ */}
+        {step === 2 && (
+          <div style={{ background: 'white', borderRadius: '20px', border: '1.5px solid #e5e7eb', padding: '3rem', textAlign: 'center' }}>
+            <Loader size={40} color={GREEN} style={{ animation: 'spin 1s linear infinite', marginBottom: '1.2rem' }} />
+            <p style={{ fontWeight: '700', color: '#1a2e10', fontSize: '1rem' }}>Création de vos commandes en cours…</p>
+            <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>Veuillez patienter, ne fermez pas cette page.</p>
+          </div>
+        )}
+
+        {/* ══════════ ÉTAPE 3 : RÉSULTAT ══════════ */}
+        {step === 3 && (
+          <div style={{ background: 'white', borderRadius: '20px', border: '1.5px solid #e5e7eb', padding: '2rem' }}>
+
+            {/* En-tête résultat */}
+            {commandes.every(c => c.ok) ? (
+              <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: GREEN, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
+                  <CheckCircle size={36} color="white" />
+                </div>
+                <h2 style={{ fontWeight: '800', color: '#1a2e10', margin: '0 0 6px' }}>
+                  {commandes.length === 1 ? 'Commande créée !' : `${commandes.length} commandes créées !`}
+                </h2>
+                <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>
+                  Vos fonds sont sécurisés en séquestre. Le vendeur peut maintenant préparer la livraison.
+                </p>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                <AlertCircle size={40} color="#f59e0b" style={{ marginBottom: '0.8rem' }} />
+                <h2 style={{ fontWeight: '800', color: '#1a2e10', margin: '0 0 6px' }}>Résultat partiel</h2>
+                <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>Certaines commandes ont rencontré une erreur.</p>
+              </div>
+            )}
+
+            {/* Détail par commande */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '1.5rem' }}>
+              {commandes.map((c, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '12px', background: c.ok ? '#f0fdf4' : '#fef2f2', border: `1px solid ${c.ok ? '#bbf7d0' : '#fecaca'}` }}>
+                  {c.ok
+                    ? <CheckCircle size={18} color="#16a34a" />
+                    : <AlertCircle size={18} color="#dc2626" />
+                  }
+                  <div style={{ flex: 1 }}>
+                    <p style={{ margin: 0, fontWeight: '700', fontSize: '0.88rem', color: '#1a2e10' }}>{c.produit_nom}</p>
+                    {c.ok
+                      ? <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#6b7280' }}>Référence : {c.reference}</p>
+                      : <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#dc2626' }}>{c.erreur}</p>
+                    }
+                  </div>
+                  {c.ok && (
+                    <span style={{ fontSize: '0.78rem', fontWeight: '700', color: '#16a34a', background: '#dcfce7', borderRadius: '20px', padding: '2px 10px' }}>
+                      Créée
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => navigate('/buyer/orders')}
+                style={{ flex: 1, background: `linear-gradient(135deg, ${GREEN}, #2d8c47)`, color: 'white', border: 'none', borderRadius: '12px', padding: '0.85rem', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              >
+                <ShoppingBag size={16} /> Voir mes commandes
+              </button>
+              <button
+                onClick={() => navigate('/buyer/catalog')}
+                style={{ flex: 1, background: 'white', color: GREEN, border: `1.5px solid ${GREEN}`, borderRadius: '12px', padding: '0.85rem', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer' }}
+              >
+                Continuer mes achats
+              </button>
             </div>
           </div>
         )}
+
       </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </DashboardLayout>
   );
 }
 
-const styles = {
-  page: { maxWidth: '1180px', margin: '0 auto' },
-  backBtn: { display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid #e5e7eb', background: '#fff', borderRadius: 10, padding: '8px 12px', cursor: 'pointer', marginBottom: 16 },
-  header: { marginBottom: 22 },
-  title: { fontSize: '1.5rem', fontWeight: 800, color: '#1a2e10', margin: 0 },
-  subtitle: { color: '#6b7280', fontSize: '.92rem', lineHeight: 1.6, margin: '6px 0 0' },
-  card: { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, padding: 24, boxShadow: '0 4px 18px rgba(0,0,0,.05)' },
-  cardTitle: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: '1.05rem', color: '#1a2e10', fontWeight: 800, marginBottom: 18 },
-  label: { display: 'block', color: '#374151', fontWeight: 700, fontSize: '.85rem', margin: '14px 0 6px' },
-  input: { width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '11px 12px', background: '#fafafa', color: '#1a2e10', outline: 'none' },
-  infoBox: { display: 'flex', alignItems: 'center', gap: 10, margin: '18px 0', border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#166534', borderRadius: 12, padding: 12, fontWeight: 700, fontSize: '.86rem' },
-  errorBox: { display: 'flex', alignItems: 'center', gap: 8, background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 10, padding: 12, marginBottom: 16 },
-  primaryBtn: { width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, background: '#1a5c2a', color: '#fff', border: 0, borderRadius: 12, padding: 13, fontWeight: 800, cursor: 'pointer' },
-  paymentGrid: { display: 'grid', gap: 10, marginBottom: 18 },
-  paymentMode: { display: 'flex', alignItems: 'center', gap: 10, border: '2px solid #e5e7eb', borderRadius: 12, padding: 14, background: '#fff', fontWeight: 700, cursor: 'pointer' },
-  totalBox: { border: '1px solid #e5e7eb', borderRadius: 12, padding: 14, marginBottom: 18 },
-  totalRow: { display: 'flex', justifyContent: 'space-between', padding: '7px 0', color: '#374151' },
-  totalFinal: { display: 'flex', justifyContent: 'space-between', paddingTop: 12, marginTop: 6, borderTop: '1px solid #e5e7eb', color: '#1a5c2a', fontSize: '1.05rem' },
-  successIcon: { width: 78, height: 78, borderRadius: '50%', background: '#1a5c2a', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' },
-  linkBtn: { display: 'inline-flex', justifyContent: 'center', background: '#1a5c2a', color: '#fff', borderRadius: 12, padding: '12px 18px', fontWeight: 800, textDecoration: 'none', marginTop: 16 },
-  summary: { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, padding: 18, position: 'sticky', top: 90 },
-  productImage: { width: '100%', height: 180, objectFit: 'cover', borderRadius: 12, marginBottom: 14 },
-  productName: { fontSize: '1rem', color: '#1a2e10', fontWeight: 800, margin: '0 0 10px' },
-  meta: { display: 'flex', alignItems: 'center', gap: 6, color: '#6b7280', fontSize: '.85rem', marginBottom: 6 },
-  price: { color: '#1a5c2a', fontWeight: 900, fontSize: '1.25rem', marginTop: 14 },
-};
+const lbl = { display: 'block', color: '#374151', fontWeight: '700', fontSize: '0.83rem', margin: '12px 0 5px' };
+const inp = { width: '100%', border: '1.5px solid #e5e7eb', borderRadius: '10px', padding: '10px 12px', background: '#fafafa', color: '#1a2e10', outline: 'none', fontSize: '0.88rem', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' };
+const row = { display: 'flex', justifyContent: 'space-between', alignItems: 'center' };

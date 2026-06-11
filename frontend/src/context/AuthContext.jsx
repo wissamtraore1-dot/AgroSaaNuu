@@ -21,8 +21,18 @@ export function AuthProvider({ children }) {
         localStorage.setItem('user', JSON.stringify(data.user));
       }
     } catch (err) {
-      localStorage.clear();
-      setUser(null);
+      const status = err.response?.status;
+      if (status === 401 || status === 403) {
+        // Token expiré ou invalide → déconnexion
+        localStorage.clear();
+        setUser(null);
+      } else {
+        // Erreur réseau / serveur → garder l'utilisateur du localStorage
+        const stored = localStorage.getItem('user');
+        if (stored) {
+          try { setUser(JSON.parse(stored)); } catch { /* malformed */ }
+        }
+      }
     } finally {
       setLoading(false);
     }

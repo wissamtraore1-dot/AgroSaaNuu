@@ -120,7 +120,7 @@ export default function Contact() {
               <span style={{ color: 'rgba(255,255,255,0.5)' }}>/</span>
               <span style={{ color: 'white' }}>Contact</span>
             </div>
-            <h1 style={styles.heroTitle}>📞 Contactez-nous</h1>
+            <h1 style={styles.heroTitle}><Phone size={32} style={{ verticalAlign: 'middle', marginRight: '8px' }} /> Contactez-nous</h1>
             <p style={styles.heroSub}>
               Notre équipe est disponible pour répondre à toutes vos questions
             </p>

@@ -4,6 +4,7 @@ Utilise feedparser (bien meilleure extraction d'images et compatibilité RSS/Ato
 """
 import re
 import html
+import socket
 import hashlib
 import feedparser
 from datetime import datetime, timezone
@@ -56,7 +57,7 @@ RSS_SOURCES = [
     },
     # Presse africaine généraliste (filtrage strict)
     {
-        'url':    'https://www.rfi.fr/fr/rss/actualites/afrique.rss',
+        'url':    'https://www.rfi.fr/fr/afrique/rss',
         'source': 'RFI Afrique',
         'color':  '#e63946',
         'strict': True,
@@ -75,8 +76,8 @@ RSS_SOURCES = [
     },
     # Presse béninoise (filtrage modéré)
     {
-        'url':    'https://www.24haubenin.info/?feed=rss2',
-        'source': '24h au Bénin',
+        'url':    'https://banouto.com/feed/',
+        'source': 'Banouto Bénin',
         'color':  '#008751',
         'strict': True,
     },
@@ -231,10 +232,10 @@ def fetch_rss(source_info):
     """Parse un flux RSS avec feedparser — gère RSS 1.0/2.0 et Atom."""
     articles = []
     try:
+        socket.setdefaulttimeout(TIMEOUT)
         feed = feedparser.parse(
             source_info['url'],
             request_headers={'User-Agent': 'AgroSaaNuu/1.0'},
-            timeout=TIMEOUT,
         )
         if feed.bozo and not feed.entries:
             return articles

@@ -3,13 +3,14 @@
 // src/components/common/Notification.jsx
 // ============================================================
 import React, { useEffect, useState } from 'react';
+import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 import { useNotificationContext } from '../../context/NotificationContext';
 
 const ICONS = {
-  success: '✅',
-  error:   '❌',
-  warning: '⚠️',
-  info:    'ℹ️',
+  success: <CheckCircle size={18} color="#16A34A" />,
+  error:   <XCircle    size={18} color="#DC2626" />,
+  warning: <AlertTriangle size={18} color="#D97706" />,
+  info:    <Info       size={18} color="#3B82F6" />,
 };
 
 const COLORS = {
@@ -70,7 +71,7 @@ const Toast = ({ notification, onDismiss }) => {
 
       {/* Content */}
       <div style={styles.content}>
-        <span style={styles.icon}>{ICONS[type]}</span>
+        <span style={styles.icon}>{ICONS[type] || ICONS.info}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           {title && (
             <div style={{ ...styles.toastTitle, color: cfg.title }}>
@@ -83,7 +84,7 @@ const Toast = ({ notification, onDismiss }) => {
             </div>
           )}
         </div>
-        <button style={styles.closeBtn} onClick={handleDismiss}>✕</button>
+        <button style={styles.closeBtn} onClick={handleDismiss}><X size={14} color="#9CA3AF" /></button>
       </div>
     </div>
   );

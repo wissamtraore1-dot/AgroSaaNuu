@@ -4,6 +4,7 @@
 // ============================================================
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { CheckCircle, Smartphone } from 'lucide-react';
 import AuthService from '../../services/auth.service';
 
 const VerifyIdentity = () => {
@@ -49,7 +50,7 @@ const VerifyIdentity = () => {
   if (success) return (
     <div style={styles.wrap}>
       <div style={styles.card}>
-        <div style={{ fontSize: '52px' }}>✅</div>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}><CheckCircle size={52} color="#16A34A" /></div>
         <h4 style={styles.title}>Email Verified!</h4>
         <p style={styles.text}>Your account is confirmed. Redirecting to login...</p>
       </div>
@@ -59,7 +60,7 @@ const VerifyIdentity = () => {
   return (
     <div style={styles.wrap}>
       <div style={styles.card}>
-        <div style={{ fontSize: '40px', marginBottom: '12px' }}>📱</div>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}><Smartphone size={40} color="#1a5c2a" /></div>
         <h4 style={styles.title}>Verify your identity</h4>
         <p style={styles.text}>Enter the 6-digit code sent to your email</p>
 

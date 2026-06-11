@@ -5,14 +5,14 @@ from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
-from .models import Commande, LitigeCommande, Paiement, RetaitVendeur, Message
+from .models import Commande, LitigeCommande, Paiement, RetaitVendeur
 from .serializers import (
     CommandeSerializer,
     PasserCommandeSerializer,
     ConfirmerReceptionSerializer,
     LitigeSerializer,
+    LitigeDetailSerializer,
     PaiementSerializer,
-    MessageSerializer,
 )
 from apps.authentication.permissions import IsBuyer, IsSeller
 
@@ -170,18 +170,82 @@ class SignalerLitigeView(APIView):
     def post(self, request, pk):
         commande = get_object_or_404(Commande, pk=pk, acheteur=request.user)
         if LitigeCommande.objects.filter(commande=commande).exists():
-            return Response({'success': False, 'message': 'Litige déjà ouvert.'}, status=400)
+            return Response({'success': False, 'message': 'Un problème a déjà été signalé pour cette commande.'}, status=400)
         serializer = LitigeSerializer(data=request.data)
         if serializer.is_valid():
-            LitigeCommande.objects.create(
+            litige = LitigeCommande.objects.create(
                 commande=commande,
                 plaignant=request.user,
                 description=serializer.validated_data['description']
             )
             commande.statut = Commande.Statut.LITIGE
             commande.save(update_fields=['statut'])
-            return Response({'success': True, 'message': 'Litige signalé.'}, status=201)
+            try:
+                from apps.notifications.services import notifier_litige_signale
+                notifier_litige_signale(litige)
+            except Exception:
+                pass
+            return Response({'success': True, 'message': 'Problème signalé. Notre équipe va examiner votre demande.'}, status=201)
         return Response({'success': False, 'errors': serializer.errors}, status=400)
+
+
+class MesLitigesView(generics.ListAPIView):
+    """GET /api/v1/orders/mes-litiges/ — acheteur"""
+    serializer_class   = LitigeDetailSerializer
+    permission_classes = [IsBuyer]
+
+    def get_queryset(self):
+        return LitigeCommande.objects.filter(
+            plaignant=self.request.user
+        ).select_related('commande', 'commande__produit', 'commande__vendeur', 'plaignant')
+
+
+class DetailLitigeView(APIView):
+    """GET /api/v1/orders/litiges/<id>/"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        litige = get_object_or_404(LitigeCommande, pk=pk)
+        commande = litige.commande
+        if request.user not in [commande.acheteur, commande.vendeur] and not request.user.is_staff:
+            return Response({'success': False, 'message': 'Accès non autorisé.'}, status=403)
+        return Response({'success': True, 'litige': LitigeDetailSerializer(litige).data})
+
+
+class ResoudreLitigeView(APIView):
+    """PATCH /api/v1/orders/litiges/<id>/resoudre/ — admin uniquement"""
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        if not request.user.is_staff:
+            return Response({'success': False, 'message': 'Réservé aux administrateurs.'}, status=403)
+
+        litige     = get_object_or_404(LitigeCommande, pk=pk)
+        resolution = request.data.get('resolution', '').strip()
+        statut     = request.data.get('statut', LitigeCommande.Statut.RESOLU)
+
+        if not resolution:
+            return Response({'success': False, 'message': 'La réponse au problème est requise.'}, status=400)
+
+        if statut not in [LitigeCommande.Statut.RESOLU, LitigeCommande.Statut.FERME, LitigeCommande.Statut.EN_COURS]:
+            return Response({'success': False, 'message': 'Statut invalide.'}, status=400)
+
+        litige.resolution      = resolution
+        litige.statut          = statut
+        litige.date_resolution = timezone.now()
+        litige.save(update_fields=['resolution', 'statut', 'date_resolution'])
+
+        try:
+            from apps.notifications.services import notifier_litige_resolu
+            notifier_litige_resolu(litige)
+        except Exception:
+            pass
+
+        return Response({
+            'success': True,
+            'message': 'Problème mis à jour.',
+            'litige':  LitigeDetailSerializer(litige).data,
+        })
 
 
 # ===== ESCROW & PAYMENT ENDPOINTS =====
@@ -515,88 +579,3 @@ class NoterVendeurView(APIView):
         return Response({'success': True, 'message': 'Vendeur noté. Merci pour votre évaluation !'})
 
 
-class MessagesCommandeView(APIView):
-    """
-    GET  /api/v1/orders/<id>/messages/ — Liste les messages
-    POST /api/v1/orders/<id>/messages/ — Envoie un message
-    Accessible à l'acheteur, au vendeur et au transporteur de la commande.
-    """
-    permission_classes = [IsAuthenticated]
-
-    def _get_commande(self, request, pk):
-        commande = get_object_or_404(Commande, pk=pk)
-        participants = [commande.acheteur, commande.vendeur]
-        if hasattr(commande, 'mission_transport'):
-            participants.append(commande.mission_transport.transporteur)
-        if request.user not in participants:
-            return None, commande
-        return commande, None
-
-    def get(self, request, pk):
-        commande, err = self._get_commande(request, pk)
-        if err:
-            return Response({'success': False, 'message': 'Accès non autorisé.'}, status=403)
-
-        messages = commande.messages.select_related('expediteur').all()
-        # Marquer les messages non lus comme lus (pour cet utilisateur)
-        commande.messages.exclude(expediteur=request.user).filter(est_lu=False).update(est_lu=True)
-
-        return Response({
-            'success':  True,
-            'messages': MessageSerializer(messages, many=True).data,
-        })
-
-    def post(self, request, pk):
-        commande, err = self._get_commande(request, pk)
-        if err:
-            return Response({'success': False, 'message': 'Accès non autorisé.'}, status=403)
-
-        contenu = request.data.get('contenu', '').strip()
-        if not contenu:
-            return Response({'success': False, 'message': 'Message vide.'}, status=400)
-
-        message = Message.objects.create(
-            commande   = commande,
-            expediteur = request.user,
-            contenu    = contenu,
-        )
-        return Response({
-            'success': True,
-            'message': MessageSerializer(message).data,
-        }, status=status.HTTP_201_CREATED)
-
-
-class RecuCommandeView(APIView):
-    """
-    GET /api/v1/orders/<id>/recu/
-    Retourne les données du reçu numérique (commande + paiement + mission).
-    """
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, pk):
-        commande = get_object_or_404(Commande, pk=pk)
-        if request.user not in [commande.acheteur, commande.vendeur] and not request.user.is_staff:
-            return Response({'success': False, 'message': 'Accès non autorisé.'}, status=403)
-
-        paiement = None
-        try:
-            paiement = PaiementSerializer(commande.paiement).data
-        except Paiement.DoesNotExist:
-            pass
-
-        mission = None
-        try:
-            from apps.transport.serializers import MissionTransportSerializer
-            mission = MissionTransportSerializer(commande.mission_transport).data
-        except Exception:
-            pass
-
-        return Response({
-            'success':  True,
-            'recu': {
-                'commande': CommandeSerializer(commande).data,
-                'paiement': paiement,
-                'mission':  mission,
-                'genere_le': timezone.now().isoformat(),
-            },
-        })

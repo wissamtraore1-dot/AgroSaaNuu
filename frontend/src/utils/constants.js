@@ -149,10 +149,10 @@ export const TRANSACTION_TYPE_ICONS = {
 
     // Clés = valeurs retournées par le backend (PointsFidelite.Niveau)
     TIERS: {
-      BRONZE:  { name: 'Bronze',  min: 0,    max: 499,  color: '#CD7F32', badge: '🥉' },
-      ARGENT:  { name: 'Argent',  min: 500,  max: 1999, color: '#A8A9AD', badge: '🥈' },
-      OR:      { name: 'Or',      min: 2000, max: 4999, color: '#FFD700', badge: '🥇' },
-      PLATINE: { name: 'Platine', min: 5000, max: null, color: '#4F46E5', badge: '💎' },
+      BRONZE:  { name: 'Bronze',  min: 0,    max: 499,  color: '#CD7F32' },
+      ARGENT:  { name: 'Argent',  min: 500,  max: 1999, color: '#A8A9AD' },
+      OR:      { name: 'Or',      min: 2000, max: 4999, color: '#FFD700' },
+      PLATINE: { name: 'Platine', min: 5000, max: null, color: '#4F46E5' },
     },
 
     TIER_MULTIPLIERS: {

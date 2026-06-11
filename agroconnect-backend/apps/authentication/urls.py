@@ -6,7 +6,8 @@ from . import sms_auth_views
 app_name = 'authentication'
 
 urlpatterns = [
-    # ===== ANCIENNES ROUTES =====
+    # ===== ROUTES PRINCIPALES =====
+    path('login/',                    views.ConnexionUnifieeView.as_view(), name='login-unifie'),
     path('inscription/',              views.InscriptionView.as_view(), name='inscription'),
     path('connexion/',                views.ConnexionView.as_view(), name='connexion'),
     path('deconnexion/',              views.DeconnexionView.as_view(), name='deconnexion'),
@@ -33,4 +34,19 @@ urlpatterns = [
     path('kyc/upload-document/',      views.UploadKYCDocumentView.as_view(), name='upload-kyc-document'),
     path('kyc/status/',               views.GetKYCStatusView.as_view(), name='get-kyc-status'),
     path('kyc/admin-verify/',         views.AdminVerifyKYCView.as_view(), name='admin-verify-kyc'),
+    path('kyc/admin-list/',           views.AdminVerifyKYCView.as_view(), name='admin-kyc-list'),
+
+    # ===== ADMIN — GESTION UTILISATEURS =====
+    path('admin/users/',                        views.AdminListeUtilisateursView.as_view(), name='admin-users'),
+    path('admin/users/<str:pk>/',               views.AdminUserDetailView.as_view(),        name='admin-user-detail'),
+    path('admin/users/<str:pk>/suspendre/',     views.SuspendreUtilisateurView.as_view(),   name='admin-suspendre'),
+    path('admin/users/<str:pk>/bannir/',        views.BannirUtilisateurView.as_view(),      name='admin-bannir'),
+    path('admin/users/<str:pk>/reactiver/',     views.ReactiverUtilisateurView.as_view(),   name='admin-reactiver'),
+    path('admin/stats/',                        views.AdminStatsView.as_view(),             name='admin-stats'),
+    path('admin/logs/',                         views.AdminLogsView.as_view(),              name='admin-logs'),
+
+    # ===== VÉRIFICATION ADMIN AVANT PREMIÈRE PUBLICATION / MISSION =====
+    path('admin/verifications/vendeurs/',      views.ListeVerificationsVendeursView.as_view(),      name='verif-vendeurs'),
+    path('admin/verifications/transporteurs/', views.ListeVerificationsTransporteursView.as_view(), name='verif-transporteurs'),
+    path('admin/verifications/traiter/',       views.TraiterVerificationView.as_view(),              name='traiter-verif'),
 ]

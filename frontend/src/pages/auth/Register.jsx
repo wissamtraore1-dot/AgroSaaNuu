@@ -7,7 +7,7 @@ import {
   Eye, EyeOff, AlertCircle, Loader,
   User, Mail, Phone, Lock, MapPin, Building,
   ChevronRight, ChevronLeft, Check, X, ShoppingCart,
-  Truck, Store, ArrowLeft,
+  Truck, Store, ArrowLeft, XCircle, CheckCircle,
 } from 'lucide-react';
 import logo from '../../assets/images/logo.jpeg';
 
@@ -304,7 +304,7 @@ export default function Register() {
                             ))}
                           </div>
                           <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                            {form.password.length < 4 ? '🔴 Très faible' : form.password.length < 6 ? '🟠 Faible' : form.password.length < 8 ? '🟡 Moyen' : '🟢 Fort'}
+                            {form.password.length < 4 ? 'Très faible' : form.password.length < 6 ? 'Faible' : form.password.length < 8 ? 'Moyen' : 'Fort'}
                           </span>
                         </div>
                       )}
@@ -324,8 +324,8 @@ export default function Register() {
                           {showConfirm ? <EyeOff size={17} color="#9ca3af" /> : <Eye size={17} color="#9ca3af" />}
                         </button>
                       </div>
-                      {form.confirm && form.confirm !== form.password && <span style={{ fontSize: '0.78rem', color: '#ef4444', marginTop: '4px' }}>❌ Les mots de passe ne correspondent pas</span>}
-                      {form.confirm && form.confirm === form.password && <span style={{ fontSize: '0.78rem', color: '#22c55e', marginTop: '4px' }}>✅ Les mots de passe correspondent</span>}
+                      {form.confirm && form.confirm !== form.password && <span style={{ fontSize: '0.78rem', color: '#ef4444', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><XCircle size={13} /> Les mots de passe ne correspondent pas</span>}
+                      {form.confirm && form.confirm === form.password && <span style={{ fontSize: '0.78rem', color: '#22c55e', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle size={13} /> Les mots de passe correspondent</span>}
                     </div>
                   </div>
                 </div>
@@ -377,10 +377,19 @@ export default function Register() {
               </motion.button>
             ) : etape === etapes.length - 1 ? (
               <motion.button type="button" onClick={handleSubmit} style={{ ...S.btnSuivant, background: '#1a5c2a' }} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} disabled={loading}>
-                {loading
-                  ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Loader size={18} /></motion.div>
-                  : <><Check size={18} /> Créer mon compte</>
-                }
+                <AnimatePresence mode="wait" initial={false}>
+                  {loading ? (
+                    <motion.span key="loading" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                      <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Loader size={18} /></motion.div>
+                    </motion.span>
+                  ) : (
+                    <motion.span key="idle" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                      <Check size={18} /> Créer mon compte
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </motion.button>
             ) : null}
           </div>

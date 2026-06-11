@@ -49,6 +49,7 @@ LOCAL_APPS = [
     'apps.notifications.apps.NotificationsConfig',
     'apps.news.apps.NewsConfig',
     'apps.market_prices.apps.MarketPricesConfig',
+    'apps.cart.apps.CartConfig',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -207,6 +208,13 @@ CLOUDINARY_STORAGE = {
 # Activer Cloudinary seulement si configuré
 if env('CLOUDINARY_CLOUD_NAME', default=''):
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+# ── Cache (LocMemCache par défaut — Redis en production) ──────────────────────
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    }
+}
 
 # ── Celery (tâches asynchrones — avec Redis) ──────────────────────────────────
 # Redis doit tourner en local : https://redis.io/

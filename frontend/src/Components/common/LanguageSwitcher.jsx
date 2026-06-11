@@ -1,7 +1,6 @@
 // src/Components/common/LanguageSwitcher.jsx
 // Bouton de bascule FR ↔ EN visible dans la navbar.
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
 
 export default function LanguageSwitcher({ style = {} }) {
   const { i18n } = useTranslation();
@@ -10,10 +9,8 @@ export default function LanguageSwitcher({ style = {} }) {
   const toggle = () => i18n.changeLanguage(isFr ? 'en' : 'fr');
 
   return (
-    <motion.button
+    <button
       onClick={toggle}
-      whileHover={{ scale: 1.06 }}
-      whileTap={{ scale: 0.94 }}
       title={isFr ? 'Switch to English' : 'Passer en français'}
       style={{
         display: 'flex',
@@ -28,12 +25,16 @@ export default function LanguageSwitcher({ style = {} }) {
         fontWeight: '700',
         color: 'white',
         letterSpacing: '0.03em',
-        transition: 'background 0.2s',
+        transition: 'background 0.2s, transform 0.1s',
         ...style,
       }}
+      onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.06)'}
+      onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+      onMouseDown={e => e.currentTarget.style.transform = 'scale(0.94)'}
+      onMouseUp={e => e.currentTarget.style.transform = 'scale(1.06)'}
     >
       <span style={{ fontSize: '1rem' }}>{isFr ? '🇫🇷' : '🇬🇧'}</span>
-      {isFr ? 'FR' : 'EN'}
-    </motion.button>
+      <span>{isFr ? 'FR' : 'EN'}</span>
+    </button>
   );
 }

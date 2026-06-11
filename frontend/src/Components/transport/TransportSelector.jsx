@@ -132,7 +132,7 @@ export default function TransportSelector({ commande, onAssigned, onClose }) {
             style={{ ...btnStyle(GREEN), marginBottom: '1rem' }}
             whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
           >
-            {loading ? <><Loader size={15} /> Recherche…</> : 'Rechercher les transporteurs'}
+            {loading ? <><Loader size={15} /><span> Recherche…</span></> : <span>Rechercher les transporteurs</span>}
           </motion.button>
 
           {/* Estimation */}
@@ -245,7 +245,7 @@ export default function TransportSelector({ commande, onAssigned, onClose }) {
             style={{ ...btnStyle(selected ? GREEN : '#d1d5db'), cursor: selected ? 'pointer' : 'not-allowed' }}
             whileHover={{ scale: selected ? 1.02 : 1 }} whileTap={{ scale: selected ? 0.98 : 1 }}
           >
-            {submitting ? <><Loader size={15} /> Assignation…</> : <><Check size={15} /> Confirmer le transporteur</>}
+            {submitting ? <><Loader size={15} /><span> Assignation…</span></> : <><Check size={15} /><span> Confirmer le transporteur</span></>}
           </motion.button>
         </div>
       </motion.div>

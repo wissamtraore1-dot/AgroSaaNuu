@@ -3,8 +3,16 @@
 // src/components/loyalty/ProgressBar.jsx
 // ============================================================
 import React from 'react';
+import { Award, Crown, Gem } from 'lucide-react';
 import { LOYALTY } from '../../utils/constants';
 import { formatPoints } from '../../utils/formatPrice';
+
+const TIER_ICONS = {
+  BRONZE:  <Award size={16} color="#CD7F32" />,
+  ARGENT:  <Award size={16} color="#A8A9AD" />,
+  OR:      <Crown size={16} color="#FFD700" />,
+  PLATINE: <Gem   size={16} color="#4F46E5" />,
+};
 
 const ProgressBar = ({ totalPoints = 0 }) => {
   const tiers  = Object.entries(LOYALTY.TIERS);
@@ -20,10 +28,10 @@ const ProgressBar = ({ totalPoints = 0 }) => {
             <div key={key} style={styles.tierItem}>
               <div style={{
                 ...styles.tierDot,
-                background:  reached ? tier.color : '#D1D5DB',
+                background:  reached ? tier.color + '22' : '#D1D5DB',
                 boxShadow:   reached ? `0 0 0 3px ${tier.color}33` : 'none',
               }}>
-                <span style={{ fontSize: '14px' }}>{tier.badge}</span>
+                {TIER_ICONS[key]}
               </div>
               <div style={{
                 ...styles.tierName,

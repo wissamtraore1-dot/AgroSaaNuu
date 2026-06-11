@@ -1,5 +1,19 @@
 from rest_framework import serializers
-from .models import Wallet, Transaction
+from .models import Wallet, Transaction, PlatformWallet, PlatformTransaction
+
+
+class PlatformTransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = PlatformTransaction
+        fields = ['id', 'reference', 'type', 'montant', 'description', 'commande_id', 'created_at']
+
+
+class PlatformWalletSerializer(serializers.ModelSerializer):
+    transactions = PlatformTransactionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model  = PlatformWallet
+        fields = ['id', 'solde', 'total_commissions', 'total_retire', 'updated_at', 'transactions']
 
 
 class WalletSerializer(serializers.ModelSerializer):

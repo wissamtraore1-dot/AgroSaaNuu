@@ -1,9 +1,9 @@
-import { useEffect, useState, useMemo } from 'react';
+﻿import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
   Search, Calendar, ExternalLink,
-  ArrowRight, Clock, X, RefreshCw, Rss
+  ArrowRight, Clock, X, RefreshCw, Rss, AlertTriangle
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -101,7 +101,7 @@ export default function News() {
   return (
     <div style={{ background: '#f8f9f4', minHeight: '100vh' }}>
 
-      {/* ══ HERO ══ */}
+      {/* â•â• HERO â•â• */}
       <div style={{ background: 'linear-gradient(135deg, #0d2b14 0%, #1a5c2a 60%, #2d8c47 100%)', padding: '3rem 0 2rem' }}>
         <div className="container-fluid px-4 px-lg-5">
           <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }}>
@@ -179,7 +179,7 @@ export default function News() {
         {/* Erreur */}
         {error && (
           <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '1rem 1.5rem', color: '#dc2626', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            ⚠️ {error}
+            <AlertTriangle size={16} color="#F59E0B" /> {error}
           </div>
         )}
 
@@ -248,8 +248,7 @@ export default function News() {
                 className="col-12 col-sm-6 col-lg-4"
                 variants={fadeUp}
                 initial="hidden"
-                whileInView="show"
-                viewport={{ once: true }}
+                animate="show"
                 transition={{ delay: i * 0.05 }}
               >
                 <motion.a
@@ -317,3 +316,4 @@ function SourceBadge({ source, color }) {
     </span>
   );
 }
+

@@ -3,13 +3,22 @@
 // src/pages/buyer/Points.jsx
 // ============================================================
 import React, { useEffect } from 'react';
-import PointsCard      from '../../components/loyalty/PointsCard';
-import ProgressBar     from '../../components/loyalty/ProgressBar';
-import PointsConverter from '../../components/loyalty/PointsConverter';
+import { Star, ShoppingCart, TrendingUp, Coins, Award, Crown, Gem } from 'lucide-react';
+import DashboardLayout from '../../Components/layout/DashboardLayout';
+import PointsCard      from '../../Components/loyalty/PointsCard';
+import ProgressBar     from '../../Components/loyalty/ProgressBar';
+import PointsConverter from '../../Components/loyalty/PointsConverter';
 import PointsHistory   from '../../Components/loyalty/PointsHistory';
 import useLoyalty      from '../../hooks/useLoyalty';
 import { formatPoints, formatPrice } from '../../utils/formatPrice';
 import { LOYALTY } from '../../utils/constants';
+
+const TIER_ICONS = {
+  BRONZE:  <Award  size={18} color="#CD7F32" />,
+  ARGENT:  <Award  size={18} color="#A8A9AD" />,
+  OR:      <Crown  size={18} color="#FFD700" />,
+  PLATINE: <Gem    size={18} color="#4F46E5" />,
+};
 
 const Points = () => {
   const {
@@ -21,8 +30,9 @@ const Points = () => {
   useEffect(() => { fetchHistory(); }, []);
 
   return (
+    <DashboardLayout role="buyer">
     <div style={styles.wrap}>
-      <h5 style={styles.title}>⭐ My Points & Rewards</h5>
+      <h5 style={styles.title}><Star size={22} color="#F59E0B" style={{ verticalAlign: 'middle', marginRight: 8 }} />Mes Points & Récompenses</h5>
 
       <div style={styles.layout}>
         <div style={styles.mainCol}>
@@ -35,25 +45,25 @@ const Points = () => {
             <div style={styles.cardTitle}>How it works</div>
             <div style={styles.howGrid}>
               <div style={styles.howItem}>
-                <div style={styles.howIcon}>🛒</div>
-                <div style={styles.howLabel}>Buy products</div>
+                <div style={styles.howIcon}><ShoppingCart size={26} color="#16A34A" /></div>
+                <div style={styles.howLabel}>Acheter des produits</div>
                 <div style={styles.howText}>
-                  Earn {LOYALTY.POINTS_PER_100_FCFA} pt per 100 FCFA spent
+                  Gagnez {LOYALTY.POINTS_PER_1000_FCFA} pt par 1 000 FCFA dépensés
                 </div>
               </div>
               <div style={styles.howItem}>
-                <div style={styles.howIcon}>📈</div>
-                <div style={styles.howLabel}>Level up</div>
+                <div style={styles.howIcon}><TrendingUp size={26} color="#2563EB" /></div>
+                <div style={styles.howLabel}>Monter de niveau</div>
                 <div style={styles.howText}>
-                  Higher tiers earn more points per purchase
+                  Les niveaux supérieurs rapportent plus de points par achat
                 </div>
               </div>
               <div style={styles.howItem}>
-                <div style={styles.howIcon}>💰</div>
-                <div style={styles.howLabel}>Convert</div>
+                <div style={styles.howIcon}><Coins size={26} color="#D97706" /></div>
+                <div style={styles.howLabel}>Conversion</div>
                 <div style={styles.howText}>
                   {LOYALTY.MIN_POINTS_TO_REDEEM} pts minimum →{' '}
-                  {formatPrice(LOYALTY.MIN_POINTS_TO_REDEEM * LOYALTY.FCFA_PER_POINT)} in wallet
+                  {formatPrice(LOYALTY.MIN_POINTS_TO_REDEEM * LOYALTY.FCFA_PER_POINT)} en portefeuille
                 </div>
               </div>
             </div>
@@ -89,7 +99,7 @@ const Points = () => {
             {Object.entries(LOYALTY.TIERS).map(([key, tier]) => (
               <div key={key} style={styles.tierRow}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '18px' }}>{tier.badge}</span>
+                  {TIER_ICONS[key]}
                   <span style={{ fontSize: '14px', fontWeight: 500 }}>{tier.name}</span>
                 </div>
                 <div style={styles.multiplierBadge}>
@@ -101,6 +111,7 @@ const Points = () => {
         </div>
       </div>
     </div>
+    </DashboardLayout>
   );
 };
 

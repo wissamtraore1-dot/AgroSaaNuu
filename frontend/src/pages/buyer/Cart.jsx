@@ -1,242 +1,213 @@
-// ============================================================
-// AgroConnect — Cart Page
-// src/pages/buyer/Cart.jsx
-// ============================================================
-import React from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { formatPrice, formatPoints } from '../../utils/formatPrice';
-import { ROUTES, LOYALTY } from '../../utils/constants';
-import useLoyalty from '../../hooks/useLoyalty';
+import { ShoppingCart, Trash2, Plus, Minus, ArrowLeft, Loader, ShoppingBag, Lock, Package } from 'lucide-react';
+import DashboardLayout from '../../Components/layout/DashboardLayout';
+import CartService from '../../services/cart.service';
 
-const Cart = ({ cartItems = [], onUpdateQty, onRemove }) => {
+const GREEN = '#1a5c2a';
+
+export default function Cart() {
   const navigate = useNavigate();
-  const { points, maxPointsForOrder } = useLoyalty();
+  const [panier,   setPanier]   = useState(null);
+  const [loading,  setLoading]  = useState(true);
+  const [actionId, setActionId] = useState(null);
 
-  const subtotal = cartItems.reduce((sum, i) => sum + i.price * i.qty, 0);
-  const { maxPoints, maxDiscountFcfa } = maxPointsForOrder(subtotal);
-  const [usePoints, setUsePoints] = React.useState(false);
-  const discount  = usePoints ? maxDiscountFcfa : 0;
-  const total     = subtotal - discount;
+  const charger = async () => {
+    try {
+      const data = await CartService.monPanier();
+      setPanier(data);
+    } catch {
+      setPanier({ lignes: [], total: 0, nombre_articles: 0 });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  if (cartItems.length === 0) {
-    return (
-      <div style={styles.empty}>
-        <div style={{ fontSize: '52px' }}>🛒</div>
-        <h5 style={styles.emptyTitle}>Your cart is empty</h5>
-        <p style={styles.emptyText}>Add products to start your order</p>
-        <button style={styles.shopBtn} onClick={() => navigate(ROUTES.PRODUCTS)}>
-          Browse Products
-        </button>
-      </div>
-    );
-  }
+  useEffect(() => { charger(); }, []);
+
+  const modifier = async (ligneId, nouvelleQte) => {
+    setActionId(ligneId);
+    try {
+      const data = await CartService.modifier(ligneId, nouvelleQte);
+      setPanier(data);
+    } finally { setActionId(null); }
+  };
+
+  const supprimer = async (ligneId) => {
+    setActionId(ligneId);
+    try {
+      const data = await CartService.supprimer(ligneId);
+      setPanier(data);
+    } finally { setActionId(null); }
+  };
+
+  const vider = async () => {
+    setLoading(true);
+    try {
+      const data = await CartService.vider();
+      setPanier(data);
+    } finally { setLoading(false); }
+  };
+
+  const lignes = panier?.lignes || [];
+  const total  = Number(panier?.total || 0);
 
   return (
-    <div style={styles.wrap}>
-      <h5 style={styles.title}>My Cart ({cartItems.length})</h5>
+    <DashboardLayout role="buyer">
+      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
 
-      <div style={styles.layout}>
-        {/* ── Items ── */}
-        <div style={styles.itemsCol}>
-          {cartItems.map(item => (
-            <div key={item.id} style={styles.itemCard}>
-              <img
-                src={item.image || '/assets/images/placeholder.png'}
-                alt={item.name}
-                style={styles.itemImg}
-              />
-              <div style={{ flex: 1 }}>
-                <div style={styles.itemName}>{item.name}</div>
-                <div style={styles.itemSeller}>by {item.seller}</div>
-                <div style={styles.itemPrice}>{formatPrice(item.price)}</div>
+        {/* En-tête */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => navigate(-1)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '7px 14px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', color: '#374151' }}
+          >
+            <ArrowLeft size={15} /> Retour
+          </button>
+
+          <h1 style={{ margin: 0, fontSize: '1.3rem', fontWeight: '800', color: '#1a2e10', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ShoppingCart size={20} /> Mon panier
+            {lignes.length > 0 && (
+              <span style={{ background: GREEN, color: 'white', borderRadius: '20px', padding: '2px 10px', fontSize: '0.78rem' }}>
+                {lignes.length}
+              </span>
+            )}
+          </h1>
+
+          {lignes.length > 0 && (
+            <button
+              onClick={vider}
+              style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '7px 12px', cursor: 'pointer', fontSize: '0.82rem', color: '#dc2626', fontWeight: '600' }}
+            >
+              <Trash2 size={14} /> Vider le panier
+            </button>
+          )}
+        </div>
+
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af' }}>
+            <Loader size={24} />
+          </div>
+        ) : lignes.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '4rem', background: 'white', borderRadius: '20px', border: '1.5px solid #e5e7eb' }}>
+            <ShoppingCart size={56} color="#d1d5db" style={{ marginBottom: '1rem' }} />
+            <p style={{ fontWeight: '700', fontSize: '1.1rem', color: '#1a2e10', marginBottom: '0.5rem' }}>Votre panier est vide</p>
+            <p style={{ color: '#9ca3af', fontSize: '0.88rem', marginBottom: '1.5rem' }}>Ajoutez des produits depuis le catalogue</p>
+            <button
+              onClick={() => navigate('/buyer/catalog')}
+              style={{ background: GREEN, color: 'white', border: 'none', borderRadius: '12px', padding: '0.8rem 2rem', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem' }}
+            >
+              Parcourir le catalogue
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '20px', alignItems: 'start' }}>
+
+            {/* Articles */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {lignes.map(ligne => (
+                <div
+                  key={ligne.id}
+                  style={{ background: 'white', borderRadius: '16px', padding: '1rem', border: '1.5px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: '14px', animation: 'fadeIn 0.25s ease both' }}
+                >
+                  {ligne.produit_image ? (
+                    <img
+                      src={ligne.produit_image}
+                      alt={ligne.produit_nom}
+                      style={{ width: '64px', height: '64px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0 }}
+                      onError={e => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div style={{ width: '64px', height: '64px', borderRadius: '12px', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Package size={24} color="#d1d5db" />
+                    </div>
+                  )}
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: '0 0 3px', fontWeight: '700', color: '#1a2e10', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {ligne.produit_nom}
+                    </p>
+                    <p style={{ margin: '0 0 6px', fontSize: '0.78rem', color: '#6b7280' }}>Vendeur : {ligne.vendeur_nom}</p>
+                    <p style={{ margin: 0, fontWeight: '700', color: GREEN, fontSize: '0.9rem' }}>
+                      {Number(ligne.prix_unitaire).toLocaleString('fr-FR')} FCFA / unité
+                    </p>
+                  </div>
+
+                  {/* Quantité */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                      onClick={() => modifier(ligne.id, ligne.quantite - 1)}
+                      disabled={actionId === ligne.id}
+                      style={{ width: '30px', height: '30px', borderRadius: '8px', border: '1.5px solid #e5e7eb', background: '#f9fafb', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Minus size={13} />
+                    </button>
+                    <span style={{ fontWeight: '700', fontSize: '0.95rem', minWidth: '24px', textAlign: 'center' }}>
+                      {actionId === ligne.id ? '…' : ligne.quantite}
+                    </span>
+                    <button
+                      onClick={() => modifier(ligne.id, ligne.quantite + 1)}
+                      disabled={actionId === ligne.id}
+                      style={{ width: '30px', height: '30px', borderRadius: '8px', border: '1.5px solid #e5e7eb', background: '#f9fafb', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Plus size={13} />
+                    </button>
+                  </div>
+
+                  {/* Sous-total + supprimer */}
+                  <div style={{ textAlign: 'right', minWidth: '110px' }}>
+                    <p style={{ margin: '0 0 6px', fontWeight: '800', color: '#1a2e10', fontSize: '0.95rem' }}>
+                      {Number(ligne.sous_total).toLocaleString('fr-FR')} FCFA
+                    </p>
+                    <button
+                      onClick={() => supprimer(ligne.id)}
+                      disabled={actionId === ligne.id}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: '600', marginLeft: 'auto' }}
+                    >
+                      <Trash2 size={13} /> Retirer
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Résumé */}
+            <div style={{ background: 'white', borderRadius: '20px', padding: '1.5rem', border: '1.5px solid #e5e7eb', position: 'sticky', top: '80px' }}>
+              <p style={{ margin: '0 0 1rem', fontWeight: '800', fontSize: '1rem', color: '#1a2e10' }}>Résumé</p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '1rem' }}>
+                {lignes.map(ligne => (
+                  <div key={ligne.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#6b7280' }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '150px' }}>
+                      {ligne.produit_nom} ×{ligne.quantite}
+                    </span>
+                    <span>{Number(ligne.sous_total).toLocaleString('fr-FR')} FCFA</span>
+                  </div>
+                ))}
               </div>
 
-              {/* Qty controls */}
-              <div style={styles.qtyWrap}>
-                <button
-                  style={styles.qtyBtn}
-                  onClick={() => onUpdateQty(item.id, item.qty - 1)}
-                  disabled={item.qty <= 1}
-                >−</button>
-                <span style={styles.qtyVal}>{item.qty}</span>
-                <button
-                  style={styles.qtyBtn}
-                  onClick={() => onUpdateQty(item.id, item.qty + 1)}
-                >+</button>
+              <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontWeight: '800', fontSize: '1rem', color: '#1a2e10', marginBottom: '1.2rem' }}>
+                <span>Total</span>
+                <span style={{ color: GREEN }}>{total.toLocaleString('fr-FR')} FCFA</span>
               </div>
 
-              <div style={styles.itemTotal}>
-                {formatPrice(item.price * item.qty)}
+              <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '0.7rem', fontSize: '0.78rem', color: GREEN, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
+                <Lock size={13} /> Paiement sécurisé — fonds bloqués jusqu'à la réception
               </div>
 
               <button
-                style={styles.removeBtn}
-                onClick={() => onRemove(item.id)}
-              >✕</button>
-            </div>
-          ))}
-        </div>
-
-        {/* ── Summary ── */}
-        <div style={styles.summaryCol}>
-          <div style={styles.summaryCard}>
-            <div style={styles.summaryTitle}>Order Summary</div>
-
-            <div style={styles.summaryRow}>
-              <span>Subtotal</span>
-              <span>{formatPrice(subtotal)}</span>
+                onClick={() => navigate('/buyer/checkout', { state: { total, lignes } })}
+                style={{ width: '100%', background: `linear-gradient(135deg, ${GREEN}, #2d8c47)`, color: 'white', border: 'none', borderRadius: '12px', padding: '0.9rem', fontWeight: '700', fontSize: '0.97rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 16px rgba(26,92,42,0.25)' }}
+              >
+                <ShoppingBag size={17} /> Passer la commande
+              </button>
             </div>
 
-            {/* Points toggle */}
-            {points.balance >= LOYALTY.MIN_POINTS_TO_REDEEM && maxDiscountFcfa > 0 && (
-              <div style={styles.pointsBox}>
-                <div style={styles.pointsBoxHeader}>
-                  <span>⭐ Use my points</span>
-                  <label style={styles.toggle}>
-                    <input
-                      type="checkbox"
-                      checked={usePoints}
-                      onChange={e => setUsePoints(e.target.checked)}
-                      style={{ display: 'none' }}
-                    />
-                    <div style={{
-                      ...styles.toggleTrack,
-                      background: usePoints ? '#16A34A' : '#D1D5DB',
-                    }}>
-                      <div style={{
-                        ...styles.toggleThumb,
-                        transform: usePoints ? 'translateX(18px)' : 'translateX(0)',
-                      }} />
-                    </div>
-                  </label>
-                </div>
-                <div style={styles.pointsBoxText}>
-                  Use {formatPoints(maxPoints)} → save {formatPrice(maxDiscountFcfa)}
-                </div>
-              </div>
-            )}
-
-            {usePoints && (
-              <div style={styles.summaryRow}>
-                <span style={{ color: '#16A34A' }}>Points discount</span>
-                <span style={{ color: '#16A34A' }}>−{formatPrice(discount)}</span>
-              </div>
-            )}
-
-            <div style={styles.divider} />
-
-            <div style={{ ...styles.summaryRow, fontWeight: 700, fontSize: '16px' }}>
-              <span>Total</span>
-              <span>{formatPrice(total)}</span>
-            </div>
-
-            {/* Points to earn */}
-            <div style={styles.earnRow}>
-              ⭐ You'll earn ~{formatPoints(
-                Math.floor(total / 100) * LOYALTY.POINTS_PER_100_FCFA
-              )} on this order
-            </div>
-
-            {/* Escrow notice */}
-            <div style={styles.escrowNotice}>
-              🔒 Funds are held securely until delivery is confirmed
-            </div>
-
-            <button
-              style={styles.checkoutBtn}
-              onClick={() => navigate(ROUTES.BUYER_CHECKOUT, {
-                state: { subtotal, discount, total, usePoints, pointsUsed: usePoints ? maxPoints : 0 }
-              })}
-            >
-              Proceed to Checkout
-            </button>
           </div>
-        </div>
+        )}
       </div>
-    </div>
+
+      <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+    </DashboardLayout>
   );
-};
-
-const styles = {
-  wrap:       { padding: '24px 16px', maxWidth: '1000px', margin: '0 auto' },
-  title:      { fontSize: '20px', fontWeight: 700, color: '#1F2937', marginBottom: '20px' },
-  layout:     { display: 'flex', gap: '20px', flexWrap: 'wrap' },
-  itemsCol:   { flex: 2, minWidth: '300px', display: 'flex', flexDirection: 'column', gap: '12px' },
-  summaryCol: { flex: 1, minWidth: '260px' },
-  itemCard: {
-    display: 'flex', alignItems: 'center', gap: '12px',
-    background: '#fff', borderRadius: '14px',
-    padding: '14px', border: '1.5px solid #E5E7EB',
-  },
-  itemImg:    { width: '60px', height: '60px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 },
-  itemName:   { fontSize: '14px', fontWeight: 600, color: '#1F2937' },
-  itemSeller: { fontSize: '12px', color: '#6B7280', marginTop: '2px' },
-  itemPrice:  { fontSize: '13px', color: '#16A34A', fontWeight: 500, marginTop: '4px' },
-  qtyWrap:    { display: 'flex', alignItems: 'center', gap: '8px' },
-  qtyBtn: {
-    width: '28px', height: '28px', borderRadius: '8px',
-    border: '1.5px solid #D1D5DB', background: '#F9FAFB',
-    cursor: 'pointer', fontSize: '16px', fontWeight: 700,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-  },
-  qtyVal:     { fontSize: '14px', fontWeight: 600, minWidth: '20px', textAlign: 'center' },
-  itemTotal:  { fontSize: '14px', fontWeight: 700, color: '#1F2937', minWidth: '80px', textAlign: 'right' },
-  removeBtn: {
-    background: 'none', border: 'none', color: '#9CA3AF',
-    cursor: 'pointer', fontSize: '14px', padding: '4px',
-  },
-  summaryCard: {
-    background: '#fff', borderRadius: '16px',
-    padding: '20px', border: '1.5px solid #E5E7EB',
-    position: 'sticky', top: '80px',
-  },
-  summaryTitle: { fontSize: '16px', fontWeight: 700, color: '#1F2937', marginBottom: '16px' },
-  summaryRow: {
-    display: 'flex', justifyContent: 'space-between',
-    fontSize: '14px', color: '#374151', marginBottom: '10px',
-  },
-  pointsBox: {
-    background: '#F0FDF4', borderRadius: '10px',
-    padding: '10px 12px', marginBottom: '10px',
-  },
-  pointsBoxHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  pointsBoxText:   { fontSize: '12px', color: '#16A34A', marginTop: '4px' },
-  toggle:          { cursor: 'pointer' },
-  toggleTrack: {
-    width: '36px', height: '20px', borderRadius: '20px',
-    position: 'relative', transition: 'background .2s',
-  },
-  toggleThumb: {
-    position: 'absolute', top: '2px', left: '2px',
-    width: '16px', height: '16px', borderRadius: '50%',
-    background: '#fff', transition: 'transform .2s',
-  },
-  divider:     { borderTop: '1px solid #E5E7EB', margin: '12px 0' },
-  earnRow: {
-    background: '#FFFBEB', borderRadius: '8px',
-    padding: '8px 12px', fontSize: '12px',
-    color: '#D97706', marginTop: '10px', marginBottom: '10px',
-  },
-  escrowNotice: {
-    background: '#F0FDF4', borderRadius: '8px',
-    padding: '8px 12px', fontSize: '12px',
-    color: '#16A34A', marginBottom: '14px',
-  },
-  checkoutBtn: {
-    width: '100%', padding: '13px', background: '#16A34A',
-    color: '#fff', border: 'none', borderRadius: '12px',
-    fontWeight: 700, fontSize: '15px', cursor: 'pointer',
-  },
-  empty: {
-    textAlign: 'center', padding: '80px 16px',
-  },
-  emptyTitle: { fontSize: '20px', fontWeight: 700, color: '#1F2937', marginTop: '16px' },
-  emptyText:  { fontSize: '14px', color: '#6B7280', marginBottom: '24px' },
-  shopBtn: {
-    padding: '12px 28px', background: '#16A34A',
-    color: '#fff', border: 'none', borderRadius: '12px',
-    fontWeight: 600, fontSize: '15px', cursor: 'pointer',
-  },
-};
-
-export default Cart;
+}

@@ -6,15 +6,16 @@ from apps.products.models import Produit
 
 
 class CommandeSerializer(serializers.ModelSerializer):
-    acheteur_nom = serializers.CharField(source='acheteur.nom_complet', read_only=True)
-    vendeur_nom  = serializers.CharField(source='vendeur.nom_complet',  read_only=True)
-    produit_nom  = serializers.CharField(source='produit.nom',          read_only=True)
+    acheteur_nom  = serializers.CharField(source='acheteur.nom_complet', read_only=True)
+    vendeur_nom   = serializers.CharField(source='vendeur.nom_complet',  read_only=True)
+    produit_nom   = serializers.CharField(source='produit.nom',          read_only=True)
+    produit_image = serializers.SerializerMethodField()
 
     class Meta:
         model  = Commande
         fields = [
             'id', 'reference', 'acheteur', 'acheteur_nom',
-            'vendeur', 'vendeur_nom', 'produit', 'produit_nom',
+            'vendeur', 'vendeur_nom', 'produit', 'produit_nom', 'produit_image',
             'quantite', 'prix_unitaire', 'montant_produit',
             'frais_livraison', 'frais_paiement', 'commission',
             'montant_total', 'montant_vendeur',
@@ -31,6 +32,15 @@ class CommandeSerializer(serializers.ModelSerializer):
             'statut', 'date_confirmation', 'date_livraison',
             'date_reception', 'created_at',
         ]
+
+    def get_produit_image(self, obj):
+        if not obj.produit:
+            return None
+        img = obj.produit.images.filter(est_principale=True).first() or obj.produit.images.first()
+        if img and img.image:
+            request = self.context.get('request')
+            return request.build_absolute_uri(img.image.url) if request else img.image.url
+        return None
 
 
 class PasserCommandeSerializer(serializers.Serializer):
@@ -101,6 +111,24 @@ class LitigeSerializer(serializers.ModelSerializer):
         model  = LitigeCommande
         fields = ['id', 'commande', 'description', 'statut', 'resolution', 'created_at']
         read_only_fields = ['id', 'commande', 'statut', 'resolution', 'created_at']
+
+
+class LitigeDetailSerializer(serializers.ModelSerializer):
+    commande_reference = serializers.CharField(source='commande.reference', read_only=True)
+    commande_produit   = serializers.CharField(source='commande.produit.nom', read_only=True)
+    commande_montant   = serializers.DecimalField(source='commande.montant_total', max_digits=12, decimal_places=2, read_only=True)
+    plaignant_nom      = serializers.CharField(source='plaignant.nom_complet', read_only=True)
+    vendeur_nom        = serializers.CharField(source='commande.vendeur.nom_complet', read_only=True)
+    commande_id        = serializers.UUIDField(source='commande.id', read_only=True)
+
+    class Meta:
+        model  = LitigeCommande
+        fields = [
+            'id', 'commande_id', 'commande_reference', 'commande_produit',
+            'commande_montant', 'plaignant_nom', 'vendeur_nom',
+            'description', 'statut', 'resolution', 'date_resolution', 'created_at',
+        ]
+        read_only_fields = fields
 
 
 # ===== PAYMENT & ESCROW SERIALIZERS =====

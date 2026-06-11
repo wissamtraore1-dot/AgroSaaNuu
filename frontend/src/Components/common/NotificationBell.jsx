@@ -84,6 +84,7 @@ export default function NotificationBell() {
         <AnimatePresence>
           {nonLues > 0 && (
             <motion.span
+              key="notif-badge"
               initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
               style={{ position: 'absolute', top: '-5px', right: '-5px', background: '#ef4444', color: 'white', borderRadius: '50%', width: '18px', height: '18px', fontSize: '0.65rem', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid white' }}
             >
@@ -97,6 +98,7 @@ export default function NotificationBell() {
       <AnimatePresence>
         {open && (
           <motion.div
+            key="notif-dropdown"
             initial={{ opacity: 0, y: -8, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.95 }}
@@ -111,7 +113,8 @@ export default function NotificationBell() {
             {/* Header dropdown */}
             <div style={{ padding: '1rem 1.2rem', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '800', color: '#1a2e10' }}>
-                Notifications {nonLues > 0 && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>({nonLues})</span>}
+                <span>Notifications</span>
+                {nonLues > 0 && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}> ({nonLues})</span>}
               </h4>
               {nonLues > 0 && (
                 <button onClick={marquerToutesLues} style={{ background: 'none', border: 'none', color: GREEN, fontSize: '0.78rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>

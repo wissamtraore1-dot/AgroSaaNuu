@@ -35,7 +35,8 @@ class ListeProduitsView(generics.ListAPIView):
     def get_queryset(self):
         return Produit.objects.filter(
             statut=Produit.Statut.ACTIF,
-            est_disponible=True
+            est_disponible=True,
+            vendeur__seller_profile__est_verifie=True,
         ).select_related('vendeur', 'categorie').prefetch_related('images')
 
 
@@ -70,6 +71,35 @@ class CreerProduitView(APIView):
     permission_classes = [IsSeller]
 
     def post(self, request):
+        # Gate : le vendeur doit avoir renseigné son CIP
+        if not request.user.cip:
+            return Response({
+                'success':         False,
+                'profil_incomplet': True,
+                'message':         'Complétez votre profil (numéro CIP requis) avant de publier un produit.',
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        # Gate : vérification admin requise avant première publication
+        try:
+            profil = request.user.seller_profile
+        except Exception:
+            profil = None
+
+        if profil and not profil.est_verifie:
+            from django.utils import timezone as tz
+            if profil.date_demande_verification is None:
+                # Première tentative : déclencher la demande
+                profil.date_demande_verification = tz.now()
+                profil.save(update_fields=['date_demande_verification'])
+                from apps.notifications.services import notifier_demande_verification
+                notifier_demande_verification(request.user)
+            return Response({
+                'success':             False,
+                'verification_pending': True,
+                'message':             'Votre compte est en attente de vérification par l\'administrateur. '
+                                       'Vous serez notifié(e) une fois approuvé(e).',
+            }, status=status.HTTP_403_FORBIDDEN)
+
         serializer = ProduitCreateSerializer(
             data=request.data,
             context={'request': request}

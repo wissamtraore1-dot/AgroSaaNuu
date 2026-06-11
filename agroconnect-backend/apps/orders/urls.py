@@ -25,6 +25,9 @@ urlpatterns = [
 
     # ===== NOUVELLES FONCTIONNALITÉS =====
     path('<uuid:pk>/noter-vendeur/',         views.NoterVendeurView.as_view()),
-    path('<uuid:pk>/messages/',              views.MessagesCommandeView.as_view()),
-    path('<uuid:pk>/recu/',                  views.RecuCommandeView.as_view()),
+
+    # ===== PROBLÈMES =====
+    path('mes-problemes/',                      views.MesLitigesView.as_view()),
+    path('problemes/<uuid:pk>/',                views.DetailLitigeView.as_view()),
+    path('problemes/<uuid:pk>/resoudre/',       views.ResoudreLitigeView.as_view()),
 ]

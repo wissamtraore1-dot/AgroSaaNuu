@@ -4,6 +4,7 @@
 // ============================================================
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Lock } from 'lucide-react';
 import PaymentMethodSelector from '../../components/finance/PaymentMethodSelector';
 import useWallet from '../../hooks/useWallet';
 import { WALLET_LIMITS } from '../../config/paymentConfig';
@@ -48,7 +49,7 @@ const Withdrawal = () => {
         {/* Escrow warning */}
         {balance.in_escrow > 0 && (
           <div style={styles.escrowNotice}>
-            🔒 {formatPrice(balance.in_escrow)} is currently in escrow and cannot be withdrawn
+            <Lock size={13} style={{ verticalAlign: 'middle', marginRight: 6 }} /> {formatPrice(balance.in_escrow)} is currently in escrow and cannot be withdrawn
           </div>
         )}
 

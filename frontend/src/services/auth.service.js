@@ -16,6 +16,15 @@ const AuthService = {
     return response.data;
   },
 
+  async loginUnifie(identifiant, password) {
+    const response = await api.post('/auth/login/', { identifiant, password });
+    const { tokens, user } = response.data;
+    localStorage.setItem('access_token',  tokens.access);
+    localStorage.setItem('refresh_token', tokens.refresh);
+    localStorage.setItem('user',          JSON.stringify(user));
+    return response.data;
+  },
+
   async deconnexion() {
     const refresh = localStorage.getItem('refresh_token');
     try {

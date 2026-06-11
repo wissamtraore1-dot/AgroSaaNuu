@@ -1,23 +1,23 @@
-// src/pages/auth/Auth.jsx — Authentification style 1xBet
+// src/pages/auth/Auth.jsx
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import AuthService from '../../services/auth.service';
 import {
-  Phone, Mail, Eye, EyeOff, ArrowLeft,
-  AlertCircle, Check, ShoppingCart, Store, Truck, Lock, Loader,
+  Phone, Mail, Eye, EyeOff, ArrowLeft, AlertCircle,
+  Check, ShoppingCart, Store, Truck, Lock, Loader, User,
+  XCircle, CheckCircle,
 } from 'lucide-react';
 import logo from '../../assets/images/logo.jpeg';
 
-// ── Constantes de couleurs ──
-const GREEN  = '#1a5c2a';
-const BG     = '#d6d1c4';
+const GREEN = '#1a5c2a';
+const BG    = '#f2ede4';
 
 const ROLES = [
-  { id: 'BUYER',       Icon: ShoppingCart, label: 'Acheteur',     desc: 'Achetez des céréales',           color: '#2563eb', bg: '#eff6ff' },
-  { id: 'SELLER',      Icon: Store,        label: 'Vendeur',      desc: 'Vendez vos produits agricoles',  color: GREEN,     bg: '#f0fdf4' },
-  { id: 'TRANSPORTER', Icon: Truck,        label: 'Transporteur', desc: 'Proposez vos services',          color: '#d97706', bg: '#fffbeb' },
+  { id: 'BUYER',       Icon: ShoppingCart, label: 'Acheteur',     desc: 'Achetez des céréales',          color: '#2563eb', bg: '#eff6ff' },
+  { id: 'SELLER',      Icon: Store,        label: 'Vendeur',      desc: 'Vendez vos produits agricoles', color: GREEN,     bg: '#f0fdf4' },
+  { id: 'TRANSPORTER', Icon: Truck,        label: 'Transporteur', desc: 'Proposez vos services',         color: '#d97706', bg: '#fffbeb' },
 ];
 
 const slide = {
@@ -26,36 +26,48 @@ const slide = {
   exit:    { x: -32, opacity: 0, transition: { duration: 0.18 } },
 };
 
-// ── Composant principal ──
 export default function Auth() {
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
+  const location  = useLocation();
   const { login, updateUser } = useAuth();
 
-  // Onglet actif
-  const [tab, setTab] = useState('phone'); // 'phone' | 'email'
+  // ── Mode synchronisé avec l'URL ─────────────────────
+  const isLoginRoute = location.pathname.includes('login');
+  const [mode, setMode] = useState(isLoginRoute ? 'login' : 'register');
 
-  // ─ Phone flow ─
-  const [phoneStep, setPhoneStep] = useState('input'); // input | otp | role | password
-  const [phone,      setPhone]      = useState('+229 ');
-  const [isExisting, setIsExisting] = useState(false);
-  const [otp,        setOtp]        = useState(Array(6).fill(''));
+  useEffect(() => {
+    const isLogin = location.pathname.includes('login');
+    setMode(isLogin ? 'login' : 'register');
+    setRegStep('role');
+    setError('');
+    setOtp(Array(6).fill(''));
+  }, [location.pathname]);
+
+  // ── Inscription ─────────────────────────────────────
+  const [regStep,    setRegStep]    = useState('role'); // role | form | otp
   const [role,       setRole]       = useState('');
-  const [pwd,        setPwd]        = useState('');
-  const [pwdConfirm, setPwdConfirm] = useState('');
+  const [nomComplet,  setNomComplet]  = useState('');
+  const [phone,       setPhone]       = useState('+229 ');
+  const [regEmail,    setRegEmail]    = useState('');
+  const [pwd,         setPwd]         = useState('');
+  const [pwdConfirm,  setPwdConfirm]  = useState('');
   const [showPwd,    setShowPwd]    = useState(false);
-  const [timer,      setTimer]      = useState(0);
 
-  // ─ Email flow ─
-  const [email,        setEmail]       = useState('');
-  const [emailPwd,     setEmailPwd]    = useState('');
-  const [showEmailPwd, setShowEmailPwd] = useState(false);
+  // ── OTP partagé ──────────────────────────────────────
+  const [otp,    setOtp]    = useState(Array(6).fill(''));
+  const [timer,  setTimer]  = useState(0);
+  const [devOtp, setDevOtp] = useState(''); // code affiché en mode dev local
 
-  // ─ Partagé ─
+  // ── Connexion ────────────────────────────────────────
+  const [loginId,      setLoginId]      = useState(''); // email ou téléphone
+  const [loginPwd,     setLoginPwd]     = useState('');
+  const [showLoginPwd, setShowLoginPwd] = useState(false);
+
+  // ── Partagé ──────────────────────────────────────────
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
   const [focused, setFocused] = useState('');
 
-  // Compte à rebours
   useEffect(() => {
     if (timer <= 0) return;
     const id = setTimeout(() => setTimer(t => t - 1), 1000);
@@ -63,227 +75,192 @@ export default function Auth() {
   }, [timer]);
 
   const fmtTimer = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-
   const clearError = () => setError('');
 
-  // ──────────────────────────────
-  // FLOW TÉLÉPHONE
-  // ──────────────────────────────
+  // ═══════════════════════════════════════
+  // INSCRIPTION
+  // ═══════════════════════════════════════
 
-  const handleRequestOTP = async e => {
-    e.preventDefault();
+  const validerForm = () => {
+    if (!nomComplet.trim()) { setError('Le nom complet est requis'); return false; }
     const cleaned = phone.replace(/\s/g, '');
-    if (cleaned.length < 8) { setError('Numéro de téléphone invalide'); return; }
+    if (cleaned.length < 8) { setError('Numéro de téléphone invalide'); return false; }
+    if (!regEmail.trim())   { setError('L\'adresse email est requise'); return false; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail)) { setError('Adresse email invalide'); return false; }
+    if (!pwd.trim())        { setError('Le mot de passe est obligatoire'); return false; }
+    if (pwd.length < 8)     { setError('Mot de passe : 8 caractères minimum'); return false; }
+    if (pwd !== pwdConfirm) { setError('Les mots de passe ne correspondent pas'); return false; }
+    return true;
+  };
+
+  const handleSubmitForm = async e => {
+    e.preventDefault();
+    if (!validerForm()) return;
     setLoading(true); clearError();
     try {
+      const cleaned = phone.replace(/\s/g, '');
       const res = await AuthService.requestOTP(cleaned);
-      setIsExisting(!!res.existing);
+      if (res.existing) {
+        setError('Ce numéro est déjà enregistré. Connectez-vous.');
+        return;
+      }
       setTimer(300);
-      setPhoneStep('otp');
-      // En développement : afficher le code dans la console
-      if (res.code_dev) console.log(`[DEV] Code OTP: ${res.code_dev}`);
+      if (res.code_dev) {
+        setDevOtp(res.code_dev);
+        setOtp(res.code_dev.split(''));
+      } else {
+        setDevOtp('');
+        setOtp(Array(6).fill(''));
+      }
+      setRegStep('otp');
     } catch (err) {
       setError(err.response?.data?.message || 'Erreur lors de l\'envoi du SMS');
     } finally { setLoading(false); }
   };
 
-  const handleOTPChange = (i, val) => {
-    if (!/^\d?$/.test(val)) return;
-    const next = [...otp];
-    next[i] = val;
-    setOtp(next);
-    if (val && i < 5) document.getElementById(`otp-${i + 1}`)?.focus();
-  };
-
-  const handleOTPKey = (i, e) => {
-    if (e.key === 'Backspace' && !otp[i] && i > 0)
-      document.getElementById(`otp-${i - 1}`)?.focus();
-  };
-
-  const handleVerifyOTP = async e => {
+  const handleVerifyRegOTP = async e => {
     e.preventDefault();
     const code = otp.join('');
     if (code.length !== 6) { setError('Entrez les 6 chiffres'); return; }
-
-    if (isExisting) {
-      // Connexion utilisateur existant via OTP
-      setLoading(true); clearError();
-      try {
-        const res = await AuthService.phoneLogin(phone.replace(/\s/g, ''), code);
-        updateUser(res.user);
-        navigate(`/${res.user.role.toLowerCase()}/dashboard`, { replace: true });
-      } catch (err) {
-        setError(err.response?.data?.message || 'Code invalide');
-      } finally { setLoading(false); }
-    } else {
-      // Nouvel utilisateur → sélection du rôle
-      setPhoneStep('role');
-    }
-  };
-
-  const handleRoleSelect = r => {
-    setRole(r);
-    setPhoneStep('password');
-  };
-
-  const handleRegister = async (skipPwd = false) => {
-    if (!skipPwd && pwd && pwd.length < 8) { setError('Mot de passe : 8 caractères minimum'); return; }
-    if (!skipPwd && pwd && pwd !== pwdConfirm) { setError('Les mots de passe ne correspondent pas'); return; }
     setLoading(true); clearError();
     try {
-      const res = await AuthService.verifyOTPAndRegister({
-        phone: phone.replace(/\s/g, ''),
-        code:  otp.join(''),
+      const payload = {
+        phone:       phone.replace(/\s/g, ''),
+        code,
         role,
-        password: (skipPwd || !pwd) ? undefined : pwd,
-      });
-      updateUser(res.user);
-      navigate(`/${res.user.role.toLowerCase()}/dashboard`, { replace: true });
+        nom_complet: nomComplet.trim(),
+        email:       regEmail.trim(),
+        password:    pwd,
+      };
+      const res = await AuthService.verifyOTPAndRegister(payload);
+      const u = res.user;
+      if (!u?.role) throw new Error('Données utilisateur invalides. Réessayez.');
+      updateUser(u);
+      navigate(`/${u.role.toLowerCase()}/dashboard`, { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors de la création du compte');
-      // Si l'OTP a expiré, revenir à la saisie OTP
-      if (err.response?.data?.message?.includes('expiré')) setPhoneStep('otp');
+      setError(err.response?.data?.message || 'Code invalide ou expiré');
+      if (err.response?.data?.message?.includes('expiré')) setRegStep('form');
     } finally { setLoading(false); }
   };
 
-  const handleResend = async () => {
+  const handleResendReg = async () => {
     clearError();
     try {
       const res = await AuthService.resendOTP(phone.replace(/\s/g, ''));
       setTimer(300);
-      setOtp(Array(6).fill(''));
-      if (res.code_dev) console.log(`[DEV] Code OTP renvoyé: ${res.code_dev}`);
+      if (res.code_dev) {
+        setDevOtp(res.code_dev);
+        setOtp(res.code_dev.split(''));
+      } else {
+        setDevOtp('');
+        setOtp(Array(6).fill(''));
+      }
     } catch { setError('Impossible de renvoyer le code'); }
   };
 
-  const goBack = () => {
-    clearError();
-    const prev = { otp: 'input', role: 'otp', password: 'role' };
-    setPhoneStep(prev[phoneStep] || 'input');
-  };
+  // ═══════════════════════════════════════
+  // CONNEXION
+  // ═══════════════════════════════════════
 
-  // ──────────────────────────────
-  // FLOW EMAIL
-  // ──────────────────────────────
-
-  const handleEmailLogin = async e => {
+  const handleLogin = async e => {
     e.preventDefault();
-    if (!email || !emailPwd) { setError('Remplissez tous les champs'); return; }
+    if (!loginId.trim())  { setError('Renseignez votre email ou numéro de téléphone'); return; }
+    if (!loginPwd.trim()) { setError('Renseignez votre mot de passe'); return; }
     setLoading(true); clearError();
     try {
-      const data = await login(email, emailPwd);
-      navigate(`/${data.user.role.toLowerCase()}/dashboard`, { replace: true });
+      const data = await AuthService.loginUnifie(loginId.trim(), loginPwd);
+      const u = data.user;
+      if (!u?.role) throw new Error('Données utilisateur invalides. Réessayez.');
+      updateUser(u);
+      navigate(`/${u.role.toLowerCase()}/dashboard`, { replace: true });
     } catch (err) {
-      setError(err.message || 'Email ou mot de passe incorrect');
+      setError(err.response?.data?.message || err.message || 'Identifiant ou mot de passe incorrect');
     } finally { setLoading(false); }
   };
 
-  // ──────────────────────────────
-  // STYLES PARTAGÉS
-  // ──────────────────────────────
+  // ═══════════════════════════════════════
+  // HELPERS STYLES
+  // ═══════════════════════════════════════
 
-  const inputStyle = name => ({
-    width: '100%', padding: '0.82rem 1rem',
-    border: `1.5px solid ${focused === name ? GREEN : '#e5e7eb'}`,
-    borderRadius: '12px', fontSize: '0.93rem', outline: 'none',
+  const inp = name => ({
+    width: '100%', padding: '0.82rem 1rem 0.82rem 2.5rem',
+    border: `2px solid ${focused === name ? GREEN : '#c4b9a8'}`,
+    borderRadius: '12px', fontSize: '0.92rem', outline: 'none',
     color: '#1a2e10', background: focused === name ? '#fafff9' : '#fafafa',
-    transition: 'all 0.2s',
-    boxShadow: focused === name ? '0 0 0 3px rgba(26,92,42,0.08)' : 'none',
+    transition: 'all 0.2s', boxShadow: focused === name ? '0 0 0 3px rgba(26,92,42,0.08)' : 'none',
+    boxSizing: 'border-box',
   });
 
   const btnPrimary = {
     width: '100%', padding: '0.9rem', marginTop: '0.4rem',
-    background: `linear-gradient(135deg, ${GREEN} 0%, #2d8c47 100%)`,
+    background: `linear-gradient(135deg, ${GREEN}, #2d8c47)`,
     color: 'white', border: 'none', borderRadius: '12px',
     fontSize: '0.97rem', fontWeight: '700', cursor: 'pointer',
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-    boxShadow: '0 4px 20px rgba(26,92,42,0.28)', transition: 'opacity 0.2s',
+    boxShadow: '0 4px 20px rgba(26,92,42,0.28)',
   };
 
-  const stepLabel = { input: 'Connexion / Inscription', otp: 'Code de vérification', role: 'Votre activité', password: 'Sécurité du compte' };
+  const IL = { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' };
+  const LB = { display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#374151', marginBottom: '6px' };
+  const FW = { marginBottom: '0.9rem' };
 
-  // ──────────────────────────────
+  const switchTo = m => {
+    setMode(m); clearError();
+    setOtp(Array(6).fill(''));
+    setRegEmail('');
+    setLoginId('');
+    setLoginPwd('');
+  };
+
+  // ═══════════════════════════════════════
   // RENDU
-  // ──────────────────────────────
+  // ═══════════════════════════════════════
+
+  const showBack = mode === 'register' && regStep !== 'role';
+
+  const handleBack = () => {
+    clearError();
+    if (mode === 'register') {
+      if (regStep === 'form') setRegStep('role');
+      if (regStep === 'otp')  setRegStep('form');
+    }
+  };
 
   return (
-    <div style={{ minHeight: '100vh', background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        style={{ width: '100%', maxWidth: '430px' }}
+    <div style={{ minHeight: '100vh', background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem', position: 'relative', overflow: 'hidden' }}>
+
+      {/* Cercles décoratifs background */}
+      <div style={{ position: 'absolute', top: '-80px',  left: '-80px',  width: '300px', height: '300px', borderRadius: '50%', background: 'rgba(180,160,120,0.12)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: '-60px', right: '-60px', width: '260px', height: '260px', borderRadius: '50%', background: 'rgba(180,160,120,0.12)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: '40%',    right: '-40px',  width: '180px', height: '180px', borderRadius: '50%', background: 'rgba(180,160,120,0.08)', pointerEvents: 'none' }} />
+
+      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+        style={{ width: '100%', maxWidth: '420px', position: 'relative', zIndex: 1 }}
       >
+
         {/* Bouton retour */}
         <div style={{ marginBottom: '1rem' }}>
-          <motion.button onClick={() => navigate(-1)}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '7px 14px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', color: '#374151' }}
+          <motion.button onClick={showBack ? handleBack : () => navigate('/')}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.7)', border: '1px solid #e0d8cc', borderRadius: '10px', padding: '7px 14px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', color: '#374151', backdropFilter: 'blur(4px)' }}
             whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
           >
             <ArrowLeft size={16} /> Retour
           </motion.button>
         </div>
 
-        {/* Carte principale */}
-        <div style={{ background: 'white', borderRadius: '20px', padding: '2rem', boxShadow: '0 2px 24px rgba(0,0,0,0.07)', border: '1px solid #e5e7eb' }}>
+        {/* Carte */}
+        <div style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', padding: '2.2rem 2rem', boxShadow: '0 8px 40px rgba(0,0,0,0.08)', backdropFilter: 'blur(8px)' }}>
 
-          {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '1.5rem' }}>
-            <img src={logo} alt="AgroSaaNuu" style={{ width: '40px', height: '40px', borderRadius: '10px', objectFit: 'cover' }} />
-            <span style={{ fontSize: '1.4rem', fontWeight: '900', color: '#1a2e10' }}>
-              Agro<span style={{ color: GREEN }}>SaaNuu</span>
-            </span>
+          {/* Logo centré */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.4rem' }}>
+            <img src={logo} alt="AgroSaaNuu" style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', marginBottom: '0.6rem', boxShadow: '0 2px 12px rgba(0,0,0,0.1)' }} />
+            <span style={{ fontSize: '1.5rem', fontWeight: '900', color: '#1a2e10' }}>AgroSaaNuu</span>
           </div>
 
-          {/* Onglets (visibles sur la page d'accueil ou onglet email) */}
-          {(phoneStep === 'input' || tab === 'email') && (
-            <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: '12px', padding: '4px', marginBottom: '1.5rem', gap: '4px' }}>
-              {[
-                { id: 'phone', Icon: Phone, label: 'Téléphone' },
-                { id: 'email', Icon: Mail,  label: 'Email' },
-              ].map(t => (
-                <button key={t.id}
-                  onClick={() => { setTab(t.id); clearError(); }}
-                  style={{
-                    flex: 1, padding: '0.6rem 0.5rem', border: 'none', borderRadius: '9px', cursor: 'pointer',
-                    fontSize: '0.85rem', fontWeight: '600',
-                    background: tab === t.id ? 'white' : 'transparent',
-                    color:      tab === t.id ? GREEN   : '#6b7280',
-                    boxShadow:  tab === t.id ? '0 1px 6px rgba(0,0,0,0.1)' : 'none',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <t.Icon size={15} /> {t.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* En-tête d'étape (phone flow, après input) */}
-          {tab === 'phone' && phoneStep !== 'input' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.4rem' }}>
-              <button onClick={goBack}
-                style={{ background: '#f3f4f6', border: 'none', borderRadius: '8px', padding: '6px', cursor: 'pointer', display: 'flex', flexShrink: 0 }}
-              >
-                <ArrowLeft size={18} color="#374151" />
-              </button>
-              <div>
-                <p style={{ margin: 0, fontSize: '0.75rem', color: '#9ca3af', fontWeight: '500' }}>
-                  {phone.replace(/\s/g, '')}
-                </p>
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '700', color: '#1a2e10' }}>
-                  {stepLabel[phoneStep]}
-                </h3>
-              </div>
-            </div>
-          )}
-
-          {/* Message d'erreur */}
+          {/* Erreur */}
           <AnimatePresence>
             {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '0.7rem 1rem', marginBottom: '1rem', fontSize: '0.84rem', color: '#dc2626' }}
               >
                 <AlertCircle size={15} /> {error}
@@ -291,320 +268,319 @@ export default function Auth() {
             )}
           </AnimatePresence>
 
-          {/* ══════════════════════════════ */}
-          {/* ONGLET TÉLÉPHONE               */}
-          {/* ══════════════════════════════ */}
-          {tab === 'phone' && (
-            <AnimatePresence mode="wait">
+          <AnimatePresence mode="wait">
 
-              {/* Étape 1 : saisie du numéro */}
-              {phoneStep === 'input' && (
-                <motion.form key="phone-input" {...slide} onSubmit={handleRequestOTP}>
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                      Numéro de téléphone
-                    </label>
-                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                      <Phone size={16} color="#9ca3af" style={{ position: 'absolute', left: '14px', pointerEvents: 'none' }} />
-                      <input
-                        type="tel" value={phone}
-                        onChange={e => { setPhone(e.target.value); clearError(); }}
-                        onFocus={() => setFocused('phone')} onBlur={() => setFocused('')}
-                        placeholder="+229 01 23 45 67 89"
-                        style={{ ...inputStyle('phone'), paddingLeft: '2.5rem' }}
-                      />
-                    </div>
-                    <p style={{ fontSize: '0.74rem', color: '#9ca3af', margin: '5px 0 0 2px' }}>
-                      Format Bénin : +229 XX XX XX XX
-                    </p>
-                  </div>
+            {/* ══════════════════════════════════
+                INSCRIPTION — Étape 1 : Rôle
+            ══════════════════════════════════ */}
+            {mode === 'register' && regStep === 'role' && (
+              <motion.div key="role" {...slide}>
+                <p style={{ textAlign: 'center', fontSize: '0.92rem', fontWeight: '700', color: '#1a2e10', marginBottom: '0.3rem' }}>
+                  Créer un compte
+                </p>
+                <p style={{ textAlign: 'center', fontSize: '0.84rem', color: '#6b7280', marginBottom: '1.4rem' }}>
+                  Quel est votre rôle sur la plateforme ?
+                </p>
 
-                  <motion.button type="submit" style={{ ...btnPrimary, opacity: loading ? 0.75 : 1 }}
-                    disabled={loading} whileHover={{ scale: loading ? 1 : 1.02 }} whileTap={{ scale: loading ? 1 : 0.98 }}
-                  >
-                    {loading
-                      ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div> Envoi…</>
-                      : 'Recevoir le code SMS'
-                    }
-                  </motion.button>
-
-                  {/* Séparateur */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '1.2rem 0' }}>
-                    <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
-                    <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>ou</span>
-                    <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
-                  </div>
-
-                  {/* Google (placeholder) */}
-                  <button type="button" disabled title="Bientôt disponible"
-                    style={{ width: '100%', background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: '12px', padding: '0.78rem', fontSize: '0.9rem', fontWeight: '600', color: '#9ca3af', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '1rem', opacity: 0.65 }}
-                  >
-                    <GoogleIcon />
-                    Continuer avec Google (bientôt)
-                  </button>
-
-                  <p style={{ textAlign: 'center', fontSize: '0.80rem', color: '#9ca3af', margin: 0 }}>
-                    En continuant, vous acceptez nos{' '}
-                    <a href="#" style={{ color: GREEN, textDecoration: 'none', fontWeight: '600' }}>conditions d'utilisation</a>
-                  </p>
-                </motion.form>
-              )}
-
-              {/* Étape 2 : OTP */}
-              {phoneStep === 'otp' && (
-                <motion.form key="otp" {...slide} onSubmit={handleVerifyOTP}>
-                  <p style={{ textAlign: 'center', fontSize: '0.88rem', color: '#6b7280', marginBottom: '1.5rem' }}>
-                    {isExisting
-                      ? <>Code envoyé sur <strong style={{ color: '#1a2e10' }}>{phone}</strong><br /><span style={{ fontSize: '0.8rem' }}>Connectez-vous avec votre code</span></>
-                      : <>Code envoyé sur <strong style={{ color: '#1a2e10' }}>{phone}</strong></>
-                    }
-                  </p>
-
-                  {/* 6 cases OTP */}
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '1.2rem' }}>
-                    {otp.map((d, i) => (
-                      <input
-                        key={i} id={`otp-${i}`} type="text" inputMode="numeric" maxLength="1"
-                        value={d}
-                        onChange={e => handleOTPChange(i, e.target.value)}
-                        onKeyDown={e => handleOTPKey(i, e)}
-                        autoFocus={i === 0}
-                        style={{
-                          width: '46px', height: '52px', fontSize: '1.4rem', fontWeight: '700',
-                          textAlign: 'center', border: `2px solid ${d ? GREEN : '#e5e7eb'}`,
-                          borderRadius: '10px', outline: 'none', color: '#1a2e10',
-                          background: d ? '#f0fdf4' : '#fafafa', transition: 'all 0.15s',
-                        }}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Compte à rebours / Renvoyer */}
-                  <div style={{ textAlign: 'center', marginBottom: '1.2rem', minHeight: '24px' }}>
-                    {timer > 0
-                      ? <span style={{ fontSize: '0.84rem', color: '#6b7280' }}>
-                          Code expire dans <strong style={{ color: GREEN }}>{fmtTimer(timer)}</strong>
-                        </span>
-                      : <button type="button" onClick={handleResend}
-                          style={{ background: 'none', border: 'none', color: GREEN, cursor: 'pointer', fontWeight: '600', fontSize: '0.88rem', textDecoration: 'underline' }}
-                        >
-                          Renvoyer le code
-                        </button>
-                    }
-                  </div>
-
-                  <motion.button type="submit"
-                    style={{ ...btnPrimary, opacity: (loading || otp.join('').length !== 6) ? 0.65 : 1 }}
-                    disabled={loading || otp.join('').length !== 6}
-                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                  >
-                    {loading
-                      ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div> Vérification…</>
-                      : <><Check size={16} /> Vérifier</>
-                    }
-                  </motion.button>
-                </motion.form>
-              )}
-
-              {/* Étape 3 : Sélection du rôle */}
-              {phoneStep === 'role' && (
-                <motion.div key="role" {...slide}>
-                  <p style={{ textAlign: 'center', fontSize: '0.88rem', color: '#6b7280', marginBottom: '1.2rem' }}>
-                    Comment allez-vous utiliser AgroSaaNuu ?
-                  </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {ROLES.map(({ id, Icon, label, desc, color, bg }) => (
-                      <motion.button key={id}
-                        onClick={() => handleRoleSelect(id)}
-                        whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '14px',
-                          padding: '1rem', border: `2px solid ${role === id ? color : '#e5e7eb'}`,
-                          borderRadius: '14px', background: role === id ? bg : 'white',
-                          cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s',
-                          boxShadow: role === id ? `0 0 0 3px ${color}25` : 'none',
-                        }}
-                      >
-                        <div style={{ width: '46px', height: '46px', borderRadius: '10px', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1px solid ${color}30` }}>
-                          <Icon size={22} color={color} />
-                        </div>
-                        <div>
-                          <p style={{ margin: 0, fontWeight: '700', color: '#1a2e10', fontSize: '0.95rem' }}>{label}</p>
-                          <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280', marginTop: '2px' }}>{desc}</p>
-                        </div>
-                        {role === id && <Check size={18} color={color} style={{ marginLeft: 'auto' }} />}
-                      </motion.button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Étape 4 : Mot de passe (optionnel) */}
-              {phoneStep === 'password' && (
-                <motion.div key="password" {...slide}>
-                  <p style={{ fontSize: '0.87rem', color: '#6b7280', marginBottom: '1.2rem', textAlign: 'center' }}>
-                    Protégez votre compte avec un mot de passe<br />
-                    <span style={{ fontSize: '0.78rem' }}>(optionnel — vous pouvez toujours vous connecter par SMS)</span>
-                  </p>
-
-                  {/* Champ mot de passe */}
-                  <div style={{ marginBottom: '0.8rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                      Mot de passe
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                      <Lock size={16} color="#9ca3af" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-                      <input
-                        type={showPwd ? 'text' : 'password'} value={pwd}
-                        onChange={e => { setPwd(e.target.value); clearError(); }}
-                        onFocus={() => setFocused('pwd')} onBlur={() => setFocused('')}
-                        placeholder="Minimum 8 caractères"
-                        style={{ ...inputStyle('pwd'), paddingLeft: '2.5rem', paddingRight: '3rem' }}
-                      />
-                      <button type="button" onClick={() => setShowPwd(v => !v)}
-                        style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}
-                      >
-                        {showPwd ? <EyeOff size={17} color="#9ca3af" /> : <Eye size={17} color="#9ca3af" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Confirmer */}
-                  {pwd.length > 0 && (
-                    <div style={{ marginBottom: '0.8rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                        Confirmer le mot de passe
-                      </label>
-                      <input
-                        type={showPwd ? 'text' : 'password'} value={pwdConfirm}
-                        onChange={e => setPwdConfirm(e.target.value)}
-                        onFocus={() => setFocused('pwdc')} onBlur={() => setFocused('')}
-                        placeholder="Répétez le mot de passe"
-                        style={{ ...inputStyle('pwdc'), borderColor: pwdConfirm && pwdConfirm !== pwd ? '#ef4444' : undefined }}
-                      />
-                      {pwdConfirm && pwdConfirm !== pwd && (
-                        <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '4px', display: 'block' }}>
-                          ❌ Ne correspondent pas
-                        </span>
-                      )}
-                      {pwdConfirm && pwdConfirm === pwd && (
-                        <span style={{ fontSize: '0.75rem', color: '#16a34a', marginTop: '4px', display: 'block' }}>
-                          ✅ Correspondent
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Boutons */}
-                  <motion.button onClick={() => handleRegister(false)}
-                    style={{ ...btnPrimary, opacity: loading ? 0.75 : 1 }}
-                    disabled={loading} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                  >
-                    {loading
-                      ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div> Création…</>
-                      : <><Check size={16} /> Créer mon compte</>
-                    }
-                  </motion.button>
-
-                  <button type="button" onClick={() => handleRegister(true)} disabled={loading}
-                    style={{ width: '100%', marginTop: '10px', padding: '0.78rem', background: 'transparent', border: '1.5px solid #e5e7eb', borderRadius: '12px', fontSize: '0.88rem', color: '#6b7280', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: '500', transition: 'border-color 0.2s' }}
-                  >
-                    Continuer sans mot de passe
-                  </button>
-                </motion.div>
-              )}
-
-            </AnimatePresence>
-          )}
-
-          {/* ══════════════════════════════ */}
-          {/* ONGLET EMAIL                   */}
-          {/* ══════════════════════════════ */}
-          {tab === 'email' && (
-            <motion.form key="email-form" {...slide} onSubmit={handleEmailLogin}>
-
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                  Adresse email
-                </label>
-                <input
-                  type="email" value={email}
-                  onChange={e => { setEmail(e.target.value); clearError(); }}
-                  onFocus={() => setFocused('email')} onBlur={() => setFocused('')}
-                  placeholder="votre@email.com"
-                  style={inputStyle('email')}
-                />
-              </div>
-
-              <div style={{ marginBottom: '0.6rem' }}>
-                <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                  Mot de passe
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type={showEmailPwd ? 'text' : 'password'} value={emailPwd}
-                    onChange={e => { setEmailPwd(e.target.value); clearError(); }}
-                    onFocus={() => setFocused('emailPwd')} onBlur={() => setFocused('')}
-                    placeholder="Votre mot de passe"
-                    style={{ ...inputStyle('emailPwd'), paddingRight: '3rem' }}
-                  />
-                  <button type="button" onClick={() => setShowEmailPwd(v => !v)}
-                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}
-                  >
-                    {showEmailPwd ? <EyeOff size={17} color="#9ca3af" /> : <Eye size={17} color="#9ca3af" />}
-                  </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {ROLES.map(({ id, Icon, label, desc, color, bg }) => (
+                    <motion.button key={id}
+                      onClick={() => { setRole(id); setRegStep('form'); clearError(); }}
+                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '1rem', border: `2px solid ${role === id ? color : '#e5e7eb'}`, borderRadius: '14px', background: role === id ? bg : 'white', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', boxShadow: role === id ? `0 0 0 3px ${color}22` : 'none' }}
+                    >
+                      <div style={{ width: '46px', height: '46px', borderRadius: '10px', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1px solid ${color}30` }}>
+                        <Icon size={22} color={color} />
+                      </div>
+                      <div>
+                        <p style={{ margin: 0, fontWeight: '700', color: '#1a2e10', fontSize: '0.95rem' }}>{label}</p>
+                        <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280', marginTop: '2px' }}>{desc}</p>
+                      </div>
+                      {role === id && <Check size={18} color={color} style={{ marginLeft: 'auto' }} />}
+                    </motion.button>
+                  ))}
                 </div>
-              </div>
 
-              <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
-                <Link to="/auth/forgot-password" style={{ fontSize: '0.83rem', color: GREEN, textDecoration: 'none', fontWeight: '600' }}>
-                  Mot de passe oublié ?
-                </Link>
-              </div>
+                <p style={{ textAlign: 'center', fontSize: '0.84rem', color: '#9ca3af', margin: '1.2rem 0 0' }}>
+                  Déjà inscrit ?{' '}
+                  <Link to="/auth/login" style={{ color: GREEN, fontWeight: '700', textDecoration: 'none' }}>
+                    Connexion
+                  </Link>
+                </p>
+              </motion.div>
+            )}
 
-              <motion.button type="submit"
-                style={{ ...btnPrimary, opacity: loading ? 0.75 : 1 }}
-                disabled={loading} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-              >
-                {loading
-                  ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div> Connexion…</>
-                  : 'Se connecter'
-                }
-              </motion.button>
+            {/* ══════════════════════════════════
+                INSCRIPTION — Étape 2 : Formulaire
+            ══════════════════════════════════ */}
+            {mode === 'register' && regStep === 'form' && (
+              <motion.form key="reg-form" {...slide} onSubmit={handleSubmitForm}>
+                <p style={{ fontSize: '0.82rem', color: '#6b7280', marginBottom: '1.2rem', textAlign: 'center' }}>
+                  {role === 'BUYER' && 'Inscription Acheteur'}
+                  {role === 'SELLER' && 'Inscription Vendeur'}
+                  {role === 'TRANSPORTER' && 'Inscription Transporteur'}
+                </p>
 
-              {/* Google */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '1.1rem 0' }}>
-                <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
-                <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>ou</span>
-                <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
-              </div>
+                {/* Nom complet */}
+                <div style={FW}>
+                  <label style={LB}>Nom complet *</label>
+                  <div style={{ position: 'relative' }}>
+                    <User size={15} color="#9ca3af" style={IL} />
+                    <input type="text" value={nomComplet} onChange={e => { setNomComplet(e.target.value); clearError(); }}
+                      onFocus={() => setFocused('nom')} onBlur={() => setFocused('')}
+                      placeholder="Prénom et Nom" style={inp('nom')} />
+                  </div>
+                </div>
 
-              <button type="button" disabled title="Bientôt disponible"
-                style={{ width: '100%', background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: '12px', padding: '0.78rem', fontSize: '0.9rem', fontWeight: '600', color: '#9ca3af', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', opacity: 0.65 }}
-              >
-                <GoogleIcon />
-                Continuer avec Google (bientôt)
-              </button>
-            </motion.form>
-          )}
+                {/* Téléphone */}
+                <div style={FW}>
+                  <label style={LB}>Numéro de téléphone *</label>
+                  <div style={{ position: 'relative' }}>
+                    <Phone size={15} color="#9ca3af" style={IL} />
+                    <input type="tel" value={phone} onChange={e => { setPhone(e.target.value); clearError(); }}
+                      onFocus={() => setFocused('tel')} onBlur={() => setFocused('')}
+                      placeholder="+229 01 23 45 67 89" style={inp('tel')} />
+                  </div>
+                  <span style={{ fontSize: '0.74rem', color: '#9ca3af', marginTop: '3px', display: 'block' }}>Format Bénin : +229 XX XX XX XX</span>
+                </div>
 
-          {/* Pied de page */}
-          {(phoneStep === 'input' || tab === 'email') && (
-            <p style={{ textAlign: 'center', fontSize: '0.84rem', color: '#6b7280', marginTop: '1.2rem', marginBottom: 0 }}>
-              {tab === 'phone'
-                ? <>Vous avez un compte email ?{' '}<button type="button" onClick={() => setTab('email')} style={{ background: 'none', border: 'none', color: GREEN, fontWeight: '700', cursor: 'pointer', fontSize: '0.84rem', padding: 0 }}>Connexion email</button></>
-                : <>Nouveau sur AgroSaaNuu ?{' '}<button type="button" onClick={() => setTab('phone')} style={{ background: 'none', border: 'none', color: GREEN, fontWeight: '700', cursor: 'pointer', fontSize: '0.84rem', padding: 0 }}>Créer un compte</button></>
-              }
-            </p>
-          )}
+                {/* Email */}
+                <div style={FW}>
+                  <label style={LB}>Adresse email *</label>
+                  <div style={{ position: 'relative' }}>
+                    <Mail size={15} color="#9ca3af" style={IL} />
+                    <input
+                      type="email"
+                      value={regEmail}
+                      onChange={e => { setRegEmail(e.target.value); clearError(); }}
+                      onFocus={() => setFocused('regEmail')}
+                      onBlur={() => setFocused('')}
+                      placeholder="votre@email.com"
+                      style={inp('regEmail')}
+                      autoComplete="email"
+                    />
+                  </div>
+                  {regEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail) && (
+                    <span style={{ fontSize: '0.74rem', color: '#ef4444', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}><XCircle size={13} /> Format email invalide</span>
+                  )}
+                  {regEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail) && (
+                    <span style={{ fontSize: '0.74rem', color: '#16a34a', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle size={13} /> Email valide</span>
+                  )}
+                </div>
 
+                {/* Mot de passe */}
+                <div style={FW}>
+                  <label style={LB}>Mot de passe *</label>
+                  <div style={{ position: 'relative' }}>
+                    <Lock size={15} color="#9ca3af" style={IL} />
+                    <input type={showPwd ? 'text' : 'password'} value={pwd}
+                      onChange={e => { setPwd(e.target.value); clearError(); }}
+                      onFocus={() => setFocused('pwd')} onBlur={() => setFocused('')}
+                      placeholder="Minimum 8 caractères"
+                      style={{ ...inp('pwd'), paddingRight: '3rem' }} />
+                    <button type="button" onClick={() => setShowPwd(v => !v)}
+                      style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}>
+                      {showPwd ? <EyeOff size={17} color="#9ca3af" /> : <Eye size={17} color="#9ca3af" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirmation mot de passe */}
+                <div style={FW}>
+                  <label style={LB}>Confirmer le mot de passe *</label>
+                  <input type={showPwd ? 'text' : 'password'} value={pwdConfirm}
+                    onChange={e => { setPwdConfirm(e.target.value); clearError(); }}
+                    onFocus={() => setFocused('pwdc')} onBlur={() => setFocused('')}
+                    placeholder="Répétez le mot de passe"
+                    style={{ ...inp('pwdc'), paddingLeft: '1rem', borderColor: pwdConfirm && pwdConfirm !== pwd ? '#ef4444' : undefined }}
+                  />
+                  {pwdConfirm && pwdConfirm !== pwd && <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}><XCircle size={13} /> Ne correspondent pas</span>}
+                  {pwdConfirm && pwdConfirm === pwd && pwd.length > 0 && <span style={{ fontSize: '0.75rem', color: '#16a34a', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle size={13} /> Correspondent</span>}
+                </div>
+
+                <motion.button type="submit" style={{ ...btnPrimary, opacity: loading ? 0.75 : 1 }}
+                  disabled={loading} whileHover={{ scale: loading ? 1 : 1.02 }} whileTap={{ scale: loading ? 1 : 0.98 }}
+                >
+                  <AnimatePresence mode="wait" initial={false}>
+                    {loading ? (
+                      <motion.span key="loading" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div>
+                        <span> Création du compte…</span>
+                      </motion.span>
+                    ) : (
+                      <motion.span key="idle" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                        <Check size={15} /><span> S'inscrire</span>
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
+
+              </motion.form>
+            )}
+
+            {/* ══════════════════════════════════
+                INSCRIPTION — Étape 3 : OTP
+            ══════════════════════════════════ */}
+            {mode === 'register' && regStep === 'otp' && (
+              <motion.form key="reg-otp" {...slide} onSubmit={handleVerifyRegOTP}>
+                <p style={{ textAlign: 'center', fontSize: '1rem', fontWeight: '700', color: '#1a2e10', marginBottom: '0.3rem' }}>
+                  Vérification du numéro
+                </p>
+                <p style={{ textAlign: 'center', fontSize: '0.88rem', color: '#6b7280', marginBottom: '1.5rem' }}>
+                  Code envoyé au <strong style={{ color: '#1a2e10' }}>{phone}</strong>
+                </p>
+
+                {devOtp && (
+                  <div style={{ background: '#fefce8', border: '1px solid #fde047', borderRadius: '10px', padding: '0.6rem 1rem', marginBottom: '1rem', textAlign: 'center' }}>
+                    <span style={{ fontSize: '0.78rem', color: '#92400e', display: 'block', marginBottom: '2px' }}>Code de vérification (serveur local)</span>
+                    <strong style={{ fontSize: '1.3rem', letterSpacing: '0.2em', color: '#713f12' }}>{devOtp}</strong>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '1.2rem' }}>
+                  {otp.map((d, i) => (
+                    <input key={i} id={`otp-${i}`} type="text" inputMode="numeric" maxLength="1" value={d}
+                      onChange={e => {
+                        if (!/^\d?$/.test(e.target.value)) return;
+                        const next = [...otp]; next[i] = e.target.value; setOtp(next);
+                        if (e.target.value && i < 5) document.getElementById(`otp-${i + 1}`)?.focus();
+                      }}
+                      onKeyDown={e => { if (e.key === 'Backspace' && !d && i > 0) document.getElementById(`otp-${i - 1}`)?.focus(); }}
+                      autoFocus={i === 0}
+                      style={{ width: '46px', height: '52px', fontSize: '1.4rem', fontWeight: '700', textAlign: 'center', border: `2px solid ${d ? GREEN : '#e5e7eb'}`, borderRadius: '10px', outline: 'none', color: '#1a2e10', background: d ? '#f0fdf4' : '#fafafa', transition: 'all 0.15s' }}
+                    />
+                  ))}
+                </div>
+
+                <div style={{ textAlign: 'center', marginBottom: '1.2rem', minHeight: '22px' }}>
+                  {timer > 0
+                    ? <span style={{ fontSize: '0.84rem', color: '#6b7280' }}>Expire dans <strong style={{ color: GREEN }}>{fmtTimer(timer)}</strong></span>
+                    : <button type="button" onClick={handleResendReg} style={{ background: 'none', border: 'none', color: GREEN, cursor: 'pointer', fontWeight: '600', fontSize: '0.88rem', textDecoration: 'underline' }}>Renvoyer le code</button>
+                  }
+                </div>
+
+                <motion.button type="submit"
+                  style={{ ...btnPrimary, opacity: (loading || otp.join('').length !== 6) ? 0.65 : 1 }}
+                  disabled={loading || otp.join('').length !== 6}
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                >
+                  <AnimatePresence mode="wait" initial={false}>
+                    {loading ? (
+                      <motion.span key="loading" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div>
+                        <span> Création du compte…</span>
+                      </motion.span>
+                    ) : (
+                      <motion.span key="idle" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                        <Check size={16} /><span> Créer mon compte</span>
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
+              </motion.form>
+            )}
+
+            {/* ══════════════════════════════════
+                CONNEXION
+            ══════════════════════════════════ */}
+            {mode === 'login' && (
+              <motion.form key="login" {...slide} onSubmit={handleLogin}>
+
+                <p style={{ textAlign: 'center', fontSize: '1.05rem', fontWeight: '800', color: '#1a2e10', marginBottom: '1.5rem' }}>
+                  Connexion
+                </p>
+
+                {/* Email ou téléphone */}
+                <div style={FW}>
+                  <label style={LB}>Email ou numéro de téléphone</label>
+                  <div style={{ position: 'relative' }}>
+                    <User size={15} color="#9ca3af" style={IL} />
+                    <input
+                      type="text"
+                      value={loginId}
+                      onChange={e => { setLoginId(e.target.value); clearError(); }}
+                      onFocus={() => setFocused('loginId')}
+                      onBlur={() => setFocused('')}
+                      placeholder=""
+                      style={inp('loginId')}
+                      autoComplete="username"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                {/* Mot de passe */}
+                <div style={FW}>
+                  <label style={LB}>Mot de passe</label>
+                  <div style={{ position: 'relative' }}>
+                    <Lock size={15} color="#9ca3af" style={IL} />
+                    <input
+                      type={showLoginPwd ? 'text' : 'password'}
+                      value={loginPwd}
+                      onChange={e => { setLoginPwd(e.target.value); clearError(); }}
+                      onFocus={() => setFocused('loginPwd')}
+                      onBlur={() => setFocused('')}
+                      placeholder=""
+                      style={{ ...inp('loginPwd'), paddingRight: '3rem' }}
+                      autoComplete="current-password"
+                    />
+                    <button type="button" onClick={() => setShowLoginPwd(v => !v)}
+                      style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}>
+                      {showLoginPwd ? <EyeOff size={17} color="#9ca3af" /> : <Eye size={17} color="#9ca3af" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Mot de passe oublié */}
+                <div style={{ textAlign: 'right', marginBottom: '1.2rem', marginTop: '-0.4rem' }}>
+                  <Link to="/auth/forgot-password" style={{ fontSize: '0.83rem', color: GREEN, textDecoration: 'none', fontWeight: '600' }}>
+                    Mot de passe oublié ?
+                  </Link>
+                </div>
+
+                {/* Bouton connexion */}
+                <motion.button type="submit"
+                  style={{ ...btnPrimary, borderRadius: '50px', fontSize: '1rem', padding: '0.95rem', letterSpacing: '0.02em', opacity: loading ? 0.75 : 1 }}
+                  disabled={loading} whileHover={{ scale: loading ? 1 : 1.02 }} whileTap={{ scale: loading ? 1 : 0.98 }}
+                >
+                  <AnimatePresence mode="wait" initial={false}>
+                    {loading ? (
+                      <motion.span key="loading" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div>
+                        <span> Connexion…</span>
+                      </motion.span>
+                    ) : (
+                      <motion.span key="idle"
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                        Connexion
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
+
+                {/* Inscription */}
+                <p style={{ textAlign: 'center', fontSize: '0.84rem', color: '#6b7280', marginTop: '1rem', marginBottom: 0 }}>
+                  Pas encore de compte ?{' '}
+                  <Link to="/auth/register" style={{ color: GREEN, fontWeight: '700', textDecoration: 'none' }}>
+                    Inscription
+                  </Link>
+                </p>
+
+              </motion.form>
+            )}
+
+          </AnimatePresence>
         </div>
       </motion.div>
     </div>
   );
 }
 
-// Icône Google
 function GoogleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 48 48">

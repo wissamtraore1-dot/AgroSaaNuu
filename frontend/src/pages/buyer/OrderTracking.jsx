@@ -1,122 +1,211 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
 import {
   Package, Truck, CheckCircle, Clock,
   MapPin, Star, Shield, AlertCircle,
-  Loader, Phone, MessageSquare, ArrowLeft
+  Loader, ArrowLeft, X, Sparkles, AlertTriangle,
+  ClipboardList,
 } from 'lucide-react';
 import DashboardLayout from '../../Components/layout/DashboardLayout';
+import OrderService from '../../services/order.service';
+import TransportService from '../../services/transport.service';
 
-// ===== MOCK DATA =====
-const commande = {
-  id:          'AGR-CMD-12345678',
-  produit:     'Maïs blanc 2t',
-  vendeur:     'Moussa K.',
-  transporteur:'Kofi T.',
-  montant:     185000,
-  date:        '10 Mai 2026',
-  adresse:     'Quartier Cadjèhoun, Cotonou',
-  statut:      'en_livraison', // en_attente | confirmee | en_livraison | livree | litigee
-};
+const GREEN = '#1a5c2a';
 
-const etapesLivraison = [
-  { id: 'commande',    label: 'Commande passée',       icon: Package,      date: '10 Mai 09:00', fait: true  },
-  { id: 'paiement',   label: 'Paiement sécurisé',      icon: Shield,       date: '10 Mai 09:01', fait: true  },
-  { id: 'preparation',label: 'Préparation en cours',   icon: Clock,        date: '10 Mai 10:30', fait: true  },
-  { id: 'livraison',  label: 'En cours de livraison',  icon: Truck,        date: '11 Mai 08:00', fait: true  },
-  { id: 'livree',     label: 'Livraison confirmée',    icon: CheckCircle,  date: '—',            fait: false },
+// Mapping statut commande → étapes timeline complétées
+const ETAPES_ORDRE = ['EN_ATTENTE', 'CONFIRME', 'PAYE', 'EN_PREPARATION', 'EN_LIVRAISON', 'RECEPTION_CONFIRMEE'];
+
+const buildTimeline = (statutCommande, mission) => [
+  {
+    id:    'commande',
+    label: 'Commande passée',
+    icon:  Package,
+    fait:  true,
+    date:  null,
+  },
+  {
+    id:    'paiement',
+    label: 'Paiement sécurisé',
+    icon:  Shield,
+    fait:  ETAPES_ORDRE.indexOf(statutCommande) >= ETAPES_ORDRE.indexOf('PAYE'),
+    date:  null,
+  },
+  {
+    id:    'preparation',
+    label: 'En préparation',
+    icon:  Clock,
+    fait:  ETAPES_ORDRE.indexOf(statutCommande) >= ETAPES_ORDRE.indexOf('EN_PREPARATION'),
+    date:  null,
+  },
+  {
+    id:    'livraison',
+    label: 'En cours de livraison',
+    icon:  Truck,
+    fait:  ETAPES_ORDRE.indexOf(statutCommande) >= ETAPES_ORDRE.indexOf('EN_LIVRAISON'),
+    date:  mission?.date_debut ? new Date(mission.date_debut).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : null,
+  },
+  {
+    id:    'livree',
+    label: 'Livraison confirmée',
+    icon:  CheckCircle,
+    fait:  statutCommande === 'RECEPTION_CONFIRMEE',
+    date:  mission?.date_fin ? new Date(mission.date_fin).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : null,
+  },
 ];
 
-const fadeUp = {
-  hidden: { y: 30, opacity: 0 },
-  show:   { y: 0,  opacity: 1 },
-};
-
 export default function OrderTracking() {
-  const [confirming,  setConfirming]  = useState(false);
-  const [loading,     setLoading]     = useState(false);
-  const [confirme,    setConfirme]    = useState(false);
-  const [note,        setNote]        = useState(0);
-  const [commentaire, setCommentaire] = useState('');
-  const [litige,      setLitige]      = useState(false);
-  const [litigeText,  setLitigeText]  = useState('');
-  const [litigeEnvoye,setLitigeEnvoye]= useState(false);
+  const { id }     = useParams();
+  const navigate   = useNavigate();
 
-  const handleConfirmer = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+  const [commande,      setCommande]      = useState(null);
+  const [mission,       setMission]       = useState(null);
+  const [loading,       setLoading]       = useState(true);
+  const [submitting,    setSubmitting]    = useState(false);
+  const [confirming,    setConfirming]    = useState(false);
+  const [confirme,      setConfirme]      = useState(false);
+  const [note,          setNote]          = useState(0);
+  const [commentaire,   setCommentaire]   = useState('');
+  const [litige,        setLitige]        = useState(false);
+  const [litigeText,    setLitigeText]    = useState('');
+  const [litigeEnvoye,  setLitigeEnvoye]  = useState(false);
+  const [message,       setMessage]       = useState('');
+
+  useEffect(() => {
+    if (!id) { navigate('/buyer/orders'); return; }
+    const charger = async () => {
+      try {
+        const [cmdData, missionData] = await Promise.allSettled([
+          OrderService.detail(id),
+          TransportService.getMissionDeCommande(id),
+        ]);
+        if (cmdData.status === 'fulfilled') {
+          setCommande(cmdData.value.commande ?? cmdData.value);
+        }
+        if (missionData.status === 'fulfilled') {
+          setMission(missionData.value.mission ?? missionData.value);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    charger();
+  }, [id, navigate]);
+
+  const handleConfirmer = async () => {
+    if (note === 0) { setMessage('Veuillez donner une note avant de confirmer.'); return; }
+    setSubmitting(true);
+    try {
+      await OrderService.confirmerReception(id, {});
+      await OrderService.noterVendeur(id, { note, commentaire });
       setConfirme(true);
-    }, 2000);
+      setCommande(prev => ({ ...prev, statut: 'RECEPTION_CONFIRMEE' }));
+    } catch {
+      setMessage('Erreur lors de la confirmation. Réessayez.');
+    } finally { setSubmitting(false); }
   };
 
-  const handleLitige = () => {
-    setLitigeEnvoye(true);
+  const handleLitige = async () => {
+    if (!litigeText.trim()) return;
+    setSubmitting(true);
+    try {
+      await OrderService.signalerLitige(id, litigeText);
+      setLitigeEnvoye(true);
+    } catch {
+      setMessage('Erreur lors du signalement.');
+    } finally { setSubmitting(false); }
   };
+
+  if (loading) return (
+    <DashboardLayout role="buyer">
+      <div style={{ textAlign: 'center', padding: '4rem', color: '#9ca3af' }}>
+        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
+          <Loader size={28} />
+        </motion.div>
+      </div>
+    </DashboardLayout>
+  );
+
+  if (!commande) return (
+    <DashboardLayout role="buyer">
+      <div style={{ textAlign: 'center', padding: '4rem', color: '#9ca3af' }}>
+        <p>Commande introuvable.</p>
+        <Link to="/buyer/orders" style={{ color: GREEN, fontWeight: '700' }}>← Mes commandes</Link>
+      </div>
+    </DashboardLayout>
+  );
+
+  const statut     = commande.statut || commande.status || 'EN_ATTENTE';
+  const timeline   = buildTimeline(statut, mission);
+  const ref        = commande.reference || commande.numero || `#${String(id).slice(0, 8).toUpperCase()}`;
+  const vendeur    = commande.vendeur_nom || commande.vendeur?.nom_complet || '—';
+  const transporteur = mission?.transporteur_nom || mission?.transporteur?.nom_complet || '—';
+  const montant    = Number(commande.total || commande.montant_total || 0);
+  const adresse    = commande.adresse_livraison || commande.ville_arrivee || '—';
+  const dateCmd    = commande.created_at ? new Date(commande.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
+
+  const peutConfirmer = ['EN_LIVRAISON', 'LIVRE'].includes(statut) && !confirme;
+  const peutSignaler  = !['EN_ATTENTE', 'ANNULE', 'RECEPTION_CONFIRMEE'].includes(statut);
 
   return (
     <DashboardLayout role="buyer">
       <div>
 
-        {/* EN-TÊTE */}
-        <motion.div variants={fadeUp} initial="hidden" animate="show" style={styles.header}>
-          <Link to="/buyer/orders" style={styles.btnRetour}>
+        {/* En-tête */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+          style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}
+        >
+          <Link to="/buyer/orders" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: GREEN, textDecoration: 'none', fontWeight: '600', fontSize: '0.88rem' }}>
             <ArrowLeft size={16} /> Mes commandes
           </Link>
-          <h1 style={styles.headerTitle}>📦 Suivi de commande</h1>
-          <span style={styles.commandeId}>{commande.id}</span>
+          <h1 style={{ margin: 0, fontSize: '1.3rem', fontWeight: '800', color: '#1a2e10', display: 'flex', alignItems: 'center', gap: '8px' }}><Package size={20} /> Suivi de commande</h1>
+          <span style={{ fontSize: '0.78rem', background: '#f0fdf4', color: GREEN, padding: '3px 10px', borderRadius: '20px', fontWeight: '700', fontFamily: 'monospace' }}>{ref}</span>
         </motion.div>
+
+        {/* Message flash */}
+        <AnimatePresence>
+          {message && (
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.88rem', color: '#dc2626', display: 'flex', justifyContent: 'space-between' }}
+            >
+              {message}
+              <button onClick={() => setMessage('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', display: 'flex' }}><X size={16} /></button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="row g-4">
           <div className="col-12 col-lg-8">
 
-            {/* ===== TIMELINE ===== */}
-            <motion.div
-              style={styles.card}
-              variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.1 }}
+            {/* Timeline */}
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+              style={{ background: 'white', borderRadius: '20px', padding: '1.8rem', border: '1px solid #e5e7eb', marginBottom: '1rem' }}
             >
-              <h3 style={styles.cardTitle}>
-                <Truck size={18} color="#1a5c2a" /> Suivi de livraison
+              <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#1a2e10', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Truck size={18} color={GREEN} /> Suivi de livraison
               </h3>
 
-              <div style={styles.timeline}>
-                {etapesLivraison.map((etape, i) => {
-                  const Icon = etape.icon;
-                  const isLast = i === etapesLivraison.length - 1;
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {timeline.map((etape, i) => {
+                  const Icon   = etape.icon;
+                  const isLast = i === timeline.length - 1;
                   return (
-                    <div key={etape.id} style={styles.timelineItem}>
-                      {/* LIGNE */}
+                    <div key={etape.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', position: 'relative', paddingBottom: isLast ? 0 : '1.5rem' }}>
                       {!isLast && (
-                        <div style={{
-                          ...styles.timelineLine,
-                          background: etape.fait ? '#1a5c2a' : '#e5e7eb',
-                        }} />
+                        <div style={{ position: 'absolute', left: '19px', top: '38px', width: '2px', height: 'calc(100% - 20px)', background: etape.fait ? GREEN : '#e5e7eb', zIndex: 0 }} />
                       )}
-
-                      {/* CERCLE */}
                       <motion.div
-                        style={{
-                          ...styles.timelineCircle,
-                          background: etape.fait ? '#1a5c2a' : '#f4f6f4',
-                          border:     etape.fait ? 'none' : '2px solid #e5e7eb',
-                        }}
-                        animate={etape.fait && !isLast ? {} : etape.fait ? { scale: [1, 1.1, 1] } : {}}
+                        style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, zIndex: 1, background: etape.fait ? GREEN : '#f4f6f4', border: etape.fait ? 'none' : '2px solid #e5e7eb' }}
+                        animate={etape.fait && i === timeline.filter(e => e.fait).length - 1 ? { scale: [1, 1.1, 1] } : {}}
                         transition={{ repeat: Infinity, duration: 2 }}
                       >
                         <Icon size={16} color={etape.fait ? 'white' : '#9ca3af'} />
                       </motion.div>
-
-                      {/* CONTENU */}
-                      <div style={styles.timelineContent}>
-                        <div style={{
-                          ...styles.timelineLabel,
-                          color: etape.fait ? '#1a2e10' : '#9ca3af',
-                          fontWeight: etape.fait ? '700' : '400',
-                        }}>
+                      <div style={{ flex: 1, paddingTop: '8px' }}>
+                        <div style={{ fontWeight: etape.fait ? '700' : '400', fontSize: '0.92rem', color: etape.fait ? '#1a2e10' : '#9ca3af', marginBottom: '3px' }}>
                           {etape.label}
                         </div>
-                        <div style={styles.timelineDate}>{etape.date}</div>
+                        {etape.date && <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{etape.date}</div>}
                       </div>
                     </div>
                   );
@@ -124,212 +213,128 @@ export default function OrderTracking() {
               </div>
             </motion.div>
 
-            {/* ===== CONFIRMATION LIVRAISON ===== */}
+            {/* Confirmation réception + note vendeur */}
             <AnimatePresence>
-              {!confirme && !litigeEnvoye && (
-                <motion.div
-                  style={styles.card}
-                  variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.2 }}
+              {peutConfirmer && !litigeEnvoye && (
+                <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  style={{ background: 'white', borderRadius: '20px', padding: '1.8rem', border: '1px solid #e5e7eb', marginBottom: '1rem' }}
                 >
-                  <h3 style={styles.cardTitle}>
-                    <CheckCircle size={18} color="#1a5c2a" /> Avez-vous reçu votre commande ?
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#1a2e10', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CheckCircle size={18} color={GREEN} /> Avez-vous reçu votre commande ?
                   </h3>
 
-                  <div style={styles.escrowInfo}>
-                    <Shield size={16} color="#1a5c2a" style={{ flexShrink: 0 }} />
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', background: '#f0fdf4', borderRadius: '12px', padding: '1rem', border: '1px solid #86efac', marginBottom: '1.2rem' }}>
+                    <Shield size={16} color={GREEN} style={{ flexShrink: 0, marginTop: '2px' }} />
                     <div>
-                      <div style={styles.escrowTitle}>Votre argent est encore protégé</div>
-                      <div style={styles.escrowDesc}>
-                        <strong>{commande.montant.toLocaleString('fr-FR')} FCFA</strong> sont bloqués en séquestre.
-                        Confirmez la réception pour libérer le paiement au vendeur.
+                      <div style={{ fontWeight: '700', fontSize: '0.88rem', color: GREEN, marginBottom: '4px' }}>Votre argent est encore protégé</div>
+                      <div style={{ fontSize: '0.82rem', color: '#374151' }}>
+                        <strong>{montant.toLocaleString('fr-FR')} FCFA</strong> sont bloqués. Confirmez la réception pour libérer le paiement au vendeur.
                       </div>
                     </div>
                   </div>
 
                   {!confirming ? (
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                      <motion.button
-                        style={styles.btnConfirmer}
-                        onClick={() => setConfirming(true)}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
+                      <motion.button onClick={() => setConfirming(true)} style={btnConfirmerStyle} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                         <CheckCircle size={16} /> Oui, j'ai reçu ma commande
                       </motion.button>
-                      <motion.button
-                        style={styles.btnLitige}
-                        onClick={() => setLitige(true)}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <AlertCircle size={16} /> Signaler un problème
-                      </motion.button>
+                      {peutSignaler && (
+                        <motion.button onClick={() => setLitige(true)} style={btnLitigeStyle} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                          <AlertCircle size={16} /> Signaler un problème
+                        </motion.button>
+                      )}
                     </div>
                   ) : (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                      {/* NOTE */}
-                      <div style={styles.fieldWrap}>
-                        <label style={styles.label}>Notez votre expérience *</label>
-                        <div style={styles.starsWrap}>
-                          {[1, 2, 3, 4, 5].map((n) => (
-                            <motion.button
-                              key={n}
-                              onClick={() => setNote(n)}
-                              style={styles.starBtn}
-                              whileHover={{ scale: 1.2 }}
-                              whileTap={{ scale: 0.9 }}
-                            >
-                              <Star
-                                size={32}
-                                color="#f0c040"
-                                fill={n <= note ? '#f0c040' : 'transparent'}
-                              />
-                            </motion.button>
-                          ))}
-                        </div>
-                        {note > 0 && (
-                          <span style={styles.noteLabel}>
-                            {note === 1 ? '😞 Très mauvais' : note === 2 ? '😕 Mauvais' : note === 3 ? '😐 Moyen' : note === 4 ? '😊 Bien' : '🤩 Excellent !'}
-                          </span>
-                        )}
+                      <label style={labelStyle}>Notez votre expérience *</label>
+                      <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
+                        {[1, 2, 3, 4, 5].map(n => (
+                          <motion.button key={n} onClick={() => setNote(n)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }} whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}>
+                            <Star size={32} color="#f0c040" fill={n <= note ? '#f0c040' : 'transparent'} />
+                          </motion.button>
+                        ))}
                       </div>
-
-                      {/* COMMENTAIRE */}
-                      <div style={styles.fieldWrap}>
-                        <label style={styles.label}>Commentaire (optionnel)</label>
-                        <textarea
-                          placeholder="Décrivez votre expérience..."
-                          value={commentaire}
-                          onChange={(e) => setCommentaire(e.target.value)}
-                          style={{ ...styles.input, minHeight: '80px', resize: 'vertical' }}
-                          rows={3}
-                        />
-                      </div>
-
+                      {note > 0 && (
+                        <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#d97706', marginBottom: '12px', display: 'block' }}>
+                          {['', 'Très mauvais', 'Mauvais', 'Moyen', 'Bien', 'Excellent !'][note]}
+                        </span>
+                      )}
+                      <label style={{ ...labelStyle, marginTop: '10px' }}>Commentaire (optionnel)</label>
+                      <textarea
+                        value={commentaire} onChange={e => setCommentaire(e.target.value)}
+                        placeholder="Décrivez votre expérience..." rows={3}
+                        style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '12px', fontSize: '0.9rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', marginBottom: '1rem', boxSizing: 'border-box' }}
+                      />
                       <div style={{ display: 'flex', gap: '10px' }}>
-                        <motion.button
-                          style={styles.btnBack}
-                          onClick={() => setConfirming(false)}
-                          whileHover={{ scale: 1.02 }}
-                        >
-                          Annuler
-                        </motion.button>
-                        <motion.button
-                          style={{ ...styles.btnConfirmer, opacity: loading ? 0.8 : 1 }}
-                          onClick={handleConfirmer}
-                          disabled={loading || note === 0}
-                          whileHover={{ scale: loading ? 1 : 1.02 }}
-                          whileTap={{ scale: loading ? 1 : 0.98 }}
-                        >
-                          {loading ? (
-                            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-                              <Loader size={16} />
-                            </motion.div>
-                          ) : (
-                            <>
-                              <CheckCircle size={16} />
-                              Confirmer et payer le vendeur
-                            </>
-                          )}
+                        <motion.button onClick={() => setConfirming(false)} style={btnAnnulerStyle} whileHover={{ scale: 1.02 }}>Annuler</motion.button>
+                        <motion.button onClick={handleConfirmer} disabled={submitting || note === 0} style={{ ...btnConfirmerStyle, opacity: (submitting || note === 0) ? 0.7 : 1, flex: 1 }} whileHover={{ scale: submitting ? 1 : 1.02 }}>
+                          {submitting ? <><Loader size={16} /><span> Envoi…</span></> : <><CheckCircle size={16} /><span> Confirmer et payer le vendeur</span></>}
                         </motion.button>
                       </div>
                     </motion.div>
                   )}
 
-                  {/* LITIGE */}
+                  {/* Litige inline */}
                   <AnimatePresence>
                     {litige && (
-                      <motion.div
-                        style={styles.litigeBox}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
+                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                        style={{ background: '#fef2f2', borderRadius: '14px', padding: '1.2rem', border: '1px solid #fecaca', marginTop: '1rem' }}
                       >
-                        <h4 style={styles.litigeTitle}>
+                        <h4 style={{ fontSize: '0.95rem', fontWeight: '700', color: '#dc2626', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.8rem' }}>
                           <AlertCircle size={16} color="#dc2626" /> Signaler un problème
                         </h4>
                         <textarea
-                          placeholder="Décrivez le problème rencontré..."
-                          value={litigeText}
-                          onChange={(e) => setLitigeText(e.target.value)}
-                          style={{ ...styles.input, minHeight: '80px' }}
-                          rows={3}
+                          value={litigeText} onChange={e => setLitigeText(e.target.value)}
+                          placeholder="Décrivez le problème rencontré..." rows={3}
+                          style={{ width: '100%', padding: '0.75rem', border: '1.5px solid #fecaca', borderRadius: '10px', fontSize: '0.9rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
                         />
                         <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                          <motion.button style={styles.btnBack} onClick={() => setLitige(false)} whileHover={{ scale: 1.02 }}>
-                            Annuler
-                          </motion.button>
-                          <motion.button
-                            style={styles.btnSignaler}
-                            onClick={handleLitige}
-                            disabled={!litigeText.trim()}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            <AlertCircle size={15} /> Envoyer le signalement
+                          <motion.button onClick={() => setLitige(false)} style={btnAnnulerStyle} whileHover={{ scale: 1.02 }}>Annuler</motion.button>
+                          <motion.button onClick={handleLitige} disabled={submitting || !litigeText.trim()} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '12px', padding: '0.85rem', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer', opacity: (submitting || !litigeText.trim()) ? 0.7 : 1 }} whileHover={{ scale: 1.02 }}>
+                            {submitting ? 'Envoi…' : <><AlertCircle size={15} /> Envoyer le signalement</>}
                           </motion.button>
                         </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
-
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* ===== SUCCÈS CONFIRMATION ===== */}
+            {/* Succès confirmation */}
             <AnimatePresence>
               {confirme && (
-                <motion.div
-                  style={{ ...styles.card, textAlign: 'center' }}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                  style={{ background: 'white', borderRadius: '20px', padding: '2rem', border: '1px solid #e5e7eb', textAlign: 'center' }}
                 >
-                  <motion.div
-                    style={styles.successIcon}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: 'spring', stiffness: 300, delay: 0.2 }}
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 300, delay: 0.2 }}
+                    style={{ width: '80px', height: '80px', borderRadius: '50%', background: `linear-gradient(135deg, ${GREEN}, #4db86a)`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.2rem' }}
                   >
                     <CheckCircle size={48} color="white" />
                   </motion.div>
-                  <h3 style={styles.successTitle}>Livraison confirmée ! 🎉</h3>
-                  <p style={styles.successDesc}>
-                    Vous avez confirmé la réception de votre commande. Le paiement de{' '}
-                    <strong style={{ color: '#1a5c2a' }}>{commande.montant.toLocaleString('fr-FR')} FCFA</strong>{' '}
-                    a été libéré au vendeur <strong>{commande.vendeur}</strong>. Merci pour votre confiance !
+                  <h3 style={{ fontSize: '1.3rem', fontWeight: '800', color: '#1a2e10', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>Livraison confirmée ! <Sparkles size={22} color="#d97706" /></h3>
+                  <p style={{ fontSize: '0.9rem', color: '#6b7280', lineHeight: 1.7, marginBottom: '1.2rem' }}>
+                    Le paiement de <strong style={{ color: GREEN }}>{montant.toLocaleString('fr-FR')} FCFA</strong> a été libéré au vendeur <strong>{vendeur}</strong>.
                   </p>
-                  {note > 0 && (
-                    <div style={styles.noteConfirm}>
-                      <div style={{ display: 'flex', justifyContent: 'center', gap: '4px', marginBottom: '4px' }}>
-                        {[1,2,3,4,5].map((n) => (
-                          <Star key={n} size={20} color="#f0c040" fill={n <= note ? '#f0c040' : 'transparent'} />
-                        ))}
-                      </div>
-                      <div style={{ fontSize: '0.82rem', color: '#6b7280' }}>Merci pour votre avis !</div>
-                    </div>
-                  )}
-                  <Link to="/buyer/orders" style={styles.btnRetourCommandes}>
+                  <Link to="/buyer/orders" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: GREEN, color: 'white', borderRadius: '12px', padding: '0.8rem 2rem', fontWeight: '700', textDecoration: 'none', boxShadow: '0 4px 14px rgba(26,92,42,0.3)' }}>
                     Voir mes commandes
                   </Link>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* ===== LITIGE ENVOYÉ ===== */}
+            {/* Litige envoyé */}
             <AnimatePresence>
               {litigeEnvoye && (
-                <motion.div
-                  style={{ ...styles.card, textAlign: 'center' }}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                  style={{ background: 'white', borderRadius: '20px', padding: '2rem', border: '1px solid #e5e7eb', textAlign: 'center' }}
                 >
-                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
-                  <h3 style={{ ...styles.successTitle, color: '#dc2626' }}>Signalement envoyé</h3>
-                  <p style={styles.successDesc}>
-                    Votre signalement a été transmis à notre équipe. L'argent restera bloqué en séquestre pendant l'examen du litige. Nous vous contacterons sous 24h.
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}><AlertTriangle size={48} color="#F59E0B" /></div>
+                  <h3 style={{ fontSize: '1.3rem', fontWeight: '800', color: '#dc2626', marginBottom: '0.6rem' }}>Signalement envoyé</h3>
+                  <p style={{ fontSize: '0.9rem', color: '#6b7280', lineHeight: 1.7, marginBottom: '1.2rem' }}>
+                    L'argent restera bloqué pendant l'examen du litige. Notre équipe vous contactera sous 24h.
                   </p>
-                  <Link to="/buyer/orders" style={{ ...styles.btnRetourCommandes, background: '#dc2626', boxShadow: '0 4px 14px rgba(220,38,38,0.3)' }}>
+                  <Link to="/buyer/orders" style={{ display: 'inline-flex', alignItems: 'center', background: '#dc2626', color: 'white', borderRadius: '12px', padding: '0.8rem 2rem', fontWeight: '700', textDecoration: 'none' }}>
                     Retour à mes commandes
                   </Link>
                 </motion.div>
@@ -338,118 +343,46 @@ export default function OrderTracking() {
 
           </div>
 
-          {/* SIDEBAR */}
+          {/* Sidebar détails */}
           <div className="col-12 col-lg-4">
-            <motion.div
-              style={styles.sidebarCard}
-              variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.3 }}
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+              style={{ background: 'white', borderRadius: '16px', padding: '1.3rem', border: '1px solid #e5e7eb', position: 'sticky', top: '80px' }}
             >
-              <h4 style={styles.sidebarTitle}>📋 Détails de la commande</h4>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: '800', color: '#1a2e10', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}><ClipboardList size={16} /> Détails de la commande</h4>
 
               {[
-                { label: 'Produit',      value: commande.produit      },
-                { label: 'Vendeur',      value: commande.vendeur      },
-                { label: 'Transporteur', value: commande.transporteur },
-                { label: 'Date',         value: commande.date         },
-                { label: 'Adresse',      value: commande.adresse      },
+                { label: 'Référence',    value: ref          },
+                { label: 'Vendeur',      value: vendeur      },
+                { label: 'Transporteur', value: transporteur },
+                { label: 'Date',         value: dateCmd      },
+                { label: 'Adresse',      value: adresse      },
               ].map((row, i) => (
-                <div key={i} style={styles.detailRow}>
-                  <span style={styles.detailLabel}>{row.label}</span>
-                  <span style={styles.detailValue}>{row.value}</span>
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid #f5f5f5', fontSize: '0.85rem' }}>
+                  <span style={{ color: '#6b7280' }}>{row.label}</span>
+                  <span style={{ fontWeight: '600', color: '#1a2e10', textAlign: 'right', maxWidth: '60%' }}>{row.value}</span>
                 </div>
               ))}
 
-              <div style={styles.montantBox}>
-                <span style={styles.detailLabel}>Montant bloqué</span>
-                <span style={styles.montantVal}>{commande.montant.toLocaleString('fr-FR')} FCFA</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0fdf4', borderRadius: '10px', padding: '0.8rem', margin: '1rem 0', border: '1px solid #86efac' }}>
+                <span style={{ fontSize: '0.82rem', color: '#6b7280' }}>Montant bloqué</span>
+                <span style={{ fontWeight: '800', color: GREEN, fontSize: '1.05rem' }}>{montant.toLocaleString('fr-FR')} FCFA</span>
               </div>
 
-              {/* CONTACTER */}
-              <div style={styles.contactBox}>
-                <h5 style={styles.contactTitle}>Contacter</h5>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <motion.button style={styles.contactBtn} whileHover={{ x: 3 }}>
-                    <Phone size={15} color="#1a5c2a" />
-                    <span>Appeler le vendeur</span>
-                  </motion.button>
-                  <motion.button style={styles.contactBtn} whileHover={{ x: 3 }}>
-                    <MessageSquare size={15} color="#1a5c2a" />
-                    <span>Message au transporteur</span>
-                  </motion.button>
-                  <motion.button style={styles.contactBtn} whileHover={{ x: 3 }}>
-                    <Phone size={15} color="#2563eb" />
-                    <span style={{ color: '#2563eb' }}>Support AgroConnect</span>
-                  </motion.button>
+              {mission?.ville_depart && mission?.ville_arrivee && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fffbeb', borderRadius: '10px', padding: '0.8rem', border: '1px solid #fde68a', fontSize: '0.82rem', color: '#d97706' }}>
+                  <MapPin size={14} />
+                  <span>{mission.ville_depart} → {mission.ville_arrivee}</span>
                 </div>
-              </div>
-
+              )}
             </motion.div>
           </div>
-
         </div>
       </div>
     </DashboardLayout>
   );
 }
 
-// ===== STYLES =====
-const styles = {
-  header:      { display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' },
-  headerTitle: { fontSize: '1.3rem', fontWeight: '800', color: '#1a2e10', margin: 0 },
-  commandeId:  { fontSize: '0.78rem', background: '#f0fdf4', color: '#1a5c2a', padding: '3px 10px', borderRadius: '20px', fontWeight: '700', fontFamily: 'monospace' },
-  btnRetour:   { display: 'flex', alignItems: 'center', gap: '6px', color: '#1a5c2a', textDecoration: 'none', fontWeight: '600', fontSize: '0.88rem' },
-
-  card:        { background: 'white', borderRadius: '20px', padding: '1.8rem', border: '1px solid #e5e7eb', boxShadow: '0 4px 20px rgba(0,0,0,0.06)', marginBottom: '1rem' },
-  cardTitle:   { fontSize: '1.05rem', fontWeight: '800', color: '#1a2e10', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' },
-
-  // TIMELINE
-  timeline:        { display: 'flex', flexDirection: 'column', gap: '0' },
-  timelineItem:    { display: 'flex', alignItems: 'flex-start', gap: '16px', position: 'relative', paddingBottom: '1.5rem' },
-  timelineLine:    { position: 'absolute', left: '19px', top: '38px', width: '2px', height: 'calc(100% - 20px)', zIndex: 0 },
-  timelineCircle:  { width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, zIndex: 1 },
-  timelineContent: { flex: 1, paddingTop: '8px' },
-  timelineLabel:   { fontSize: '0.92rem', marginBottom: '3px' },
-  timelineDate:    { fontSize: '0.75rem', color: '#9ca3af' },
-
-  // ESCROW
-  escrowInfo:  { display: 'flex', alignItems: 'flex-start', gap: '10px', background: '#f0fdf4', borderRadius: '12px', padding: '1rem', border: '1px solid #86efac', marginBottom: '1.2rem' },
-  escrowTitle: { fontWeight: '700', fontSize: '0.88rem', color: '#1a5c2a', marginBottom: '4px' },
-  escrowDesc:  { fontSize: '0.82rem', color: '#374151', lineHeight: 1.6 },
-
-  // CONFIRMATION
-  starsWrap:   { display: 'flex', gap: '8px', marginBottom: '6px' },
-  starBtn:     { background: 'none', border: 'none', cursor: 'pointer', padding: '2px' },
-  noteLabel:   { fontSize: '0.85rem', fontWeight: '600', color: '#d97706' },
-  fieldWrap:   { display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '1rem' },
-  label:       { fontSize: '0.85rem', fontWeight: '600', color: '#374151' },
-  input:       { width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '12px', fontSize: '0.9rem', outline: 'none', color: '#1a2e10', background: '#fafafa', fontFamily: 'inherit' },
-
-  // LITIGE
-  litigeBox:   { background: '#fef2f2', borderRadius: '14px', padding: '1.2rem', border: '1px solid #fecaca', marginTop: '1rem' },
-  litigeTitle: { fontSize: '0.95rem', fontWeight: '700', color: '#dc2626', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.8rem' },
-
-  // BOUTONS
-  btnConfirmer:{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#1a5c2a', color: 'white', border: 'none', borderRadius: '12px', padding: '0.85rem 1.2rem', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(26,92,42,0.3)' },
-  btnLitige:   { display: 'flex', alignItems: 'center', gap: '6px', background: 'white', color: '#dc2626', border: '1.5px solid #fecaca', borderRadius: '12px', padding: '0.85rem 1.2rem', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer' },
-  btnSignaler: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '12px', padding: '0.85rem', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer' },
-  btnBack:     { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '12px', padding: '0.85rem 1.2rem', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer' },
-
-  // SUCCÈS
-  successIcon:       { width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, #1a5c2a, #4db86a)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.2rem' },
-  successTitle:      { fontSize: '1.3rem', fontWeight: '800', color: '#1a2e10', marginBottom: '0.6rem' },
-  successDesc:       { fontSize: '0.9rem', color: '#6b7280', lineHeight: 1.7, marginBottom: '1.2rem' },
-  noteConfirm:       { background: '#fffbeb', borderRadius: '10px', padding: '0.8rem', marginBottom: '1.2rem' },
-  btnRetourCommandes:{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#1a5c2a', color: 'white', borderRadius: '12px', padding: '0.8rem 2rem', fontWeight: '700', fontSize: '0.9rem', textDecoration: 'none', boxShadow: '0 4px 14px rgba(26,92,42,0.3)' },
-
-  // SIDEBAR
-  sidebarCard:   { background: 'white', borderRadius: '16px', padding: '1.3rem', border: '1px solid #e5e7eb', position: 'sticky', top: '80px' },
-  sidebarTitle:  { fontSize: '0.95rem', fontWeight: '800', color: '#1a2e10', marginBottom: '1rem' },
-  detailRow:     { display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid #f5f5f5', fontSize: '0.85rem' },
-  detailLabel:   { color: '#6b7280' },
-  detailValue:   { fontWeight: '600', color: '#1a2e10', textAlign: 'right', maxWidth: '60%' },
-  montantBox:    { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0fdf4', borderRadius: '10px', padding: '0.8rem', margin: '1rem 0', border: '1px solid #86efac' },
-  montantVal:    { fontWeight: '800', color: '#1a5c2a', fontSize: '1.05rem' },
-  contactBox:    { borderTop: '1px solid #f0f0f0', paddingTop: '1rem' },
-  contactTitle:  { fontSize: '0.85rem', fontWeight: '700', color: '#374151', marginBottom: '0.7rem' },
-  contactBtn:    { display: 'flex', alignItems: 'center', gap: '8px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '0.6rem 0.9rem', fontSize: '0.82rem', fontWeight: '600', color: '#1a2e10', cursor: 'pointer', width: '100%', transition: 'all 0.2s' },
-};
+const btnConfirmerStyle = { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: GREEN, color: 'white', border: 'none', borderRadius: '12px', padding: '0.85rem 1.2rem', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(26,92,42,0.3)' };
+const btnLitigeStyle    = { display: 'flex', alignItems: 'center', gap: '6px', background: 'white', color: '#dc2626', border: '1.5px solid #fecaca', borderRadius: '12px', padding: '0.85rem 1.2rem', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer' };
+const btnAnnulerStyle   = { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: 'white', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '12px', padding: '0.85rem 1.2rem', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer' };
+const labelStyle        = { display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#374151', marginBottom: '6px' };

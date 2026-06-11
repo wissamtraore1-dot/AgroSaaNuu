@@ -3,13 +3,25 @@
 // src/components/finance/TransactionItem.jsx
 // ============================================================
 import React from 'react';
+import { ArrowDown, ArrowUp, ShoppingCart, Lock, Unlock, Coins, Star, Gift } from 'lucide-react';
 import {
   TRANSACTION_TYPE_LABELS,
   TRANSACTION_TYPE_COLORS,
-  TRANSACTION_TYPE_ICONS,
+  TRANSACTION_TYPE,
 } from '../../utils/constants';
 import { formatPrice, formatRelativeTime } from '../../utils/formatPrice';
 import Badge from '../ui/Badge';
+
+const TX_ICONS = {
+  [TRANSACTION_TYPE.DEPOSIT]:        <ArrowDown    size={18} />,
+  [TRANSACTION_TYPE.WITHDRAWAL]:     <ArrowUp      size={18} />,
+  [TRANSACTION_TYPE.PURCHASE]:       <ShoppingCart size={18} />,
+  [TRANSACTION_TYPE.ESCROW_LOCK]:    <Lock         size={18} />,
+  [TRANSACTION_TYPE.ESCROW_RELEASE]: <Unlock       size={18} />,
+  [TRANSACTION_TYPE.REFUND]:         <Coins        size={18} />,
+  [TRANSACTION_TYPE.POINTS_CREDIT]:  <Star         size={18} color="#F59E0B" />,
+  [TRANSACTION_TYPE.POINTS_REDEEM]:  <Gift         size={18} />,
+};
 
 const TransactionItem = ({ transaction, onClick }) => {
   const {
@@ -25,7 +37,7 @@ const TransactionItem = ({ transaction, onClick }) => {
 
   const label  = TRANSACTION_TYPE_LABELS[type]  || type;
   const color  = TRANSACTION_TYPE_COLORS[type]  || 'info';
-  const icon   = TRANSACTION_TYPE_ICONS[type]   || '•';
+  const icon   = TX_ICONS[type] || <ShoppingCart size={18} />;
 
   return (
     <div
@@ -48,8 +60,8 @@ const TransactionItem = ({ transaction, onClick }) => {
         display:        'flex',
         alignItems:     'center',
         justifyContent: 'center',
-        fontSize:       '18px',
         flexShrink:     0,
+        color:          '#374151',
       }}>
         {icon}
       </div>

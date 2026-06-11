@@ -109,7 +109,7 @@ export default function RatingModal({ title, subtitle, onSubmit, onClose, loadin
           whileHover={{ scale: selected && !loading ? 1.02 : 1 }}
           whileTap={{ scale: selected && !loading ? 0.98 : 1 }}
         >
-          {loading ? <><Loader size={16} /> Envoi…</> : <><Check size={16} /> Envoyer l'évaluation</>}
+          {loading ? <><Loader size={16} /><span> Envoi…</span></> : <><Check size={16} /><span> Envoyer l'évaluation</span></>}
         </motion.button>
       </motion.div>
     </div>

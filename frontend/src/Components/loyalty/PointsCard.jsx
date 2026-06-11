@@ -4,8 +4,16 @@
 // ============================================================
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Award, Crown, Gem } from 'lucide-react';
 import { formatPoints, formatPrice } from '../../utils/formatPrice';
 import { ROUTES, LOYALTY } from '../../utils/constants';
+
+const TIER_ICONS = {
+  BRONZE:  <Award size={14} color="#CD7F32" />,
+  ARGENT:  <Award size={14} color="#A8A9AD" />,
+  OR:      <Crown size={14} color="#FFD700" />,
+  PLATINE: <Gem   size={14} color="#4F46E5" />,
+};
 
 const PointsCard = ({ points = {}, loading = false, compact = false }) => {
   const navigate = useNavigate();
@@ -27,17 +35,24 @@ const PointsCard = ({ points = {}, loading = false, compact = false }) => {
     );
   }
 
-  const tierData = tier || { name: 'Bronze', color: '#CD7F32', badge: '🥉' };
+  const tierData = tier || { name: 'Bronze', color: '#CD7F32' };
+  const tierKey  = tierData.name?.toUpperCase() === 'OR' ? 'OR'
+    : tierData.name?.toUpperCase() === 'ARGENT' ? 'ARGENT'
+    : tierData.name?.toUpperCase() === 'PLATINE' ? 'PLATINE'
+    : 'BRONZE';
 
   return (
     <div style={{
       ...styles.card,
-      background: `linear-gradient(135deg, ${tierData.color}CC 0%, ${tierData.color} 100%)`,
+      background: 'linear-gradient(135deg, #1a5c2a 0%, #2d8c47 100%)',
     }}>
       {/* Header */}
       <div style={styles.header}>
         <div>
-          <span style={styles.tierBadge}>{tierData.badge} {tierData.name}</span>
+          <span style={styles.tierBadge}>
+            <span style={{ display: 'inline-flex', verticalAlign: 'middle', marginRight: 4 }}>{TIER_ICONS[tierKey]}</span>
+            {tierData.name}
+          </span>
         </div>
         <button
           style={styles.detailBtn}

@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import logo from "../../assets/images/logo.jpeg";
-import { motion } from 'framer-motion';
 import {
   Wheat, Phone, Mail, MapPin,
   ArrowRight, Shield, Truck, Users,
@@ -34,10 +33,6 @@ const socials = [
   { icon: PlayCircle,     href: '#', color: '#ff0000' },
 ];
 
-const fadeUp = {
-  hidden: { y: 30, opacity: 0 },
-  show:   { y: 0,  opacity: 1 },
-};
 
 export default function Footer() {
   return (
@@ -49,14 +44,7 @@ export default function Footer() {
           <div className="row g-5">
 
             {/* COL 1 — LOGO */}
-            <motion.div
-              className="col-12 col-md-6 col-lg-3"
-              variants={fadeUp}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              transition={{ delay: 0 }}
-            >
+            <div className="col-12 col-md-6 col-lg-3">
               <Link to="/" style={styles.logo}>
               <img 
                  src={logo} 
@@ -78,29 +66,16 @@ export default function Footer() {
                 {socials.map((s, i) => {
                   const Icon = s.icon;
                   return (
-                    <motion.a
-                      key={i}
-                      href={s.href}
-                      style={styles.socialBtn}
-                      whileHover={{ scale: 1.15, background: s.color, borderColor: s.color }}
-                      whileTap={{ scale: 0.95 }}
-                    >
+                    <a key={i} href={s.href} style={styles.socialBtn}>
                       <Icon size={16} />
-                    </motion.a>
+                    </a>
                   );
                 })}
               </div>
-            </motion.div>
+            </div>
 
             {/* COL 2 — LIENS UTILES */}
-            <motion.div
-              className="col-12 col-md-6 col-lg-3"
-              variants={fadeUp}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-            >
+            <div className="col-12 col-md-6 col-lg-3">
               <h4 style={styles.colTitle}>Liens utiles</h4>
               <ul style={styles.linkList}>
                 {footerLinks.plateforme.map((l, i) => (
@@ -112,17 +87,10 @@ export default function Footer() {
                   </li>
                 ))}
               </ul>
-            </motion.div>
+            </div>
 
             {/* COL 3 — AIDE */}
-            <motion.div
-              className="col-12 col-md-6 col-lg-3"
-              variants={fadeUp}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-            >
+            <div className="col-12 col-md-6 col-lg-3">
               <h4 style={styles.colTitle}>Aide & Support</h4>
               <ul style={styles.linkList}>
                 {footerLinks.aide.map((l, i) => (
@@ -134,17 +102,10 @@ export default function Footer() {
                   </li>
                 ))}
               </ul>
-            </motion.div>
+            </div>
 
             {/* COL 4 — CONTACT */}
-            <motion.div
-              className="col-12 col-md-6 col-lg-3"
-              variants={fadeUp}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              transition={{ delay: 0.3 }}
-            >
+            <div className="col-12 col-md-6 col-lg-3">
               <h4 style={styles.colTitle}>Contacte</h4>
               <ul style={styles.linkList}>
                 {footerLinks.contact.map((c, i) => {
@@ -169,16 +130,12 @@ export default function Footer() {
                     placeholder="Votre email"
                     style={styles.newsletterInput}
                   />
-                  <motion.button
-                    style={styles.newsletterBtn}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
+                  <button style={styles.newsletterBtn}>
                     <ArrowRight size={16} />
-                  </motion.button>
+                  </button>
                 </div>
               </div>
-            </motion.div>
+            </div>
 
           </div>
         </div>

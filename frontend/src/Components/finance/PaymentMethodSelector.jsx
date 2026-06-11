@@ -3,6 +3,7 @@
 // src/components/finance/PaymentMethodSelector.jsx
 // ============================================================
 import React, { useState, useEffect } from 'react';
+import { CreditCard } from 'lucide-react';
 import { PAYMENT_METHODS_LIST } from '../../config/paymentConfig';
 import { formatPhoneInput, detectOperator, calcFees } from '../../utils/paymentMethods';
 import { formatPrice } from '../../utils/formatPrice';
@@ -49,10 +50,11 @@ const PaymentMethodSelector = ({
                 background: selected ? `${method.color}15` : '#fff',
               }}
             >
-              <div style={{ fontSize: '22px' }}>
-                {method.id === 'wallet' ? '💳' :
-                 method.id === 'mtn_momo' ? '🟡' :
-                 method.id === 'moov_money' ? '🔵' : '🔴'}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '28px' }}>
+                {method.id === 'wallet'
+                  ? <CreditCard size={22} color={method.color} />
+                  : <div style={{ width: 22, height: 22, borderRadius: '50%', background: method.id === 'mtn_momo' ? '#FCD34D' : method.id === 'moov_money' ? '#3B82F6' : '#EF4444' }} />
+                }
               </div>
               <div style={styles.methodName}>{method.shortName}</div>
               {method.id === 'wallet' && (

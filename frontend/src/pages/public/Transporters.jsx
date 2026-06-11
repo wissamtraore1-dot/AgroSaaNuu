@@ -3,10 +3,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
   Search, MapPin, Star, Truck,
-  CheckCircle, Clock, X,
+  CheckCircle, Clock, X, ChevronDown,
   Phone, MessageSquare, ArrowUpRight,
-  Shield, Award
+  Shield, AlertTriangle,
 } from 'lucide-react';
+
+const VILLES_BENIN = [
+  'Toutes', 'Cotonou', 'Porto-Novo', 'Abomey-Calavi', 'Ouidah',
+  'Bohicon', 'Abomey', 'Lokossa', 'Natitingou', 'Djougou',
+  'Kandi', 'Parakou', 'Savè', 'Bembèrèkè', 'Nikki', 'Malanville',
+];
 import TransportService from '../../services/transport.service';
 
 const tris = [
@@ -84,22 +90,21 @@ export default function Transporters() {
       {/* ===== HERO ===== */}
       <div style={styles.hero}>
         <div className="container-fluid px-4 px-lg-5">
-          <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }}>
+          <motion.div style={{ textAlign: 'center' }} initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }}>
             <div style={styles.heroBreadcrumb}>
               <Link to="/" style={styles.breadLink}>Accueil</Link>
               <span style={{ color: 'rgba(255,255,255,0.5)' }}>/</span>
               <span style={{ color: 'white' }}>Transporteurs</span>
             </div>
-            <h1 style={styles.heroTitle}>🚚 Transporteurs disponibles</h1>
+            <h1 style={{ ...styles.heroTitle, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><Truck size={26} /> Transporteurs disponibles</h1>
             <p style={styles.heroSub}>
               {loading ? 'Chargement…' : `${transporteursFiltres.length} transporteur${transporteursFiltres.length !== 1 ? 's' : ''} inscrit${transporteursFiltres.length !== 1 ? 's' : ''}`}
             </p>
-
             <div style={styles.heroSearch}>
               <Search size={18} color="#9ca3af" style={{ flexShrink: 0 }} />
               <input
                 type="text"
-                placeholder="Rechercher un transporteur, une ville..."
+                placeholder="Rechercher un transporteur..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 style={styles.heroSearchInput}
@@ -114,36 +119,49 @@ export default function Transporters() {
         </div>
       </div>
 
-      <div className="container-fluid px-4 px-lg-5 py-4">
+      {/* ===== BARRE FILTRES ===== */}
+      <div style={styles.filterBar}>
+        <div className="container-fluid px-4 px-lg-5">
+          <div style={styles.filterRow}>
 
-        {/* ===== FILTRES ===== */}
-        <motion.div style={styles.filtersBar} className="mb-4" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
-          <div style={styles.statutBtns}>
-            {['Tous', 'Disponible', 'En mission'].map((s) => (
-              <motion.button
-                key={s}
-                style={{ ...styles.statutBtn, background: statut === s ? '#1a5c2a' : 'white', color: statut === s ? 'white' : '#374151', borderColor: statut === s ? '#1a5c2a' : '#e5e7eb' }}
-                onClick={() => setStatut(s)}
-                whileHover={{ y: -1 }}
-                whileTap={{ scale: 0.97 }}
-              >
-                {s === 'Disponible' && <span style={{ color: statut === s ? 'white' : '#16a34a' }}>●</span>}
-                {s === 'En mission' && <span style={{ color: statut === s ? 'white' : '#d97706' }}>●</span>}
-                {s}
-              </motion.button>
-            ))}
+            {/* Ville */}
+            <div style={styles.filterDropWrap}>
+              <select value={ville} onChange={(e) => setVille(e.target.value)} style={styles.filterDrop}>
+                <option value="Toutes">Ville</option>
+                {VILLES_BENIN.filter(v => v !== 'Toutes').map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+              <ChevronDown size={14} color="#6b7280" style={styles.dropIcon} />
+            </div>
+
+            {/* Disponibilité */}
+            <div style={styles.filterDropWrap}>
+              <select value={statut} onChange={(e) => setStatut(e.target.value)} style={styles.filterDrop}>
+                <option value="Tous">Disponibilité</option>
+                <option value="Disponible">Disponible</option>
+                <option value="En mission">En mission</option>
+              </select>
+              <ChevronDown size={14} color="#6b7280" style={styles.dropIcon} />
+            </div>
+
+            <span style={styles.resultCount}>
+              {transporteursFiltres.length} transporteur{transporteursFiltres.length !== 1 ? 's' : ''} trouvé{transporteursFiltres.length !== 1 ? 's' : ''}
+            </span>
+
+            {/* Tri */}
+            <div style={{ marginLeft: 'auto' }}>
+              <div style={styles.filterDropWrap}>
+                <select value={tri} onChange={(e) => setTri(e.target.value)} style={styles.filterDrop}>
+                  {tris.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+                <ChevronDown size={14} color="#6b7280" style={styles.dropIcon} />
+              </div>
+            </div>
+
           </div>
+        </div>
+      </div>
 
-          <div style={{ flex: 1 }} />
-
-          <select value={ville} onChange={(e) => setVille(e.target.value)} style={styles.filterSelect}>
-            {villes.map((v) => <option key={v}>{v}</option>)}
-          </select>
-
-          <select value={tri} onChange={(e) => setTri(e.target.value)} style={styles.filterSelect}>
-            {tris.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
-        </motion.div>
+      <div className="container-fluid px-4 px-lg-5 py-4">
 
         {/* ===== CONTENU ===== */}
         {loading ? (
@@ -156,7 +174,7 @@ export default function Transporters() {
           </div>
         ) : error ? (
           <div style={styles.emptyState}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.8rem' }}>⚠️</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.8rem' }}><AlertTriangle size={40} color="#F59E0B" /></div>
             <h3 style={{ color: '#1a2e10' }}>{error}</h3>
             <button onClick={() => window.location.reload()} style={styles.btnRetry}>Réessayer</button>
           </div>
@@ -346,18 +364,20 @@ export default function Transporters() {
 
 // ===== STYLES =====
 const styles = {
-  hero: { background: 'linear-gradient(135deg, #0d2b14 0%, #1a5c2a 60%, #2d8c47 100%)', padding: '3rem 0 2rem' },
-  heroBreadcrumb: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', marginBottom: '1rem', color: 'rgba(255,255,255,0.6)' },
+  hero:           { background: 'linear-gradient(135deg, #0d2b14 0%, #1a5c2a 60%, #2d8c47 100%)', padding: '2.5rem 0 2rem' },
+  heroBreadcrumb: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.82rem', marginBottom: '0.8rem', color: 'rgba(255,255,255,0.6)' },
   breadLink:      { color: 'rgba(255,255,255,0.6)', textDecoration: 'none' },
-  heroTitle:      { color: 'white', fontSize: 'clamp(1.5rem, 3vw, 2.2rem)', fontWeight: '800', marginBottom: '0.4rem' },
-  heroSub:        { color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginBottom: '1.5rem' },
-  heroSearch:     { display: 'flex', alignItems: 'center', gap: '10px', background: 'white', borderRadius: '14px', padding: '0.75rem 1.2rem', maxWidth: '500px', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' },
-  heroSearchInput:{ flex: 1, border: 'none', outline: 'none', fontSize: '0.9rem', color: '#1a2e10', background: 'transparent' },
+  heroTitle:      { color: 'white', fontSize: 'clamp(1.5rem, 3vw, 2.2rem)', fontWeight: '800', margin: '0 0 0.3rem', textAlign: 'center' },
+  heroSub:        { color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', margin: '0 0 1.4rem', textAlign: 'center' },
+  heroSearch:     { display: 'flex', alignItems: 'center', gap: '10px', background: 'white', borderRadius: '14px', padding: '0.8rem 1.4rem', maxWidth: '520px', margin: '0 auto', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' },
+  heroSearchInput:{ flex: 1, border: 'none', outline: 'none', fontSize: '0.95rem', color: '#1a2e10', background: 'transparent' },
   clearBtn:       { background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: '2px' },
-  filtersBar:     { display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', background: 'white', padding: '1rem', borderRadius: '14px', border: '1px solid #e5e7eb' },
-  statutBtns:     { display: 'flex', gap: '6px' },
-  statutBtn:      { display: 'flex', alignItems: 'center', gap: '5px', padding: '0.45rem 1rem', borderRadius: '20px', border: '1.5px solid', fontSize: '0.83rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', background: 'none' },
-  filterSelect:   { padding: '0.5rem 0.8rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.85rem', outline: 'none', background: 'white', cursor: 'pointer' },
+  filterBar:      { background: 'white', borderBottom: '1px solid #e5e7eb', padding: '0.75rem 0' },
+  filterRow:      { display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' },
+  filterDropWrap: { position: 'relative', display: 'flex', alignItems: 'center' },
+  filterDrop:     { padding: '0.5rem 2rem 0.5rem 0.9rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', color: '#374151', background: 'white', cursor: 'pointer', outline: 'none', appearance: 'none' },
+  dropIcon:       { position: 'absolute', right: '8px', pointerEvents: 'none' },
+  resultCount:    { fontSize: '0.85rem', color: '#6b7280', whiteSpace: 'nowrap' },
   card:           { background: 'white', borderRadius: '18px', padding: '1.3rem', border: '1px solid #e5e7eb', transition: 'all 0.2s', height: '100%', display: 'flex', flexDirection: 'column', gap: '12px' },
   cardHeader:     { display: 'flex', alignItems: 'flex-start', gap: '12px' },
   avatarWrap:     { position: 'relative', flexShrink: 0 },

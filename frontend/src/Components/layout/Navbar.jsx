@@ -13,7 +13,7 @@ const DASHBOARD = {
   BUYER:       '/buyer/dashboard',
   SELLER:      '/seller/dashboard',
   TRANSPORTER: '/transporter/dashboard',
-  ADMIN:       '/admin/',
+  ADMIN:       '/admin/dashboard',
 };
 
 const NAV_LINKS = [
@@ -108,7 +108,7 @@ function SearchBar({ onSearch }) {
               borderRadius:'50px 0 0 50px',
             }}
           >
-            {categorie === 'Toutes catégories' ? 'Toutes' : categorie}
+            <span>{categorie === 'Toutes catégories' ? 'Toutes' : categorie}</span>
             <ChevronDown size={13} color="#9ca3af" style={{ transform: catOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
           </button>
 
@@ -386,7 +386,7 @@ export default function Navbar() {
                 }}
               >
                 <Icon size={14} />
-                {label}
+                <span>{label}</span>
               </Link>
             );
           })}
@@ -397,7 +397,7 @@ export default function Navbar() {
               style={{ fontSize: '0.87rem', fontWeight: '700', color: '#1a5c2a', background: '#f0fdf4', borderRadius: '20px', padding: '3px 12px' }}
             >
               <LayoutDashboard size={14} />
-              Tableau de bord
+              <span>Tableau de bord</span>
             </Link>
           )}
         </nav>

@@ -14,6 +14,13 @@ class ImageProduitSerializer(serializers.ModelSerializer):
         model  = ImageProduit
         fields = ['id', 'image', 'est_principale', 'ordre']
 
+    def to_representation(self, instance):
+        data    = super().to_representation(instance)
+        request = self.context.get('request')
+        if request and data.get('image'):
+            data['image'] = request.build_absolute_uri(data['image'])
+        return data
+
 
 class AvisProduitSerializer(serializers.ModelSerializer):
     acheteur_nom = serializers.CharField(source='acheteur.nom_complet', read_only=True)
@@ -35,7 +42,7 @@ class ProduitSerializer(serializers.ModelSerializer):
         model  = Produit
         fields = [
             'id', 'nom', 'description', 'prix', 'unite',
-            'quantite', 'localisation', 'ville', 'statut',
+            'quantite', 'ville', 'statut',
             'est_disponible', 'vues', 'note_moyenne', 'total_avis',
             'vendeur', 'vendeur_nom', 'vendeur_ville',
             'categorie', 'categorie_nom',

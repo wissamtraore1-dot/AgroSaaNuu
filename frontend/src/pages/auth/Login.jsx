@@ -101,7 +101,7 @@ export default function Login() {
           <div style={{ background: 'white', borderRadius: '20px', padding: '2.2rem 2rem', boxShadow: '0 2px 24px rgba(0,0,0,0.07)', border: '1px solid #e5e7eb' }}>
 
             <h2 style={{ fontSize: '1.6rem', fontWeight: '800', color: '#1a2e10', marginBottom: '0.3rem' }}>
-              Bon retour 👋
+              Bon retour
             </h2>
             <p style={{ color: '#6b7280', fontSize: '0.88rem', marginBottom: '1.5rem' }}>
               Connectez-vous à votre compte AgroSaaNuu
@@ -171,10 +171,20 @@ export default function Login() {
                 whileTap={{ scale: submitting ? 1 : 0.98 }}
                 disabled={submitting}
               >
-                {submitting
-                  ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={18} /></motion.div> Connexion…</>
-                  : <>Se connecter <ArrowRight size={16} /></>
-                }
+                <AnimatePresence mode="wait" initial={false}>
+                  {submitting ? (
+                    <motion.span key="loading" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                      <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={18} /></motion.div>
+                      Connexion…
+                    </motion.span>
+                  ) : (
+                    <motion.span key="idle" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                      Se connecter <ArrowRight size={16} />
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </motion.button>
 
             </form>

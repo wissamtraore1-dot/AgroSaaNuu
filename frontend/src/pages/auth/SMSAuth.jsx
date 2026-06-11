@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Phone, ArrowLeft, Check, AlertCircle, Loader } from 'lucide-react';
+import { Phone, ArrowLeft, Check, AlertCircle, Loader, Leaf, ShoppingCart, Store, Truck } from 'lucide-react';
 import authService from '../../services/auth.service';
 
 const SMSAuth = () => {
@@ -16,6 +16,7 @@ const SMSAuth = () => {
   const [error, setError] = useState('');
   const [otpId, setOtpId] = useState('');
   const [timer, setTimer] = useState(0);
+  const [devCode, setDevCode] = useState('');
   
   // Formulaire profil
   const [profile, setProfile] = useState({
@@ -43,6 +44,9 @@ const SMSAuth = () => {
       setOtpId(response.otp_id);
       setTimer(300); // 5 minutes
       setExistingUser(response.existing); // Vérifier si user existe
+      if (import.meta.env.DEV && response.code_dev) {
+        setDevCode(response.code_dev);
+      }
       setStep(existingUser ? 'otp-login' : 'role');
     } catch (err) {
       setError(err.message || 'Erreur lors de l\'envoi du code');
@@ -72,6 +76,42 @@ const SMSAuth = () => {
 
     setStep('otp');
   };
+
+  // DEV MODE: auto-soumission directe sans passer par le DOM (évite conflits Framer Motion)
+  React.useEffect(() => {
+    if (!import.meta.env.DEV || !devCode) return;
+    if (step !== 'otp' && step !== 'otp-login') return;
+    if (!phone) return;
+
+    setOtp(devCode.split(''));
+
+    const t = setTimeout(async () => {
+      setLoading(true);
+      setError('');
+      try {
+        let response;
+        if (existingUser) {
+          response = await authService.phoneLogin(phone, devCode);
+        } else {
+          response = await authService.verifyOTPAndRegister({
+            phone, code: devCode, role,
+            prenom: profile.prenom, nom: profile.nom, ville: profile.ville,
+          });
+        }
+        localStorage.setItem('token', response.tokens.access);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        navigate(`/${response.user.role.toLowerCase()}/dashboard`);
+      } catch (err) {
+        setError(err.message || 'Code invalide');
+      } finally {
+        setLoading(false);
+      }
+    }, 600);
+
+    return () => clearTimeout(t);
+    // les dépendances step/devCode suffisent : phone/role/profile sont stables quand on arrive ici
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, devCode]);
 
   // ===== ÉTAPE 4: VÉRIFIER OTP =====
   const handleOtpChange = (index, value) => {
@@ -230,7 +270,7 @@ const SMSAuth = () => {
       >
         {/* HEADER */}
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '10px' }}>🌾</div>
+          <div style={{ fontSize: '48px', marginBottom: '10px', display: 'flex', justifyContent: 'center' }}><Leaf size={48} color="#1a5c2a" /></div>
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#333', margin: '0 0 5px 0' }}>
             AgroSaaNuu
           </h1>
@@ -324,10 +364,10 @@ const SMSAuth = () => {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {[
-                { key: 'BUYER', label: '🛒 Acheteur', desc: 'Acheter des produits' },
-                { key: 'SELLER', label: '🌾 Vendeur', desc: 'Vendre vos produits' },
-                { key: 'TRANSPORTER', label: '🚚 Transporteur', desc: 'Livrer des commandes' },
-              ].map(({ key, label, desc }) => (
+                { key: 'BUYER', Icon: ShoppingCart, label: 'Acheteur', desc: 'Acheter des produits' },
+                { key: 'SELLER', Icon: Leaf, label: 'Vendeur', desc: 'Vendre vos produits' },
+                { key: 'TRANSPORTER', Icon: Truck, label: 'Transporteur', desc: 'Livrer des commandes' },
+              ].map(({ key, Icon, label, desc }) => (
                 <motion.button
                   key={key}
                   onClick={() => handleRoleSelect(key)}
@@ -339,7 +379,7 @@ const SMSAuth = () => {
                     background: role === key ? '#f0fdf4' : 'white',
                   }}
                 >
-                  <strong>{label}</strong>
+                  <strong style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><Icon size={16} /> {label}</strong>
                   <p style={{ fontSize: '12px', color: '#666', margin: '5px 0 0 0' }}>{desc}</p>
                 </motion.button>
               ))}
@@ -437,6 +477,11 @@ const SMSAuth = () => {
             animate={{ opacity: 1 }}
             onSubmit={handleOtpSubmit}
           >
+            {import.meta.env.DEV && devCode && (
+              <div style={{ background: '#fef3c7', border: '1px dashed #f59e0b', borderRadius: '6px', padding: '8px 12px', marginBottom: '12px', fontSize: '12px', color: '#92400e' }}>
+                ⚡ DEV MODE — auto-submit avec code: <strong>{devCode}</strong>
+              </div>
+            )}
             <button
               type="button"
               onClick={() => setStep(existingUser ? 'phone' : 'profile')}

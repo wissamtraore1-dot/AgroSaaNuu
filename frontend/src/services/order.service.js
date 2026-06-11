@@ -61,6 +61,21 @@ const OrderService = {
     return response.data;
   },
 
+  async mesProblemes() {
+    const response = await api.get('/orders/mes-problemes/');
+    return response.data;
+  },
+
+  async detailProbleme(id) {
+    const response = await api.get(`/orders/problemes/${id}/`);
+    return response.data;
+  },
+
+  async resoudreProbleme(id, { resolution, statut = 'RESOLU' }) {
+    const response = await api.patch(`/orders/problemes/${id}/resoudre/`, { resolution, statut });
+    return response.data;
+  },
+
   // ===== NOUVELLES MÉTHODES PAIEMENT & ESCROW =====
 
   async initiatePaiement(data) {
@@ -125,20 +140,6 @@ const OrderService = {
     return response.data;
   },
 
-  async getMessages(commandeId) {
-    const response = await api.get(`/orders/${commandeId}/messages/`);
-    return response.data;
-  },
-
-  async envoyerMessage(commandeId, contenu) {
-    const response = await api.post(`/orders/${commandeId}/messages/`, { contenu });
-    return response.data;
-  },
-
-  async getRecu(commandeId) {
-    const response = await api.get(`/orders/${commandeId}/recu/`);
-    return response.data;
-  },
 };
 
 export default OrderService;

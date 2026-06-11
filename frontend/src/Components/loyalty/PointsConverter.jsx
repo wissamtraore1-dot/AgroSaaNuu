@@ -3,6 +3,7 @@
 // src/components/loyalty/PointsConverter.jsx
 // ============================================================
 import React, { useState } from 'react';
+import { Coins } from 'lucide-react';
 import { LOYALTY } from '../../utils/constants';
 import { formatPoints, formatPrice } from '../../utils/formatPrice';
 import { getPointsRedeemError } from '../../utils/validators';
@@ -42,7 +43,10 @@ const PointsConverter = ({
 
   return (
     <div style={styles.wrap}>
-      <div style={styles.title}>💰 Convert Points to FCFA</div>
+      <div style={styles.title}>
+        <Coins size={17} color="#D97706" style={{ verticalAlign: 'middle', marginRight: 6 }} />
+        Convertir les points en FCFA
+      </div>
 
       {/* Rate info */}
       <div style={styles.rateRow}>

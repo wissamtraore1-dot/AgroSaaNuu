@@ -3,6 +3,7 @@
 // src/components/finance/EscrowBanner.jsx
 // ============================================================
 import React from 'react';
+import { Lock, CheckCircle, RefreshCw, AlertTriangle } from 'lucide-react';
 import { ESCROW_STATUS, ESCROW_STATUS_LABELS } from '../../utils/constants';
 import { formatPrice } from '../../utils/formatPrice';
 
@@ -11,28 +12,28 @@ const CONFIG = {
     bg:      '#FEF3C7',
     border:  '#D97706',
     color:   '#92400E',
-    icon:    '🔒',
+    Icon:    Lock,
     title:   'Funds Secured',
   },
   [ESCROW_STATUS.RELEASED]: {
     bg:      '#EAF3DE',
     border:  '#639922',
     color:   '#3B6D11',
-    icon:    '✅',
+    Icon:    CheckCircle,
     title:   'Funds Released',
   },
   [ESCROW_STATUS.REFUNDED]: {
     bg:      '#E6F1FB',
     border:  '#378ADD',
     color:   '#185FA5',
-    icon:    '↩',
+    Icon:    RefreshCw,
     title:   'Refunded',
   },
   [ESCROW_STATUS.DISPUTED]: {
     bg:      '#FDE8E8',
     border:  '#E02424',
     color:   '#9B1C1C',
-    icon:    '⚠️',
+    Icon:    AlertTriangle,
     title:   'Dispute Opened',
   },
 };
@@ -40,6 +41,7 @@ const CONFIG = {
 const EscrowBanner = ({ status, amount, autoReleaseIn = null, onConfirm = null }) => {
   const cfg = CONFIG[status] || CONFIG[ESCROW_STATUS.HELD];
   const label = ESCROW_STATUS_LABELS[status];
+  const CfgIcon = cfg.Icon;
 
   return (
     <div style={{
@@ -51,7 +53,7 @@ const EscrowBanner = ({ status, amount, autoReleaseIn = null, onConfirm = null }
       alignItems:   'flex-start',
       gap:          '12px',
     }}>
-      <span style={{ fontSize: '22px', lineHeight: 1 }}>{cfg.icon}</span>
+      <span style={{ lineHeight: 1, display: 'inline-flex' }}><CfgIcon size={22} color={cfg.color} /></span>
 
       <div style={{ flex: 1 }}>
         <div style={{ fontWeight: 600, color: cfg.color, marginBottom: '2px' }}>

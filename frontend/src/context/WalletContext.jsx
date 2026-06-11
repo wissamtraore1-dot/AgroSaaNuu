@@ -4,10 +4,12 @@
 // ============================================================
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import WalletService from '../services/wallet.service';
+import { useAuth } from './AuthContext';
 
 const WalletContext = createContext(null);
 
 export const WalletProvider = ({ children }) => {
+  const { isAuthenticated } = useAuth();
   const [balance, setBalance] = useState({
     available: 0,
     in_escrow: 0,
@@ -47,20 +49,21 @@ export const WalletProvider = ({ children }) => {
   // ── Deposit ───────────────────────────────────────────────
   const deposit = async (payload) => {
     const data = await WalletService.deposit(payload);
-    await fetchBalance(); // refresh after deposit
+    await fetchBalance();
     return data;
   };
 
   // ── Withdraw ──────────────────────────────────────────────
   const withdraw = async (payload) => {
     const data = await WalletService.withdraw(payload);
-    await fetchBalance(); // refresh after withdrawal
+    await fetchBalance();
     return data;
   };
 
+  // Seulement si connecté
   useEffect(() => {
-    fetchBalance();
-  }, [fetchBalance]);
+    if (isAuthenticated) fetchBalance();
+  }, [fetchBalance, isAuthenticated]);
 
   return (
     <WalletContext.Provider value={{

@@ -5,6 +5,54 @@ from apps.common.utils import generer_reference
 from apps.authentication.models import User
 
 
+class PlatformWallet(TimeStampedModel):
+    """Wallet singleton de l'entreprise AgroSaaNuu — capte toutes les commissions."""
+
+    nom               = models.CharField(max_length=50, unique=True, default='AGROSAANUU')
+    solde             = models.DecimalField(max_digits=16, decimal_places=2, default=0.00)
+    total_commissions = models.DecimalField(max_digits=16, decimal_places=2, default=0.00)
+    total_retire      = models.DecimalField(max_digits=16, decimal_places=2, default=0.00)
+
+    class Meta:
+        db_table = 'platform_wallet'
+
+    def __str__(self):
+        return f"Wallet AgroSaaNuu — {self.solde} FCFA"
+
+    @classmethod
+    def get(cls):
+        wallet, _ = cls.objects.get_or_create(nom='AGROSAANUU')
+        return wallet
+
+
+class PlatformTransaction(TimeStampedModel):
+    """Historique de toutes les entrées/sorties du wallet entreprise."""
+
+    class Type(models.TextChoices):
+        COMMISSION = 'COMMISSION', _('Commission perçue')
+        RETRAIT    = 'RETRAIT',    _('Retrait entreprise')
+        AJUSTEMENT = 'AJUSTEMENT', _('Ajustement manuel')
+
+    wallet      = models.ForeignKey(PlatformWallet, on_delete=models.CASCADE, related_name='transactions')
+    reference   = models.CharField(max_length=25, unique=True, blank=True)
+    type        = models.CharField(max_length=15, choices=Type.choices)
+    montant     = models.DecimalField(max_digits=12, decimal_places=2)
+    description = models.TextField(blank=True, default='')
+    commande_id = models.UUIDField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'platform_transactions'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.reference} — {self.type} {self.montant} FCFA"
+
+    def save(self, *args, **kwargs):
+        if not self.reference:
+            self.reference = generer_reference('PLT')
+        super().save(*args, **kwargs)
+
+
 class Wallet(TimeStampedModel):
     user            = models.OneToOneField(User, on_delete=models.CASCADE, related_name='wallet')
     solde           = models.DecimalField(max_digits=14, decimal_places=2, default=0.00)

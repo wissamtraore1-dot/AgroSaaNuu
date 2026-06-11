@@ -6,7 +6,8 @@ import {
   HelpCircle, ShoppingCart, Truck,
   CreditCard, User, Shield, Book,
   MessageSquare, Phone, Mail,
-  CheckCircle, ArrowRight, X
+  CheckCircle, ArrowRight, X,
+  Leaf, MessageCircle,
 } from 'lucide-react';
 
 // ===== MOCK DATA =====
@@ -52,10 +53,10 @@ const faqs = [
 ];
 
 const guides = [
-  { titre: 'Guide du vendeur',       desc: 'Comment créer et gérer vos annonces',    icon: '🌾', lien: '/help' },
-  { titre: 'Guide de l\'acheteur',   desc: 'Comment trouver et commander des céréales', icon: '🛒', lien: '/help' },
-  { titre: 'Guide du transporteur',  desc: 'Comment proposer vos services',           icon: '🚚', lien: '/help' },
-  { titre: 'Guide des paiements',    desc: 'Mobile Money et virements bancaires',     icon: '💳', lien: '/help' },
+  { titre: 'Guide du vendeur',       desc: 'Comment créer et gérer vos annonces',       Icon: Leaf,        lien: '/help' },
+  { titre: "Guide de l'acheteur",    desc: 'Comment trouver et commander des céréales', Icon: ShoppingCart, lien: '/help' },
+  { titre: 'Guide du transporteur',  desc: 'Comment proposer vos services',              Icon: Truck,       lien: '/help' },
+  { titre: 'Guide des paiements',    desc: 'Mobile Money et virements bancaires',        Icon: CreditCard,  lien: '/help' },
 ];
 
 const fadeUp = {
@@ -102,7 +103,7 @@ export default function Help() {
               <span style={{ color: 'rgba(255,255,255,0.5)' }}>/</span>
               <span style={{ color: 'white' }}>Aide</span>
             </div>
-            <h1 style={styles.heroTitle}>❓ Centre d'aide</h1>
+            <h1 style={styles.heroTitle}><HelpCircle size={32} style={{ verticalAlign: 'middle', marginRight: '8px' }} /> Centre d'aide</h1>
             <p style={styles.heroSub}>
               Trouvez rapidement des réponses à vos questions
             </p>
@@ -164,7 +165,9 @@ export default function Help() {
                 whileHover={{ y: -4 }}
                 whileTap={{ scale: 0.97 }}
               >
-                <span style={{ fontSize: '1.5rem' }}>📚</span>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: catActive === 'tous' ? 'rgba(255,255,255,0.2)' : '#f0fdf4' }}>
+                  <Book size={20} color={catActive === 'tous' ? 'white' : '#1a5c2a'} />
+                </div>
                 <span style={{
                   ...styles.catLabel,
                   color: catActive === 'tous' ? 'white' : '#374151',
@@ -248,7 +251,7 @@ export default function Help() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                   >
-                    <div style={{ fontSize: '3rem' }}>🔍</div>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}><Search size={48} color="#9ca3af" /></div>
                     <h3 style={{ color: '#1a2e10', marginBottom: '0.5rem' }}>
                       Aucune question trouvée
                     </h3>
@@ -356,19 +359,23 @@ export default function Help() {
                 <h3 style={styles.cardTitle}>Guides pratiques</h3>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {guides.map((g, i) => (
-                  <motion.div key={i} whileHover={{ x: 4 }}>
-                    <Link to={g.lien} style={styles.guideItem}>
-                      <span style={styles.guideEmoji}>{g.titre[0] === 'G' ? g.titre.split(' ')[2]?.[0] || '📖' : '📖'}</span>
-                      <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{g.icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={styles.guideTitre}>{g.titre}</div>
-                        <div style={styles.guideDesc}>{g.desc}</div>
-                      </div>
-                      <ArrowRight size={16} color="#1a5c2a" />
-                    </Link>
-                  </motion.div>
-                ))}
+                {guides.map((g, i) => {
+                  const GIcon = g.Icon;
+                  return (
+                    <motion.div key={i} whileHover={{ x: 4 }}>
+                      <Link to={g.lien} style={styles.guideItem}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <GIcon size={18} color="#1a5c2a" />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={styles.guideTitre}>{g.titre}</div>
+                          <div style={styles.guideDesc}>{g.desc}</div>
+                        </div>
+                        <ArrowRight size={16} color="#1a5c2a" />
+                      </Link>
+                    </motion.div>
+                  );
+                })}
               </div>
             </motion.div>
 
@@ -380,7 +387,7 @@ export default function Help() {
               animate="show"
               transition={{ delay: 0.5 }}
             >
-              <div style={styles.supportIcon}>💬</div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.8rem' }}><MessageCircle size={40} color="#1a5c2a" /></div>
               <h4 style={styles.supportTitle}>Vous n'avez pas trouvé votre réponse ?</h4>
               <p style={styles.supportDesc}>
                 Notre équipe est disponible pour vous aider

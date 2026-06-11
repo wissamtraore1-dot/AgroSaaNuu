@@ -7,7 +7,7 @@ import {
   TrendingUp, TrendingDown, Clock,
   CheckCircle, XCircle, RefreshCw,
   CreditCard, Smartphone, Building,
-  ChevronRight, Shield, Lock
+  ChevronRight, Shield, Lock, Coins, Upload,
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis,
@@ -80,7 +80,7 @@ export default function WalletPage() {
           style={styles.header}
         >
           <div>
-            <h1 style={styles.headerTitle}>💳 Mon Portefeuille</h1>
+            <h1 style={{ ...styles.headerTitle, display: 'flex', alignItems: 'center', gap: '8px' }}><CreditCard size={22} /> Mon Portefeuille</h1>
             <p style={styles.headerSub}>Gérez vos finances en toute sécurité</p>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
@@ -310,7 +310,7 @@ export default function WalletPage() {
                 { id: 'tous',    label: 'Toutes'      },
                 { id: 'entrees', label: '↑ Entrées'   },
                 { id: 'sorties', label: '↓ Sorties'   },
-                { id: 'pending', label: '⏳ En attente'},
+                { id: 'pending', label: 'En attente'},
               ].map((tab) => (
                 <motion.button
                   key={tab.id}
@@ -411,25 +411,30 @@ export default function WalletPage() {
       {/* ===== MODAL DÉPÔT / RETRAIT ===== */}
       <AnimatePresence>
         {showModal && (
-          <>
-            <motion.div
-              style={styles.overlay}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowModal(null)}
-            />
-            <motion.div
-              style={styles.modal}
-              initial={{ scale: 0.85, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.85, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <h3 style={styles.modalTitle}>
+          <motion.div
+            key="wallet-overlay"
+            style={styles.overlay}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowModal(null)}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            key="wallet-modal"
+            style={styles.modal}
+            initial={{ scale: 0.85, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.85, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+              <h3 style={{ ...styles.modalTitle, display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {showModal === 'depot'
-                  ? '💰 Déposer des fonds'
-                  : '📤 Retirer des fonds'
+                  ? <><Coins size={18} /> Déposer des fonds</>
+                  : <><Upload size={18} /> Retirer des fonds</>
                 }
               </h3>
               <p style={styles.modalSub}>
@@ -496,7 +501,6 @@ export default function WalletPage() {
               </div>
 
             </motion.div>
-          </>
         )}
       </AnimatePresence>
 

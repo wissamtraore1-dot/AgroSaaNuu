@@ -3,6 +3,7 @@
 // src/components/finance/WalletCard.jsx
 // ============================================================
 import React from 'react';
+import { CreditCard, Lock } from 'lucide-react';
 import { formatPrice } from '../../utils/formatPrice';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../utils/constants';
@@ -24,7 +25,7 @@ const WalletCard = ({ balance = {}, loading = false, compact = false }) => {
     <div style={styles.card}>
       {/* Header */}
       <div style={styles.header}>
-        <span style={styles.label}>💳 My Wallet</span>
+        <span style={{ ...styles.label, display: 'inline-flex', alignItems: 'center', gap: '6px' }}><CreditCard size={14} /> My Wallet</span>
         <button
           style={styles.historyBtn}
           onClick={() => navigate(ROUTES.TRANSACTIONS)}
@@ -40,7 +41,7 @@ const WalletCard = ({ balance = {}, loading = false, compact = false }) => {
       {/* Escrow row */}
       {in_escrow > 0 && (
         <div style={styles.escrowRow}>
-          <span>🔒 In escrow</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Lock size={12} /> In escrow</span>
           <span style={{ fontWeight: 600 }}>{formatPrice(in_escrow)}</span>
         </div>
       )}

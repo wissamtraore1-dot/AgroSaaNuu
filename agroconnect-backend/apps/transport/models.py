@@ -31,8 +31,9 @@ class Vehicule(TimeStampedModel):
     statut          = models.CharField(max_length=15, choices=Statut.choices, default=Statut.DISPONIBLE)
     assurance_expiry = models.DateField()
     visite_expiry    = models.DateField()
-    photo           = models.ImageField(upload_to='vehicules/', blank=True, null=True)
-    est_actif       = models.BooleanField(default=True)
+    photo            = models.ImageField(upload_to='vehicules/photos/', blank=True, null=True)
+    carte_grise      = models.FileField(upload_to='vehicules/carte_grise/', blank=True, null=True)
+    est_actif        = models.BooleanField(default=True)
 
     class Meta:
         db_table            = 'vehicules'

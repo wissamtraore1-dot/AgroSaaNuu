@@ -1,16 +1,18 @@
-// ============================================================
-// AgroConnect — Edit Product
-// src/pages/seller/EditProduct.jsx
-// ============================================================
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Save, Loader, Image } from 'lucide-react';
+import DashboardLayout from '../../Components/layout/DashboardLayout';
 import ProductService from '../../services/product.service';
 import { useNotificationContext } from '../../context/NotificationContext';
 
-const EditProduct = () => {
+const GREEN  = '#1a5c2a';
+const fadeUp = { hidden: { y: 20, opacity: 0 }, show: { y: 0, opacity: 1 } };
+
+export default function EditProduct() {
   const { id }   = useParams();
   const navigate = useNavigate();
-  const { success, error: notifyError } = useNotificationContext();
+  const { success, error: notifError } = useNotificationContext();
 
   const [form,       setForm]       = useState({ name: '', description: '', price: '', stock: '', category: '' });
   const [image,      setImage]      = useState(null);
@@ -22,18 +24,20 @@ const EditProduct = () => {
 
   useEffect(() => {
     Promise.all([
-      ProductService.getOne(id),
+      ProductService.detail(id),
       ProductService.getCategories(),
-    ]).then(([product, cats]) => {
+    ]).then(([produit, cats]) => {
       setForm({
-        name:        product.name,
-        description: product.description || '',
-        price:       product.price,
-        stock:       product.stock,
-        category:    product.category,
+        name:        produit.nom        || produit.name        || '',
+        description: produit.description                        || '',
+        price:       produit.prix       || produit.price       || '',
+        stock:       produit.stock                              || '',
+        category:    produit.categorie  || produit.category    || '',
       });
-      setPreview(product.image);
-      setCategories(cats);
+      setPreview(produit.image || null);
+      setCategories(Array.isArray(cats) ? cats : cats.results || []);
+    }).catch(() => {
+      notifError('Impossible de charger le produit');
     }).finally(() => setFetching(false));
   }, [id]);
 
@@ -55,89 +59,132 @@ const EditProduct = () => {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => fd.append(k, v));
       if (image) fd.append('image', image);
-      await ProductService.update(id, fd);
-      success('Product updated successfully!');
+      await ProductService.modifier(id, fd);
+      success('Produit mis à jour avec succès !');
       navigate('/seller/products');
     } catch (err) {
-      notifyError('Failed to update product');
+      notifError('Impossible de modifier le produit');
       setErrors(err.response?.data || {});
     } finally {
       setLoading(false);
     }
   };
 
-  if (fetching) return <div style={{ padding: '40px', textAlign: 'center', color: '#6B7280' }}>Loading...</div>;
+  if (fetching) {
+    return (
+      <DashboardLayout role="seller">
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+          <Loader size={28} color={GREEN} />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
-    <div style={styles.wrap}>
-      <button style={styles.backBtn} onClick={() => navigate('/seller/products')}>← My Products</button>
-      <h5 style={styles.title}>Edit Product</h5>
+    <DashboardLayout role="seller">
+      <div style={{ maxWidth: '600px', margin: '0 auto' }}>
 
-      <div style={styles.card}>
-        {/* Image */}
-        <div style={styles.imageUpload} onClick={() => document.getElementById('edit-img').click()}>
-          {preview
-            ? <img src={preview} alt="preview" style={styles.imagePreview} />
-            : <div style={styles.imagePlaceholder}>📷 Click to change photo</div>}
-          <input id="edit-img" type="file" accept="image/*" onChange={handleImage} style={{ display: 'none' }} />
-        </div>
+        {/* EN-TÊTE */}
+        <motion.div variants={fadeUp} initial="hidden" animate="show" style={{ marginBottom: '1.5rem' }}>
+          <button
+            onClick={() => navigate('/seller/products')}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '0.88rem', marginBottom: '0.8rem', padding: 0 }}
+          >
+            <ArrowLeft size={16} /> Retour à mes produits
+          </button>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#1a2e10', margin: 0 }}>
+            Modifier le produit
+          </h1>
+        </motion.div>
 
-        {[
-          { name: 'name',  label: 'Product Name',  type: 'text',   placeholder: '' },
-          { name: 'price', label: 'Price (FCFA)',   type: 'number', placeholder: '' },
-          { name: 'stock', label: 'Stock quantity', type: 'number', placeholder: '' },
-        ].map(field => (
-          <div key={field.name} style={styles.field}>
-            <label style={styles.label}>{field.label}</label>
-            <input
-              type={field.type}
-              name={field.name}
-              value={form[field.name]}
-              onChange={handleChange}
-              style={{ ...styles.input, borderColor: errors[field.name] ? '#E02424' : '#D1D5DB' }}
-            />
-            {errors[field.name] && <div style={styles.errText}>{errors[field.name]}</div>}
-          </div>
-        ))}
-
-        <div style={styles.field}>
-          <label style={styles.label}>Category</label>
-          <select name="category" value={form.category} onChange={handleChange} style={styles.input}>
-            <option value="">Select a category</option>
-            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
-
-        <div style={styles.field}>
-          <label style={styles.label}>Description</label>
-          <textarea name="description" value={form.description} onChange={handleChange} rows={4} style={{ ...styles.input, resize: 'vertical' }} />
-        </div>
-
-        <button
-          style={{ ...styles.submitBtn, opacity: loading ? 0.7 : 1 }}
-          onClick={handleSubmit}
-          disabled={loading}
+        {/* FORMULAIRE */}
+        <motion.div variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.05 }}
+          style={{ background: 'white', borderRadius: '16px', padding: '1.5rem', border: '1px solid #e5e7eb' }}
         >
-          {loading ? 'Saving...' : 'Save Changes'}
-        </button>
+          {/* PHOTO */}
+          <div
+            onClick={() => document.getElementById('edit-img').click()}
+            style={{ width: '100%', height: '180px', borderRadius: '12px', border: '2px dashed #d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginBottom: '1.2rem', overflow: 'hidden', background: '#fafafa' }}
+          >
+            {preview
+              ? <img src={preview} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', color: '#9ca3af', fontSize: '0.88rem' }}>
+                  <Image size={28} color="#d1d5db" />
+                  <span>Cliquez pour changer la photo</span>
+                </div>
+            }
+            <input id="edit-img" type="file" accept="image/*" onChange={handleImage} style={{ display: 'none' }} />
+          </div>
+
+          {/* NOM */}
+          <Field label="Nom du produit" error={errors.name || errors.nom}>
+            <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="Ex : Maïs blanc 2T" style={inputStyle(errors.name)} />
+          </Field>
+
+          {/* PRIX */}
+          <Field label="Prix (FCFA)" error={errors.price || errors.prix}>
+            <input type="number" name="price" value={form.price} onChange={handleChange} placeholder="Ex : 150000" style={inputStyle(errors.price)} />
+          </Field>
+
+          {/* STOCK */}
+          <Field label="Quantité en stock (kg ou tonnes)" error={errors.stock}>
+            <input type="number" name="stock" value={form.stock} onChange={handleChange} placeholder="Ex : 500" style={inputStyle(errors.stock)} />
+          </Field>
+
+          {/* CATÉGORIE */}
+          <Field label="Catégorie" error={errors.category || errors.categorie}>
+            <select name="category" value={form.category} onChange={handleChange} style={inputStyle(errors.category)}>
+              <option value="">Sélectionner une catégorie</option>
+              {categories.map(c => <option key={c.id} value={c.id}>{c.nom || c.name}</option>)}
+            </select>
+          </Field>
+
+          {/* DESCRIPTION */}
+          <Field label="Description" error={errors.description}>
+            <textarea name="description" value={form.description} onChange={handleChange} rows={4} placeholder="Décrivez votre produit..." style={{ ...inputStyle(errors.description), resize: 'vertical' }} />
+          </Field>
+
+          {/* BOUTON */}
+          <motion.button
+            onClick={handleSubmit}
+            disabled={loading}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: `linear-gradient(135deg, ${GREEN}, #2d6a4f)`, color: 'white', border: 'none', borderRadius: '12px', padding: '0.9rem', fontWeight: '700', fontSize: '0.95rem', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.8 : 1, marginTop: '0.5rem' }}
+            whileHover={{ scale: loading ? 1 : 1.02 }} whileTap={{ scale: loading ? 1 : 0.98 }}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              {loading ? (
+                <motion.span key="loading" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div>
+                  <span> Sauvegarde…</span>
+                </motion.span>
+              ) : (
+                <motion.span key="idle" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                  <Save size={16} /><span> Sauvegarder les modifications</span>
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
+        </motion.div>
+
       </div>
+    </DashboardLayout>
+  );
+}
+
+function Field({ label, error, children }) {
+  return (
+    <div style={{ marginBottom: '1rem' }}>
+      <label style={{ display: 'block', fontSize: '0.83rem', fontWeight: '600', color: '#374151', marginBottom: '5px' }}>{label}</label>
+      {children}
+      {error && <div style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '4px' }}>{error}</div>}
     </div>
   );
-};
+}
 
-const styles = {
-  wrap:             { padding: '24px 16px', maxWidth: '600px', margin: '0 auto' },
-  backBtn:          { background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: '#6B7280', marginBottom: '8px', padding: 0 },
-  title:            { fontSize: '22px', fontWeight: 700, color: '#1F2937', marginBottom: '20px' },
-  card:             { background: '#fff', borderRadius: '16px', padding: '24px', border: '1.5px solid #E5E7EB' },
-  imageUpload:      { width: '100%', height: '180px', borderRadius: '12px', border: '2px dashed #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginBottom: '20px', overflow: 'hidden' },
-  imagePreview:     { width: '100%', height: '100%', objectFit: 'cover' },
-  imagePlaceholder: { color: '#9CA3AF', fontSize: '15px' },
-  field:            { marginBottom: '16px' },
-  label:            { display: 'block', fontSize: '13px', fontWeight: 500, color: '#374151', marginBottom: '6px' },
-  input:            { width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1.5px solid #D1D5DB', fontSize: '14px', outline: 'none', boxSizing: 'border-box' },
-  errText:          { color: '#E02424', fontSize: '12px', marginTop: '4px' },
-  submitBtn:        { width: '100%', padding: '13px', background: '#16A34A', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '15px', cursor: 'pointer' },
-};
-
-export default EditProduct;
+const inputStyle = (error) => ({
+  width: '100%', padding: '0.65rem 0.9rem', borderRadius: '10px',
+  border: `1.5px solid ${error ? '#dc2626' : '#d1d5db'}`,
+  fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box',
+});

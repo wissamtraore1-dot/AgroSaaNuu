@@ -4,26 +4,27 @@
 // ============================================================
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { CheckCircle, XCircle, Clock, Lock } from 'lucide-react';
 import { formatPrice } from '../../utils/formatPrice';
 import { ROUTES } from '../../utils/constants';
 
 const CONFIG = {
   success: {
-    icon:    '✅',
+    Icon:    CheckCircle,
     color:   '#16A34A',
     bg:      '#F0FDF4',
     border:  '#86EFAC',
     title:   'Payment Successful',
   },
   failed: {
-    icon:    '❌',
+    Icon:    XCircle,
     color:   '#DC2626',
     bg:      '#FEF2F2',
     border:  '#FECACA',
     title:   'Payment Failed',
   },
   pending: {
-    icon:    '⏳',
+    Icon:    Clock,
     color:   '#D97706',
     bg:      '#FFFBEB',
     border:  '#FCD34D',
@@ -58,6 +59,7 @@ const PaymentStatus = () => {
   } = location.state || {};
 
   const cfg = CONFIG[status] || CONFIG.pending;
+  const CfgIcon = cfg.Icon;
 
   const getMessage = () => {
     if (status === 'success' && MESSAGES.success[type]) {
@@ -101,8 +103,8 @@ const PaymentStatus = () => {
       <div style={{ ...styles.card, background: cfg.bg, border: `1.5px solid ${cfg.border}` }}>
 
         {/* Icon */}
-        <div style={{ fontSize: '64px', marginBottom: '16px', lineHeight: 1 }}>
-          {cfg.icon}
+        <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+          <CfgIcon size={64} color={cfg.color} />
         </div>
 
         {/* Title */}
@@ -123,7 +125,7 @@ const PaymentStatus = () => {
         {/* Escrow notice for purchases */}
         {status === 'success' && type === 'purchase' && (
           <div style={styles.escrowBox}>
-            <span style={{ fontSize: '20px' }}>🔒</span>
+            <Lock size={20} color="#92400E" style={{ flexShrink: 0 }} />
             <div>
               <div style={styles.escrowTitle}>Funds are secured</div>
               <div style={styles.escrowText}>

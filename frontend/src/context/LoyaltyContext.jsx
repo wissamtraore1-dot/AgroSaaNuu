@@ -5,10 +5,12 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import LoyaltyService from '../services/loyalty.service';
 import { getTier, getTierProgress, calcPointsValue } from '../utils/constants';
+import { useAuth } from './AuthContext';
 
 const LoyaltyContext = createContext(null);
 
 export const LoyaltyProvider = ({ children }) => {
+  const { isAuthenticated } = useAuth();
   const [points, setPoints]     = useState({
     balance:         0,
     lifetime_points: 0,
@@ -60,9 +62,10 @@ export const LoyaltyProvider = ({ children }) => {
   // ── Value of current balance in FCFA ─────────────────────
   const balanceInFcfa = calcPointsValue(points.balance);
 
+  // Seulement si connecté
   useEffect(() => {
-    fetchPoints();
-  }, [fetchPoints]);
+    if (isAuthenticated) fetchPoints();
+  }, [fetchPoints, isAuthenticated]);
 
   return (
     <LoyaltyContext.Provider value={{

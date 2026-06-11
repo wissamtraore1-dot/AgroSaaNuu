@@ -62,7 +62,8 @@ class ListeTransporteursView(generics.ListAPIView):
 
     def get(self, request):
         transporteurs = User.objects.filter(
-            role='TRANSPORTER', is_active=True
+            role='TRANSPORTER', is_active=True,
+            transporter_profile__est_verifie=True,
         ).select_related('transporter_profile')
         from apps.authentication.serializers import UserSerializer
         return Response({
@@ -85,6 +86,14 @@ class AjouterVehiculeView(APIView):
     permission_classes = [IsTransporter]
 
     def post(self, request):
+        # Gate : le transporteur doit avoir renseigné son CIP
+        if not request.user.cip:
+            return Response({
+                'success':         False,
+                'profil_incomplet': True,
+                'message':         'Complétez votre profil (numéro CIP requis) avant d\'enregistrer un véhicule.',
+            }, status=status.HTTP_403_FORBIDDEN)
+
         serializer = VehiculeSerializer(
             data=request.data,
             context={'request': request}
@@ -171,6 +180,26 @@ class AccepterMissionView(APIView):
                 'success': False,
                 'message': 'Seules les missions en attente peuvent être acceptées.',
             }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Gate : vérification admin requise avant première mission
+        try:
+            profil = request.user.transporter_profile
+        except Exception:
+            profil = None
+
+        if profil and not profil.est_verifie:
+            if profil.date_demande_verification is None:
+                profil.date_demande_verification = timezone.now()
+                profil.save(update_fields=['date_demande_verification'])
+                from apps.notifications.services import notifier_demande_verification
+                notifier_demande_verification(request.user)
+            return Response({
+                'success':             False,
+                'verification_pending': True,
+                'message':             'Votre compte est en attente de vérification par l\'administrateur. '
+                                       'Vous serez notifié(e) une fois approuvé(e).',
+            }, status=status.HTTP_403_FORBIDDEN)
+
         mission.statut = MissionTransport.Statut.ACCEPTEE
         mission.save(update_fields=['statut'])
         return Response({
@@ -220,6 +249,7 @@ class TransporteursDisponiblesView(APIView):
             role='TRANSPORTER',
             is_active=True,
             transporter_profile__est_disponible=True,
+            transporter_profile__est_verifie=True,
         ).select_related('transporter_profile').prefetch_related('vehicules')
 
         # Filtrer par capacité

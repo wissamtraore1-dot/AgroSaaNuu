@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
@@ -260,8 +260,7 @@ export default function Home() {
                   className="col-6 col-md-4 col-lg-2"
                   variants={fadeUp}
                   initial="hidden"
-                  whileInView="show"
-                  viewport={{ once: true }}
+                  animate="show"
                   transition={{ delay: i * 0.08, duration: 0.45 }}
                 >
                  <Link to={f.to} style={{ textDecoration: 'none' }}>
@@ -321,8 +320,7 @@ export default function Home() {
                     className="col-12 col-sm-6 col-md-4"
                     variants={fadeUp}
                     initial="hidden"
-                    whileInView="show"
-                    viewport={{ once: true }}
+                    animate="show"
                     transition={{ delay: i * 0.1 }}
                   >
                     <motion.div
@@ -391,8 +389,7 @@ export default function Home() {
                     key={t.id}
                     variants={fadeUp}
                     initial="hidden"
-                    whileInView="show"
-                    viewport={{ once: true }}
+                    animate="show"
                     transition={{ delay: i * 0.1 }}
                   >
                     <motion.div
@@ -403,7 +400,7 @@ export default function Home() {
                       <div style={{ flex: 1 }}>
                         <div style={styles.transportName}>
                           {t.nom}
-                          {t.verifie && <span style={{ marginLeft: '6px', color: '#16a34a', fontSize: '0.72rem' }}>✓ Vérifié</span>}
+                          {t.verifie && <span style={{ marginLeft: '6px', color: '#16a34a', fontSize: '0.72rem' }}>âœ“ Vérifié</span>}
                         </div>
                         <div style={styles.transportLoc}>
                           <MapPin size={11} color="#6b7280" />
@@ -788,3 +785,4 @@ const styles = {
     width: '100%',
   },
 };
+

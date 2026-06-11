@@ -8,7 +8,9 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils import timezone
 
-from .models import User, OTPCode
+from django.conf import settings
+
+from .models import User, OTPCode, SellerProfile, TransporterProfile
 from .serializers import UserSerializer
 from .sms_service import send_otp_sms, generate_otp
 
@@ -67,18 +69,21 @@ class VerifyOTPAndCreateAccountView(APIView):
     """
     POST /api/v1/auth/sms/verify-and-register/
     Champs requis : phone, code, role
-    Champs optionnels : prenom, nom, ville, password
+    Champs optionnels : prenom, nom, ville, password, email
     """
     permission_classes = [AllowAny]
 
     def post(self, request):
-        phone    = request.data.get('phone',    '').strip()
-        otp_code = request.data.get('code',     '').strip()
-        role     = request.data.get('role',     'BUYER').strip()
-        prenom   = request.data.get('prenom',   '').strip()
-        nom      = request.data.get('nom',      '').strip()
-        ville    = request.data.get('ville',    '').strip()
-        password = request.data.get('password')
+        phone         = request.data.get('phone',         '').strip()
+        otp_code      = request.data.get('code',          '').strip()
+        role          = request.data.get('role',          'BUYER').strip()
+        nom_complet   = request.data.get('nom_complet',   '').strip()
+        ville         = request.data.get('ville',         '').strip()
+        password      = request.data.get('password')
+        email_input   = request.data.get('email',         '').strip()
+        # Champs spécifiques par rôle
+        nom_boutique  = request.data.get('nom_boutique',  '').strip()  # Vendeur
+        type_vehicule = request.data.get('type_vehicule', '').strip()  # Transporteur
 
         if not all([phone, otp_code, role]):
             return Response({'success': False, 'message': 'Téléphone, code et rôle requis'},
@@ -88,31 +93,52 @@ class VerifyOTPAndCreateAccountView(APIView):
             return Response({'success': False, 'message': 'Rôle invalide'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            otp = OTPCode.objects.filter(
-                phone=phone, code=otp_code,
-                type=OTPCode.Type.INSCRIPTION, est_utilise=False
-            ).latest('created_at')
+        # DEV bypass : code magique 000000 accepté si DEBUG=True
+        dev_bypass = settings.DEBUG and otp_code == '000000'
 
-            if otp.expire_at < timezone.now():
-                return Response({'success': False, 'message': 'Code OTP expiré'},
+        if not dev_bypass:
+            try:
+                otp = OTPCode.objects.filter(
+                    phone=phone, code=otp_code,
+                    type=OTPCode.Type.INSCRIPTION, est_utilise=False
+                ).latest('created_at')
+
+                if otp.expire_at < timezone.now():
+                    return Response({'success': False, 'message': 'Code OTP expiré'},
+                                    status=status.HTTP_400_BAD_REQUEST)
+            except OTPCode.DoesNotExist:
+                return Response({'success': False, 'message': 'Code OTP invalide'},
                                 status=status.HTTP_400_BAD_REQUEST)
-        except OTPCode.DoesNotExist:
-            return Response({'success': False, 'message': 'Code OTP invalide'},
-                            status=status.HTTP_400_BAD_REQUEST)
+        else:
+            otp = None  # pas d'OTP à marquer utilisé
 
         if User.objects.filter(telephone=phone).exists():
             return Response({'success': False, 'message': 'Un compte existe déjà avec ce numéro'},
                             status=status.HTTP_400_BAD_REQUEST)
 
+        # Valider et déterminer l'email
+        import re as _re
+        clean_phone = ''.join(c for c in phone if c.isdigit())
+        if email_input:
+            if not _re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email_input):
+                return Response({'success': False, 'message': 'Adresse email invalide'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            if User.objects.filter(email=email_input).exists():
+                return Response({'success': False, 'message': 'Cette adresse email est déjà utilisée'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            final_email = email_input
+        else:
+            final_email = f"sms{clean_phone}@agrosaanuu.phone"
+
         try:
-            clean_phone = ''.join(c for c in phone if c.isdigit())
-            email = f"sms{clean_phone}@agrosaanuu.phone"
-            if not nom:
-                nom = f"Utilisateur {clean_phone[-4:]}"
+
+            # Décomposer nom_complet → prenom + nom
+            parts  = nom_complet.split(' ', 1) if nom_complet else []
+            prenom = parts[0] if parts else ''
+            nom    = parts[1] if len(parts) > 1 else (parts[0] if parts else f"Utilisateur {clean_phone[-4:]}")
 
             user = User.objects.create_user(
-                email=email,
+                email=final_email,
                 telephone=phone,
                 prenom=prenom,
                 nom=nom,
@@ -123,8 +149,26 @@ class VerifyOTPAndCreateAccountView(APIView):
                 is_verified=True,
             )
 
-            otp.est_utilise = True
-            otp.save()
+            # Créer le profil spécialisé selon le rôle
+            from apps.notifications.services import notifier_demande_verification
+            if role == User.Role.SELLER:
+                SellerProfile.objects.create(
+                    user=user,
+                    association=nom_boutique,
+                    date_demande_verification=timezone.now(),
+                )
+                notifier_demande_verification(user)
+            elif role == User.Role.TRANSPORTER:
+                TransporterProfile.objects.create(
+                    user=user,
+                    zones=[type_vehicule] if type_vehicule else [],
+                    date_demande_verification=timezone.now(),
+                )
+                notifier_demande_verification(user)
+
+            if otp:
+                otp.est_utilise = True
+                otp.save()
 
             return Response({
                 'success': True,
@@ -156,21 +200,25 @@ class PhoneLoginView(APIView):
             return Response({'success': False, 'message': 'Aucun compte avec ce numéro'},
                             status=status.HTTP_404_NOT_FOUND)
 
-        try:
-            otp = OTPCode.objects.filter(
-                phone=phone, code=otp_code,
-                type=OTPCode.Type.INSCRIPTION, est_utilise=False
-            ).latest('created_at')
+        # DEV bypass : code magique 000000 accepté si DEBUG=True
+        dev_bypass = settings.DEBUG and otp_code == '000000'
 
-            if otp.expire_at < timezone.now():
-                return Response({'success': False, 'message': 'Code OTP expiré'},
+        if not dev_bypass:
+            try:
+                otp = OTPCode.objects.filter(
+                    phone=phone, code=otp_code,
+                    type=OTPCode.Type.INSCRIPTION, est_utilise=False
+                ).latest('created_at')
+
+                if otp.expire_at < timezone.now():
+                    return Response({'success': False, 'message': 'Code OTP expiré'},
+                                    status=status.HTTP_400_BAD_REQUEST)
+            except OTPCode.DoesNotExist:
+                return Response({'success': False, 'message': 'Code OTP invalide'},
                                 status=status.HTTP_400_BAD_REQUEST)
-        except OTPCode.DoesNotExist:
-            return Response({'success': False, 'message': 'Code OTP invalide'},
-                            status=status.HTTP_400_BAD_REQUEST)
 
-        otp.est_utilise = True
-        otp.save()
+            otp.est_utilise = True
+            otp.save()
 
         user.last_login_at = timezone.now()
         user.save(update_fields=['last_login_at'])

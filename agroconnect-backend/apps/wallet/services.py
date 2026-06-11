@@ -1,10 +1,27 @@
 from django.db import transaction
-from .models import Wallet, Transaction
+from .models import Wallet, Transaction, PlatformWallet, PlatformTransaction
 
 
 def obtenir_ou_creer_wallet(user):
     wallet, _ = Wallet.objects.get_or_create(user=user)
     return wallet
+
+
+def crediter_wallet(user, montant, description=''):
+    wallet = obtenir_ou_creer_wallet(user)
+    Transaction.objects.create(
+        wallet=wallet,
+        type=Transaction.Type.RECEPTION,
+        mode=Transaction.Mode.INTERNE,
+        montant=montant,
+        frais=0,
+        montant_net=montant,
+        statut=Transaction.Statut.SUCCES,
+        description=description,
+    )
+    wallet.solde      += montant
+    wallet.total_recu += montant
+    wallet.save(update_fields=['solde', 'total_recu'])
 
 
 @transaction.atomic
@@ -100,3 +117,44 @@ def liberer_paiement_vendeur(commande):
         description=f'Réception paiement commande {commande.reference}',
         commande_id=commande.id,
     )
+
+    # Créditer le wallet AgroSaaNuu de la commission
+    _crediter_commission_plateforme(
+        montant=commande.commission,
+        commande_id=commande.id,
+        reference=commande.reference,
+    )
+
+
+def _crediter_commission_plateforme(montant, commande_id, reference):
+    """Crédite la commission de la transaction sur le wallet entreprise."""
+    if not montant or montant <= 0:
+        return
+    platform = PlatformWallet.get()
+    PlatformTransaction.objects.create(
+        wallet=platform,
+        type=PlatformTransaction.Type.COMMISSION,
+        montant=montant,
+        description=f'Commission 2% — commande {reference}',
+        commande_id=commande_id,
+    )
+    platform.solde             += montant
+    platform.total_commissions += montant
+    platform.save(update_fields=['solde', 'total_commissions'])
+
+
+@transaction.atomic
+def retirer_plateforme(montant, description='Retrait entreprise'):
+    """Retrait depuis le wallet AgroSaaNuu (admin uniquement)."""
+    platform = PlatformWallet.get()
+    if platform.solde < montant:
+        raise ValueError(f'Solde insuffisant. Disponible : {platform.solde} FCFA')
+    PlatformTransaction.objects.create(
+        wallet=platform,
+        type=PlatformTransaction.Type.RETRAIT,
+        montant=montant,
+        description=description,
+    )
+    platform.solde        -= montant
+    platform.total_retire += montant
+    platform.save(update_fields=['solde', 'total_retire'])
