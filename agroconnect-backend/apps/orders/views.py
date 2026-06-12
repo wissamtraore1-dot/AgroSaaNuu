@@ -1,7 +1,7 @@
 from rest_framework import status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
@@ -81,37 +81,50 @@ class DetailCommandeView(APIView):
 
 
 class ConfirmerCommandeView(APIView):
-    """POST /api/v1/orders/<id>/confirmer/ — vendeur"""
+    """POST /api/v1/orders/<id>/confirmer/ — vendeur ① confirme réception de la commande"""
     permission_classes = [IsSeller]
 
     def post(self, request, pk):
         commande = get_object_or_404(Commande, pk=pk, vendeur=request.user)
-        if commande.statut != Commande.Statut.EN_ATTENTE:
-            return Response({
-                'success': False,
-                'message': 'Cette commande ne peut pas être confirmée.',
-            }, status=status.HTTP_400_BAD_REQUEST)
-        commande.statut             = Commande.Statut.CONFIRMEE
-        commande.date_confirmation  = timezone.now()
-        commande.save(update_fields=['statut', 'date_confirmation'])
-        return Response({'success': True, 'message': 'Commande confirmée.'})
+        if commande.statut != Commande.Statut.PAIEMENT_RECU:
+            return Response({'success': False, 'message': 'Action non autorisée pour ce statut.'}, status=400)
+        if commande.confirme_reception_vendeur:
+            return Response({'success': False, 'message': 'Vous avez déjà confirmé la réception.'}, status=400)
+        commande.confirme_reception_vendeur = True
+        commande.date_confirmation          = timezone.now()
+        commande.save(update_fields=['confirme_reception_vendeur', 'date_confirmation'])
+        return Response({'success': True, 'message': 'Réception de la commande confirmée.', 'commande': {'confirme_reception_vendeur': True}})
+
+
+class ConfirmerPreparationVendeurView(APIView):
+    """POST /api/v1/orders/<id>/confirmer-preparation/ — vendeur ② confirme que le produit est prêt"""
+    permission_classes = [IsSeller]
+
+    def post(self, request, pk):
+        commande = get_object_or_404(Commande, pk=pk, vendeur=request.user)
+        if commande.statut != Commande.Statut.PAIEMENT_RECU or not commande.confirme_reception_vendeur:
+            return Response({'success': False, 'message': 'Confirmez d\'abord la réception de la commande.'}, status=400)
+        if commande.confirme_preparation_vendeur:
+            return Response({'success': False, 'message': 'Préparation déjà confirmée.'}, status=400)
+        commande.confirme_preparation_vendeur = True
+        commande.statut                       = Commande.Statut.EN_PREPARATION
+        commande.save(update_fields=['confirme_preparation_vendeur', 'statut'])
+        return Response({'success': True, 'message': 'Préparation confirmée — colis prêt.', 'commande': {'statut': 'EN_PREPARATION', 'confirme_preparation_vendeur': True}})
 
 
 class MarquerEnLivraisonView(APIView):
-    """POST /api/v1/orders/<id>/en-livraison/ — vendeur"""
+    """POST /api/v1/orders/<id>/en-livraison/ — vendeur ③ remet le colis au transporteur"""
     permission_classes = [IsSeller]
 
     def post(self, request, pk):
         commande = get_object_or_404(Commande, pk=pk, vendeur=request.user)
-        if commande.statut not in [Commande.Statut.CONFIRMEE, Commande.Statut.EN_PREPARATION]:
-            return Response({
-                'success': False,
-                'message': 'Action non autorisée.',
-            }, status=status.HTTP_400_BAD_REQUEST)
-        commande.statut         = Commande.Statut.EN_LIVRAISON
-        commande.date_livraison = timezone.now()
-        commande.save(update_fields=['statut', 'date_livraison'])
-        return Response({'success': True, 'message': 'Commande en livraison.'})
+        if commande.statut != Commande.Statut.EN_PREPARATION or not commande.confirme_preparation_vendeur:
+            return Response({'success': False, 'message': 'Confirmez d\'abord la préparation du colis.'}, status=400)
+        if commande.confirme_vendeur:
+            return Response({'success': False, 'message': 'Vous avez déjà remis le colis au transporteur.'}, status=400)
+        commande.confirme_vendeur = True
+        commande.save(update_fields=['confirme_vendeur'])
+        return Response({'success': True, 'message': 'Colis remis au transporteur. En attente de prise en charge.', 'commande': {'confirme_vendeur': True}})
 
 
 class ConfirmerReceptionView(APIView):
@@ -156,7 +169,7 @@ class AnnulerCommandeView(APIView):
         commande = get_object_or_404(Commande, pk=pk)
         if commande.acheteur != request.user and commande.vendeur != request.user:
             return Response({'success': False, 'message': 'Accès non autorisé.'}, status=403)
-        if commande.statut not in [Commande.Statut.EN_ATTENTE, Commande.Statut.CONFIRMEE]:
+        if commande.statut not in [Commande.Statut.PAIEMENT_EN_ATTENTE, Commande.Statut.PAIEMENT_RECU]:
             return Response({'success': False, 'message': 'Commande non annulable.'}, status=400)
         commande.statut = Commande.Statut.ANNULEE
         commande.save(update_fields=['statut'])
@@ -251,46 +264,55 @@ class ResoudreLitigeView(APIView):
 # ===== ESCROW & PAYMENT ENDPOINTS =====
 
 class InitiatePaiementView(APIView):
-    """POST /api/v1/payment/initiate/ — Acheteur initie paiement"""
+    """POST /api/v1/orders/payment/initiate/ — Acheteur initie paiement FedaPay"""
     permission_classes = [IsBuyer]
 
     def post(self, request):
-        commande_id = request.data.get('commande_id')
-        mode_paiement = request.data.get('mode_paiement')  # MTN, MOOV, CELTIS, BANK
-        
+        commande_id   = request.data.get('commande_id')
+        mode_paiement = request.data.get('mode_paiement')
+        telephone     = request.data.get('telephone', request.user.telephone or '')
+
         try:
             commande = Commande.objects.get(id=commande_id, acheteur=request.user)
         except Commande.DoesNotExist:
-            return Response({
-                'success': False,
-                'message': 'Commande non trouvée.',
-            }, status=status.HTTP_404_NOT_FOUND)
-        
+            return Response({'success': False, 'message': 'Commande non trouvée.'}, status=404)
+
         if commande.statut != Commande.Statut.PAIEMENT_EN_ATTENTE:
-            return Response({
-                'success': False,
-                'message': 'Commande non en attente de paiement.',
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Créer/mettre à jour le paiement
-        paiement, created = Paiement.objects.get_or_create(
+            return Response({'success': False, 'message': 'Commande non en attente de paiement.'}, status=400)
+
+        if mode_paiement:
+            commande.mode_paiement = mode_paiement
+            commande.save(update_fields=['mode_paiement'])
+
+        paiement, _ = Paiement.objects.get_or_create(
             commande=commande,
             defaults={
-                'montant': commande.montant_total,
-                'mode_paiement': mode_paiement,
-                'statut': Paiement.Statut.EN_ATTENTE,
+                'montant':       commande.montant_total,
+                'mode_paiement': commande.mode_paiement,
+                'statut':        Paiement.Statut.EN_ATTENTE,
             }
         )
-        
+
+        # Appel FedaPay (Mobile Money)
+        payment_url = None
+        transaction_id = None
+        if commande.mode_paiement in ['MTN', 'MOOV', 'CELTIS']:
+            from .fedapay_service import initier_paiement_mobile
+            result = initier_paiement_mobile(commande, telephone)
+            if result.get('success'):
+                transaction_id = result.get('reference')
+                payment_url    = result.get('payment_url')
+                paiement.reference_transaction = transaction_id
+                paiement.save(update_fields=['reference_transaction'])
+
         return Response({
-            'success': True,
-            'message': 'Paiement initié.',
-            'paiement': {
-                'id': paiement.id,
-                'montant': str(paiement.montant),
-                'mode_paiement': paiement.mode_paiement,
-                'statut': paiement.statut,
-            }
+            'success':         True,
+            'message':         'Paiement initié.',
+            'paiement_id':     str(paiement.id),
+            'montant':         str(paiement.montant),
+            'mode_paiement':   commande.mode_paiement,
+            'payment_url':     payment_url,
+            'transaction_id':  transaction_id,
         }, status=status.HTTP_201_CREATED)
 
 
@@ -531,6 +553,203 @@ class DetailPaiementView(APIView):
 # ─────────────────────────────────────────────────────────────────────────────
 # NOUVELLES VUES
 # ─────────────────────────────────────────────────────────────────────────────
+
+class FedaPayWebhookView(APIView):
+    """
+    POST /api/v1/orders/payment/webhook/
+    Reçoit le callback FedaPay et met à jour le statut du paiement.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        data           = request.data
+        transaction_id = str(data.get('id', ''))
+        fedapay_status = data.get('status', '')
+
+        if not transaction_id:
+            return Response({'success': False, 'message': 'transaction_id manquant.'}, status=400)
+
+        try:
+            paiement = Paiement.objects.select_related('commande').get(
+                reference_transaction=transaction_id
+            )
+        except Paiement.DoesNotExist:
+            return Response({'success': True, 'message': 'Paiement inconnu — ignoré.'})
+
+        commande = paiement.commande
+
+        if fedapay_status == 'approved' and paiement.statut not in [Paiement.Statut.EN_ESCROW, Paiement.Statut.PRET_VENDEUR]:
+            paiement.statut        = Paiement.Statut.EN_ESCROW
+            paiement.date_recu     = timezone.now()
+            paiement.date_en_escrow = timezone.now()
+            paiement.log_webhook   = data
+            paiement.save(update_fields=['statut', 'date_recu', 'date_en_escrow', 'log_webhook'])
+
+            commande.statut            = Commande.Statut.PAIEMENT_RECU
+            commande.date_confirmation = timezone.now()
+            commande.save(update_fields=['statut', 'date_confirmation'])
+
+            try:
+                from apps.notifications.services import notifier_paiement_en_escrow
+                notifier_paiement_en_escrow(commande)
+            except Exception:
+                pass
+
+        elif fedapay_status in ['declined', 'cancelled']:
+            paiement.statut        = Paiement.Statut.ECHOUE
+            paiement.message_erreur = fedapay_status
+            paiement.log_webhook   = data
+            paiement.save(update_fields=['statut', 'message_erreur', 'log_webhook'])
+
+        return Response({'success': True})
+
+
+class ConfirmerReceptionTripartiteView(APIView):
+    """
+    POST /api/v1/orders/<id>/confirmer-tripartite/
+    Chacune des 3 parties confirme la réception / livraison.
+    Quand les 3 ont confirmé → libère l'escrow.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        commande = get_object_or_404(Commande, pk=pk)
+        user     = request.user
+
+        # Vérifier que l'utilisateur est bien une des 3 parties
+        is_acheteur     = (commande.acheteur == user)
+        is_vendeur      = (commande.vendeur  == user)
+        is_transporteur = (commande.transporteur == user)
+
+        # Seul l'acheteur utilise cette vue ; le transporteur confirme via TerminerMission
+        if not is_acheteur:
+            return Response({'success': False, 'message': 'Seul l\'acheteur peut confirmer la réception ici.'}, status=403)
+
+        if commande.statut not in [Commande.Statut.LIVREE, Commande.Statut.EN_LIVRAISON]:
+            return Response({
+                'success': False,
+                'message': 'La commande doit être en livraison ou livrée pour confirmer.',
+            }, status=400)
+
+        if commande.confirme_acheteur:
+            return Response({'success': False, 'message': 'Vous avez déjà confirmé la réception.'}, status=400)
+
+        champs_modifies = ['confirme_acheteur']
+        commande.confirme_acheteur = True
+
+        # Libération : acheteur + transporteur (ou acheteur seul si pas de transporteur)
+        if commande.transporteur:
+            toutes_confirmees = commande.confirme_acheteur and commande.confirme_transporteur
+        else:
+            toutes_confirmees = commande.confirme_acheteur
+
+        if toutes_confirmees:
+            commande.statut        = Commande.Statut.PAIEMENT_LIBERE
+            commande.date_reception = timezone.now()
+            commande.paiement_en_escrow = False
+            commande.paiement_libere_le = timezone.now()
+            champs_modifies += ['statut', 'date_reception', 'paiement_en_escrow', 'paiement_libere_le']
+            commande.save(update_fields=champs_modifies)
+
+            # Libérer le séquestre
+            try:
+                from apps.wallet.services import liberer_paiement_vendeur
+                liberer_paiement_vendeur(commande)
+            except Exception:
+                pass
+
+            try:
+                from apps.notifications.services import notifier_escrow_libere
+                notifier_escrow_libere(commande)
+            except Exception:
+                pass
+
+            return Response({'success': True, 'message': 'Toutes les parties ont confirmé. Paiement libéré au vendeur !'})
+
+        commande.save(update_fields=champs_modifies)
+
+        try:
+            from apps.notifications.services import notifier_confirmation_partielle
+            notifier_confirmation_partielle(commande, user)
+        except Exception:
+            pass
+
+        return Response({
+            'success': True,
+            'message': 'Réception confirmée. En attente de la confirmation du transporteur.',
+            'confirme_acheteur':     commande.confirme_acheteur,
+            'confirme_transporteur': commande.confirme_transporteur,
+        })
+
+
+class SimulerPaiementView(APIView):
+    """
+    POST /api/v1/orders/<id>/simuler-paiement/
+    Simule un paiement mobile money sans appel FedaPay réel.
+    Body: { telephone, reseau, montant }
+    """
+    permission_classes = [IsBuyer]
+
+    def post(self, request, pk):
+        commande = get_object_or_404(Commande, pk=pk, acheteur=request.user)
+
+        if commande.statut != Commande.Statut.PAIEMENT_EN_ATTENTE:
+            return Response({
+                'success': False,
+                'message': 'Cette commande n\'est pas en attente de paiement.',
+            }, status=400)
+
+        telephone = request.data.get('telephone', '').strip()
+        reseau    = request.data.get('reseau', 'MTN').strip()
+        montant   = request.data.get('montant')
+
+        if not telephone:
+            return Response({'success': False, 'message': 'Numéro de téléphone requis.'}, status=400)
+
+        reseaux_valides = ['MTN', 'MOOV', 'CELTIS', 'VIREMENT']
+        if reseau not in reseaux_valides:
+            return Response({'success': False, 'message': f'Réseau invalide. Choisir parmi {reseaux_valides}.'}, status=400)
+
+        # Créer ou récupérer l'objet Paiement
+        paiement, _ = Paiement.objects.get_or_create(
+            commande=commande,
+            defaults={
+                'montant':       commande.montant_total,
+                'mode_paiement': reseau,
+                'statut':        Paiement.Statut.EN_ATTENTE,
+            }
+        )
+
+        # Simulation : marquer directement comme reçu en séquestre
+        import uuid as _uuid
+        paiement.statut                = Paiement.Statut.EN_ESCROW
+        paiement.mode_paiement         = reseau
+        paiement.reference_transaction = f'SIM-{_uuid.uuid4().hex[:12].upper()}'
+        paiement.date_recu             = timezone.now()
+        paiement.date_en_escrow        = timezone.now()
+        paiement.save(update_fields=[
+            'statut', 'mode_paiement', 'reference_transaction', 'date_recu', 'date_en_escrow'
+        ])
+
+        commande.statut            = Commande.Statut.PAIEMENT_RECU
+        commande.mode_paiement     = reseau
+        commande.date_confirmation = timezone.now()
+        commande.save(update_fields=['statut', 'mode_paiement', 'date_confirmation'])
+
+        try:
+            from apps.notifications.services import notifier_paiement_en_escrow
+            notifier_paiement_en_escrow(commande)
+        except Exception:
+            pass
+
+        return Response({
+            'success':    True,
+            'message':    'Paiement simulé avec succès. Les fonds sont sécurisés en séquestre.',
+            'reference':  paiement.reference_transaction,
+            'montant':    str(paiement.montant),
+            'reseau':     reseau,
+        }, status=201)
+
 
 class NoterVendeurView(APIView):
     """

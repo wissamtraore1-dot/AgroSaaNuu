@@ -43,15 +43,15 @@ function StepDot({ etape, courante }) {
 
 const inputStyle = (focused, name) => ({
   width: '100%', padding: '0.82rem 1rem 0.82rem 2.6rem',
-  border: `1.5px solid ${focused === name ? GREEN : '#e5e7eb'}`,
+  border: `2px solid ${focused === name ? GREEN : '#c9d1da'}`,
   borderRadius: '12px', fontSize: '0.93rem', outline: 'none',
-  color: '#1a2e10', background: focused === name ? '#fafff9' : '#fafafa',
+  color: '#111827', background: '#ffffff',
   transition: 'all 0.2s',
-  boxShadow: focused === name ? `0 0 0 3px rgba(26,92,42,0.08)` : 'none',
+  boxShadow: focused === name ? `0 0 0 3px rgba(26,92,42,0.10)` : '0 1px 3px rgba(0,0,0,0.06)',
 });
 
 const iconLeft = { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' };
-const labelStyle = { display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#374151', marginBottom: '6px' };
+const labelStyle = { display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#1f2937', marginBottom: '6px' };
 
 export default function CompleterProfilVendeur() {
   const navigate = useNavigate();

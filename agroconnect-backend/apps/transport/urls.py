@@ -28,4 +28,10 @@ urlpatterns = [
     # ─── Assignation (acheteur/vendeur) ──────────────────────────────────────
     path('assigner/',                              views.AssignerTransporteurView.as_view()),
     path('commande/<uuid:commande_id>/mission/',   views.MissionDeCommandeView.as_view()),
+
+    # ─── Tarifs livraison ─────────────────────────────────────────────────────
+    path('mes-tarifs/',                            views.MesTarifsView.as_view()),
+    path('tarifs/ajouter/',                        views.AjouterTarifView.as_view()),
+    path('tarifs/trajet/',                         views.TarifsParTrajetView.as_view()),
+    path('tarifs/<uuid:pk>/',                      views.ModifierTarifView.as_view()),
 ]

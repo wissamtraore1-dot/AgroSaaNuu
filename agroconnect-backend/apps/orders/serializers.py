@@ -6,32 +6,43 @@ from apps.products.models import Produit
 
 
 class CommandeSerializer(serializers.ModelSerializer):
-    acheteur_nom  = serializers.CharField(source='acheteur.nom_complet', read_only=True)
-    vendeur_nom   = serializers.CharField(source='vendeur.nom_complet',  read_only=True)
-    produit_nom   = serializers.CharField(source='produit.nom',          read_only=True)
-    produit_image = serializers.SerializerMethodField()
+    acheteur_nom       = serializers.CharField(source='acheteur.nom_complet',  read_only=True)
+    vendeur_nom        = serializers.CharField(source='vendeur.nom_complet',   read_only=True)
+    produit_nom        = serializers.CharField(source='produit.nom',           read_only=True)
+    transporteur_nom   = serializers.SerializerMethodField()
+    produit_image      = serializers.SerializerMethodField()
 
     class Meta:
         model  = Commande
         fields = [
             'id', 'reference', 'acheteur', 'acheteur_nom',
             'vendeur', 'vendeur_nom', 'produit', 'produit_nom', 'produit_image',
+            'transporteur', 'transporteur_nom',
             'quantite', 'prix_unitaire', 'montant_produit',
             'frais_livraison', 'frais_paiement', 'commission',
             'montant_total', 'montant_vendeur',
             'mode_paiement', 'statut',
             'adresse_livraison', 'telephone_livraison', 'note_acheteur',
             'note_livraison', 'commentaire_livraison',
+            'confirme_reception_vendeur', 'confirme_preparation_vendeur',
+            'confirme_acheteur', 'confirme_vendeur', 'confirme_transporteur',
             'date_confirmation', 'date_livraison', 'date_reception',
+            'paiement_en_escrow', 'paiement_libere_le',
             'created_at',
         ]
         read_only_fields = [
-            'id', 'reference', 'acheteur', 'vendeur',
+            'id', 'reference', 'acheteur', 'vendeur', 'transporteur',
             'prix_unitaire', 'montant_produit', 'frais_paiement',
             'commission', 'montant_total', 'montant_vendeur',
-            'statut', 'date_confirmation', 'date_livraison',
-            'date_reception', 'created_at',
+            'statut',
+            'confirme_reception_vendeur', 'confirme_preparation_vendeur',
+            'confirme_acheteur', 'confirme_vendeur', 'confirme_transporteur',
+            'date_confirmation', 'date_livraison', 'date_reception',
+            'paiement_en_escrow', 'paiement_libere_le', 'created_at',
         ]
+
+    def get_transporteur_nom(self, obj):
+        return obj.transporteur.nom_complet if obj.transporteur else None
 
     def get_produit_image(self, obj):
         if not obj.produit:
@@ -50,6 +61,10 @@ class PasserCommandeSerializer(serializers.Serializer):
     adresse_livraison   = serializers.CharField()
     telephone_livraison = serializers.CharField()
     note_acheteur       = serializers.CharField(required=False, allow_blank=True, default='')
+    transporteur_id     = serializers.UUIDField(required=False, allow_null=True, default=None)
+    tarif_livraison     = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True, default=None)
+    ville_depart        = serializers.CharField(required=False, allow_blank=True, default='')
+    ville_arrivee       = serializers.CharField(required=False, allow_blank=True, default='')
 
     def validate_produit_id(self, value):
         try:
@@ -69,17 +84,27 @@ class PasserCommandeSerializer(serializers.Serializer):
         return data
 
     def create(self, validated_data):
-        acheteur  = self.context['request'].user
-        produit   = self.context['produit']
-        quantite  = validated_data['quantite']
-        mode      = validated_data['mode_paiement']
+        from apps.authentication.models import User as UserModel
+        acheteur        = self.context['request'].user
+        produit         = self.context['produit']
+        quantite        = validated_data['quantite']
+        mode            = validated_data['mode_paiement']
+        transporteur_id = validated_data.get('transporteur_id')
+        tarif_custom    = validated_data.get('tarif_livraison')
 
         montant_produit = float(produit.prix) * float(quantite)
-        frais_livraison = 5000
+        frais_livraison = float(tarif_custom) if tarif_custom else 5000
         frais_paiement  = calculer_frais(montant_produit, mode)
         commission      = calculer_commission(montant_produit)
         montant_total   = montant_produit + frais_livraison + frais_paiement
         montant_vendeur = montant_produit - commission
+
+        transporteur = None
+        if transporteur_id:
+            try:
+                transporteur = UserModel.objects.get(pk=transporteur_id, role='TRANSPORTER')
+            except UserModel.DoesNotExist:
+                pass
 
         commande = Commande.objects.create(
             acheteur            = acheteur,
@@ -97,7 +122,21 @@ class PasserCommandeSerializer(serializers.Serializer):
             adresse_livraison   = validated_data['adresse_livraison'],
             telephone_livraison = validated_data['telephone_livraison'],
             note_acheteur       = validated_data.get('note_acheteur', ''),
+            transporteur        = transporteur,
         )
+
+        # Créer automatiquement la MissionTransport quand un transporteur est choisi
+        if transporteur:
+            from apps.transport.models import MissionTransport
+            MissionTransport.objects.create(
+                commande      = commande,
+                transporteur  = transporteur,
+                ville_depart  = validated_data.get('ville_depart', ''),
+                ville_arrivee = validated_data.get('ville_arrivee', ''),
+                tarif         = frais_livraison,
+                statut        = MissionTransport.Statut.EN_ATTENTE,
+            )
+
         return commande
 
 

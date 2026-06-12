@@ -7,6 +7,7 @@ urlpatterns = [
     path('commandes-recues/',               views.MesCommandesVendeurView.as_view()),
     path('<uuid:pk>/',                       views.DetailCommandeView.as_view()),
     path('<uuid:pk>/confirmer/',             views.ConfirmerCommandeView.as_view()),
+    path('<uuid:pk>/confirmer-preparation/', views.ConfirmerPreparationVendeurView.as_view()),
     path('<uuid:pk>/en-livraison/',          views.MarquerEnLivraisonView.as_view()),
     path('<uuid:pk>/confirmer-reception/',   views.ConfirmerReceptionView.as_view()),
     path('<uuid:pk>/annuler/',               views.AnnulerCommandeView.as_view()),
@@ -14,6 +15,7 @@ urlpatterns = [
     
     # ===== ESCROW & PAYMENT ENDPOINTS =====
     path('payment/initiate/',                views.InitiatePaiementView.as_view()),
+    path('payment/webhook/',                 views.FedaPayWebhookView.as_view()),
     path('payment/confirm/',                 views.ConfirmPaiementView.as_view()),
     path('payment/release/',                 views.ReleasePaiementView.as_view()),
     path('payment/<uuid:pk>/',               views.DetailPaiementView.as_view()),
@@ -25,6 +27,8 @@ urlpatterns = [
 
     # ===== NOUVELLES FONCTIONNALITÉS =====
     path('<uuid:pk>/noter-vendeur/',         views.NoterVendeurView.as_view()),
+    path('<uuid:pk>/confirmer-tripartite/',  views.ConfirmerReceptionTripartiteView.as_view()),
+    path('<uuid:pk>/simuler-paiement/',      views.SimulerPaiementView.as_view()),
 
     # ===== PROBLÈMES =====
     path('mes-problemes/',                      views.MesLitigesView.as_view()),

@@ -61,7 +61,7 @@ export default function Products() {
           vendeur:      item.vendeur_nom || 'Vendeur',
           image:        item.images?.find(i => i.est_principale)?.image
                         || item.images?.[0]?.image
-                        || 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=400&q=80',
+                        || null,
           dispo:        item.est_disponible,
         })));
         setCategories(['Tous', ...catItems.map(c => c.nom)]);
@@ -239,12 +239,13 @@ function CarteGrille({ p }) {
   return (
     <motion.div style={s.card} whileHover={{ y: -4, boxShadow: '0 12px 32px rgba(0,0,0,0.12)' }}>
       <div style={s.imgWrap}>
-        <img
-          src={p.image}
-          alt={p.nom}
-          style={s.img}
-          onError={e => { e.target.src = 'https://via.placeholder.com/300x180?text=Produit'; }}
-        />
+        {p.image ? (
+          <img src={p.image} alt={p.nom} style={s.img} />
+        ) : (
+          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f6' }}>
+            <Leaf size={32} color="#d1d5db" />
+          </div>
+        )}
         {!p.dispo && (
           <div style={s.indispoBadge}>Indisponible</div>
         )}
@@ -275,12 +276,13 @@ function CarteGrille({ p }) {
 function CarteListe({ p }) {
   return (
     <motion.div style={s.listCard} whileHover={{ x: 4 }}>
-      <img
-        src={p.image}
-        alt={p.nom}
-        style={s.listImg}
-        onError={e => { e.target.src = 'https://via.placeholder.com/120x90?text=Produit'; }}
-      />
+      {p.image ? (
+        <img src={p.image} alt={p.nom} style={s.listImg} />
+      ) : (
+        <div style={{ ...s.listImg, background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Leaf size={24} color="#d1d5db" />
+        </div>
+      )}
       <div style={{ flex: 1 }}>
         <h3 style={s.cardNom}>{p.nom}</h3>
         <div style={s.cardLoc}><MapPin size={12} color="#6b7280" />{p.localisation}, Bénin</div>

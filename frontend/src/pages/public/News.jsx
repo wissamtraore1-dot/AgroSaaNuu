@@ -104,24 +104,22 @@ export default function News() {
       {/* â•â• HERO â•â• */}
       <div style={{ background: 'linear-gradient(135deg, #0d2b14 0%, #1a5c2a 60%, #2d8c47 100%)', padding: '3rem 0 2rem' }}>
         <div className="container-fluid px-4 px-lg-5">
-          <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', marginBottom: '1rem', color: 'rgba(255,255,255,0.6)' }}>
+          <motion.div style={{ textAlign: 'center' }} initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.82rem', marginBottom: '1rem', color: 'rgba(255,255,255,0.6)' }}>
               <Link to="/" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>Accueil</Link>
               <span>/</span>
               <span style={{ color: 'white' }}>Actualités</span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-              <div>
-                <h1 style={{ color: 'white', fontSize: 'clamp(1.5rem, 3vw, 2.2rem)', fontWeight: '800', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Rss size={28} color="#f0c040" />
-                  Actualités agricoles
-                </h1>
-                <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', margin: 0 }}>
-                  {loading ? 'Chargement des flux RSS…' : `${filtres.length} articles · RFI, FAO, Jeune Afrique, médias béninois`}
-                </p>
-              </div>
+            <h1 style={{ color: 'white', fontSize: 'clamp(1.5rem, 3vw, 2.2rem)', fontWeight: '800', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+              <Rss size={28} color="#f0c040" />
+              Actualités agricoles
+            </h1>
+            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', margin: '0 0 1rem' }}>
+              {loading ? 'Chargement des flux RSS…' : `${filtres.length} articles · RFI, FAO, Jeune Afrique, médias béninois`}
+            </p>
 
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}>
               <motion.button
                 onClick={handleRefresh}
                 disabled={loading || refreshing}
@@ -137,7 +135,7 @@ export default function News() {
             </div>
 
             {/* Barre de recherche */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'white', borderRadius: '14px', padding: '0.75rem 1.2rem', maxWidth: '520px', boxShadow: '0 4px 20px rgba(0,0,0,0.2)', marginTop: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'white', borderRadius: '14px', padding: '0.75rem 1.2rem', maxWidth: '520px', boxShadow: '0 4px 20px rgba(0,0,0,0.2)', marginTop: '1rem', marginLeft: 'auto', marginRight: 'auto' }}>
               <Search size={18} color="#9ca3af" />
               <input
                 type="text"

@@ -16,6 +16,7 @@ import Orders      from '../pages/seller/Orders';
 import OrderDetail from '../pages/seller/OrderDetail';
 import Earnings    from '../pages/seller/Earnings';
 import Profile     from '../pages/seller/Profile';
+import Wallet      from '../pages/seller/Wallet';
 
 const SellerRoutes = () => (
     <>
@@ -30,6 +31,7 @@ const SellerRoutes = () => (
         <Route path="/seller/orders/:id"             element={<OrderDetail />} />
         <Route path="/seller/earnings"               element={<Earnings />} />
         <Route path="/seller/profile"                element={<Profile />} />
+        <Route path="/seller/wallet"                 element={<Wallet />} />
       </Route>
     </Route>
   </Route>

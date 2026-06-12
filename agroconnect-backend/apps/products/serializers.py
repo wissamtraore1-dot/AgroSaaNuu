@@ -61,7 +61,7 @@ class ProduitCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data['vendeur'] = self.context['request'].user
-        validated_data['statut']  = Produit.Statut.ACTIF
+        validated_data['statut']  = Produit.Statut.EN_ATTENTE
         return super().create(validated_data)
 
 

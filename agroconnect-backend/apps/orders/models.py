@@ -59,6 +59,23 @@ class Commande(TimeStampedModel):
     date_livraison  = models.DateTimeField(null=True, blank=True)
     date_reception  = models.DateTimeField(null=True, blank=True)
     
+    # Transporteur assigné à cette commande
+    transporteur = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='commandes_transporteur',
+        limit_choices_to={'role': 'TRANSPORTER'}
+    )
+
+    # Confirmations vendeur (workflow)
+    confirme_reception_vendeur   = models.BooleanField(default=False)  # vendeur a accusé réception
+    confirme_preparation_vendeur = models.BooleanField(default=False)  # vendeur a préparé le colis
+    confirme_vendeur             = models.BooleanField(default=False)  # vendeur a remis au transporteur
+
+    # Confirmations finales pour libérer l'escrow (acheteur + transporteur)
+    confirme_acheteur     = models.BooleanField(default=False)
+    confirme_transporteur = models.BooleanField(default=False)
+
     # ESCROW: Track if payment is held or released
     paiement_en_escrow = models.BooleanField(default=True)
     paiement_libere_le = models.DateTimeField(null=True, blank=True)

@@ -207,6 +207,107 @@ def notifier_verification_rejetee(user, motif=''):
     )
 
 
+def notifier_paiement_en_escrow(commande):
+    """Notifie acheteur + vendeur quand le paiement FedaPay est confirmé et bloqué en escrow."""
+    envoyer_notification(
+        user=commande.acheteur,
+        titre='Paiement confirmé — en séquestre',
+        message=(
+            f'Votre paiement de {commande.montant_total:,.0f} FCFA pour la commande '
+            f'{commande.reference} a bien été reçu et est sécurisé en séquestre.'
+        ),
+        type_notif=Notification.Type.PAIEMENT,
+        lien=f'/buyer/orders/{commande.id}',
+    )
+    envoyer_notification(
+        user=commande.vendeur,
+        titre='Paiement reçu en séquestre',
+        message=(
+            f'Le paiement de la commande {commande.reference} a été reçu ({commande.montant_total:,.0f} FCFA). '
+            f'Préparez la commande pour la livraison.'
+        ),
+        type_notif=Notification.Type.PAIEMENT,
+        lien=f'/seller/orders/{commande.id}',
+    )
+    envoyer_sms(
+        commande.vendeur.telephone,
+        f'AgroSaaNuu : Paiement reçu pour commande {commande.reference}. Préparez la livraison !'
+    )
+
+
+def notifier_confirmation_partielle(commande, user):
+    """Notifie les autres parties qu'une confirmation a été enregistrée."""
+    parties = [commande.acheteur, commande.vendeur]
+    if commande.transporteur:
+        parties.append(commande.transporteur)
+
+    qui = user.nom_complet
+    for autre in parties:
+        if autre == user:
+            continue
+        role_lien = {
+            'BUYER':       f'/buyer/orders/{commande.id}',
+            'SELLER':      f'/seller/orders/{commande.id}',
+            'TRANSPORTER': f'/transporter/missions',
+        }.get(autre.role, '/')
+        envoyer_notification(
+            user=autre,
+            titre='Confirmation de livraison reçue',
+            message=f'{qui} a confirmé la livraison de la commande {commande.reference}. En attente des autres parties.',
+            type_notif=Notification.Type.LIVRAISON,
+            lien=role_lien,
+        )
+
+
+def notifier_escrow_libere(commande):
+    """Notifie vendeur + transporteur quand les 3 parties ont confirmé et le séquestre est libéré."""
+    envoyer_notification(
+        user=commande.vendeur,
+        titre='Paiement libéré sur votre wallet !',
+        message=(
+            f'Toutes les parties ont confirmé. {commande.montant_vendeur:,.0f} FCFA '
+            f'ont été crédités sur votre wallet (commande {commande.reference}).'
+        ),
+        type_notif=Notification.Type.PAIEMENT,
+        lien='/seller/wallet',
+    )
+    envoyer_sms(
+        commande.vendeur.telephone,
+        f'AgroSaaNuu : {commande.montant_vendeur:,.0f} FCFA crédités sur votre wallet ! Commande {commande.reference}.'
+    )
+    if commande.transporteur and commande.frais_livraison > 0:
+        envoyer_notification(
+            user=commande.transporteur,
+            titre='Frais de livraison reçus',
+            message=(
+                f'{commande.frais_livraison:,.0f} FCFA ont été crédités sur votre wallet '
+                f'pour la livraison de la commande {commande.reference}.'
+            ),
+            type_notif=Notification.Type.PAIEMENT,
+            lien='/transporter/wallet',
+        )
+        envoyer_sms(
+            commande.transporteur.telephone,
+            f'AgroSaaNuu : {commande.frais_livraison:,.0f} FCFA crédités (livraison {commande.reference}).'
+        )
+
+
+def envoyer_sms(telephone, message):
+    """Envoie un SMS via Africa's Talking. Ne fait rien si AT_API_KEY est absent."""
+    from django.conf import settings
+    api_key  = getattr(settings, 'AT_API_KEY',  None)
+    username = getattr(settings, 'AT_USERNAME', 'sandbox')
+    if not api_key or not telephone:
+        return
+    try:
+        import africastalking
+        africastalking.initialize(username, api_key)
+        sms = africastalking.SMS
+        sms.send(message, [f'+229{telephone}' if not str(telephone).startswith('+') else telephone])
+    except Exception:
+        pass
+
+
 def notifier_nouveau_message(message):
     """Notify all participants of a new message (except sender)."""
     commande      = message.commande

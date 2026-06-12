@@ -10,12 +10,13 @@ const GREEN = '#1a5c2a';
 
 const inp = (focused, name) => ({
   width: '100%', padding: '0.82rem 1rem 0.82rem 2.5rem',
-  border: `1.5px solid ${focused === name ? GREEN : '#e5e7eb'}`,
+  border: `2px solid ${focused === name ? GREEN : '#c9d1da'}`,
   borderRadius: '12px', fontSize: '0.92rem', outline: 'none',
-  color: '#1a2e10', background: focused === name ? '#fafff9' : '#fafafa',
+  color: '#111827', background: '#ffffff',
   transition: 'all 0.2s', boxSizing: 'border-box',
+  boxShadow: focused === name ? '0 0 0 3px rgba(26,92,42,0.10)' : '0 1px 3px rgba(0,0,0,0.06)',
 });
-const LB = { display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#374151', marginBottom: '6px' };
+const LB = { display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#1f2937', marginBottom: '6px' };
 const FW = { marginBottom: '1rem' };
 const IL = { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' };
 

@@ -137,6 +137,34 @@ const TransportService = {
     const { data } = await api.post(`/transport/missions/${missionId}/noter/`, { note, commentaire });
     return data;
   },
+
+  // ─── Tarifs livraison ─────────────────────────────────────────────────────
+
+  mesTarifs: async () => {
+    const { data } = await api.get('/transport/mes-tarifs/');
+    return data;
+  },
+
+  ajouterTarif: async (payload) => {
+    const { data } = await api.post('/transport/tarifs/ajouter/', payload);
+    return data;
+  },
+
+  modifierTarif: async (id, payload) => {
+    const { data } = await api.put(`/transport/tarifs/${id}/`, payload);
+    return data;
+  },
+
+  supprimerTarif: async (id) => {
+    await api.delete(`/transport/tarifs/${id}/`);
+  },
+
+  getTarifsParTrajet: async ({ ville_depart, ville_arrivee }) => {
+    const { data } = await api.get('/transport/tarifs/trajet/', {
+      params: { ville_depart, ville_arrivee },
+    });
+    return data;
+  },
 };
 
 export default TransportService;

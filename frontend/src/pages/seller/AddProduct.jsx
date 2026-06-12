@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload, ArrowLeft, CheckCircle, AlertCircle,
-  Loader, Tag, Package, DollarSign, MapPin, AlignLeft,
+  Loader, Package, DollarSign, MapPin, AlignLeft,
   ShieldAlert,
 } from 'lucide-react';
 import DashboardLayout from '../../Components/layout/DashboardLayout';
@@ -36,21 +36,14 @@ export default function AddProduct() {
   ];
 
   const [form, setForm] = useState({
-    nom: '', description: '', prix: '', quantite: '', unite: 'KG', categorie: '', ville: '', localisation: '',
+    nom: '', description: '', prix: '', quantite: '', unite: 'KG', ville: '', localisation: '',
   });
   const [image,      setImage]      = useState(null);
   const [preview,    setPreview]    = useState(null);
-  const [categories, setCategories] = useState([]);
   const [loading,    setLoading]    = useState(false);
   const [errors,     setErrors]     = useState({});
   const [focused,    setFocused]    = useState('');
   const [profilAlert, setProfilAlert] = useState(false);
-
-  useEffect(() => {
-    ProductService.getCategories()
-      .then(data => setCategories(Array.isArray(data) ? data : data.results || []))
-      .catch(() => {});
-  }, []);
 
   const handleChange = e => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -69,7 +62,6 @@ export default function AddProduct() {
     if (!form.nom.trim())       errs.nom       = 'Le nom du produit est requis';
     if (!form.prix || Number(form.prix) <= 0) errs.prix = 'Le prix doit être supérieur à 0';
     if (!form.quantite || Number(form.quantite) <= 0) errs.quantite = 'La quantité est requise';
-    if (!form.categorie)        errs.categorie = 'La catégorie est requise';
     if (!form.ville.trim())     errs.ville     = 'La ville est requise';
     return errs;
   };
@@ -87,7 +79,6 @@ export default function AddProduct() {
       fd.append('prix',         form.prix);
       fd.append('quantite',     form.quantite);
       fd.append('unite',        form.unite);
-      fd.append('categorie',    form.categorie);
       fd.append('ville',        form.ville.trim());
       fd.append('localisation', form.localisation.trim());
       if (image) fd.append('image', image);
@@ -224,7 +215,7 @@ export default function AddProduct() {
               <div>
                 <label style={labelStyle}>Quantité disponible *</label>
                 <div style={{ position: 'relative' }}>
-                  <Tag size={15} color="#9ca3af" style={iconLeft} />
+                  <Package size={15} color="#9ca3af" style={iconLeft} />
                   <input name="quantite" type="number" value={form.quantite} onChange={handleChange}
                     onFocus={() => setFocused('quantite')} onBlur={() => setFocused('')}
                     placeholder="Ex : 500" min="1"
@@ -247,21 +238,6 @@ export default function AddProduct() {
               </div>
             </div>
 
-            {/* Catégorie */}
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={labelStyle}>Catégorie *</label>
-              <div style={{ position: 'relative' }}>
-                <Tag size={15} color="#9ca3af" style={iconLeft} />
-                <select name="categorie" value={form.categorie} onChange={handleChange}
-                  onFocus={() => setFocused('categorie')} onBlur={() => setFocused('')}
-                  style={{ ...inputStyle(focused, 'categorie', errors.categorie), appearance: 'none', cursor: 'pointer' }}
-                >
-                  <option value="">-- Choisir une catégorie --</option>
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.nom || c.name}</option>)}
-                </select>
-              </div>
-              {errors.categorie && <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '4px', display: 'block' }}>{errors.categorie}</span>}
-            </div>
 
             {/* Ville + Localisation */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '1rem' }}>

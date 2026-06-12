@@ -118,12 +118,37 @@ def liberer_paiement_vendeur(commande):
         commande_id=commande.id,
     )
 
+    # Créditer le transporteur si assigné
+    if commande.transporteur and commande.frais_livraison > 0:
+        crediter_transporteur(commande)
+
     # Créditer le wallet AgroSaaNuu de la commission
     _crediter_commission_plateforme(
         montant=commande.commission,
         commande_id=commande.id,
         reference=commande.reference,
     )
+
+
+@transaction.atomic
+def crediter_transporteur(commande):
+    """Crédite le wallet du transporteur avec les frais de livraison."""
+    if not commande.transporteur:
+        return
+    wallet_transporteur = obtenir_ou_creer_wallet(commande.transporteur)
+    montant = float(commande.frais_livraison)
+
+    Transaction.objects.create(
+        wallet=wallet_transporteur, type=Transaction.Type.RECEPTION,
+        mode=Transaction.Mode.INTERNE,
+        montant=montant, frais=0, montant_net=montant,
+        statut=Transaction.Statut.SUCCES,
+        description=f'Frais de livraison commande {commande.reference}',
+        commande_id=commande.id,
+    )
+    wallet_transporteur.solde      += montant
+    wallet_transporteur.total_recu += montant
+    wallet_transporteur.save(update_fields=['solde', 'total_recu'])
 
 
 def _crediter_commission_plateforme(montant, commande_id, reference):

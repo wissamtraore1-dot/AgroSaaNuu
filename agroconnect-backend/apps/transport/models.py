@@ -44,6 +44,28 @@ class Vehicule(TimeStampedModel):
         return f"{self.type} {self.immatriculation} — {self.transporteur.nom_complet}"
 
 
+class TarifLivraison(TimeStampedModel):
+    """Tarif défini par le transporteur lui-même pour un trajet donné."""
+
+    transporteur  = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        related_name='tarifs_livraison',
+        limit_choices_to={'role': 'TRANSPORTER'}
+    )
+    ville_depart  = models.CharField(max_length=100)
+    ville_arrivee = models.CharField(max_length=100)
+    tarif         = models.DecimalField(max_digits=10, decimal_places=2)
+    est_actif     = models.BooleanField(default=True)
+
+    class Meta:
+        db_table        = 'tarifs_livraison'
+        unique_together = ('transporteur', 'ville_depart', 'ville_arrivee')
+        ordering        = ['ville_depart', 'ville_arrivee']
+
+    def __str__(self):
+        return f"{self.transporteur.nom_complet} : {self.ville_depart} → {self.ville_arrivee} — {self.tarif} FCFA"
+
+
 class MissionTransport(TimeStampedModel):
 
     class Statut(models.TextChoices):

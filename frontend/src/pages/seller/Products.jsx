@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Plus, Trash2, Edit, Search, Loader, AlertCircle } from 'lucide-react';
+import { Package, Plus, Trash2, Edit, Search, Loader, AlertCircle, Leaf } from 'lucide-react';
+
+const getImg = (p) => {
+  if (!p.images?.length) return null;
+  return (p.images.find(i => i.est_principale) || p.images[0])?.image || null;
+};
 import DashboardLayout from '../../Components/layout/DashboardLayout';
 import ProductService from '../../services/product.service';
 import { useNotificationContext } from '../../context/NotificationContext';
@@ -125,16 +130,32 @@ export default function SellerProducts() {
                     style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'white', borderRadius: '12px', padding: '14px', border: '1.5px solid #e5e7eb', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}
                     whileHover={{ y: -2 }}
                   >
-                    <img
-                      src={p.image || '/assets/images/placeholder.png'}
-                      alt={nom}
-                      style={{ width: '60px', height: '60px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0, background: '#f3f4f6' }}
-                      onError={e => { e.target.src = ''; e.target.style.background = '#f3f4f6'; }}
-                    />
+                    {getImg(p) ? (
+                      <img
+                        src={getImg(p)}
+                        alt={nom}
+                        style={{ width: '60px', height: '60px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }}
+                      />
+                    ) : (
+                      <div style={{ width: '60px', height: '60px', borderRadius: '10px', background: '#f3f4f6', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Leaf size={22} color="#d1d5db" />
+                      </div>
+                    )}
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: '700', fontSize: '0.9rem', color: '#1a2e10' }}>{nom}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <div style={{ fontWeight: '700', fontSize: '0.9rem', color: '#1a2e10' }}>{nom}</div>
+                        {p.statut === 'EN_ATTENTE' && (
+                          <span style={{ background: '#dbeafe', color: '#1d4ed8', borderRadius: '20px', padding: '2px 8px', fontSize: '0.68rem', fontWeight: '700' }}>En attente d'approbation</span>
+                        )}
+                        {p.statut === 'INACTIF' && (
+                          <span style={{ background: '#fee2e2', color: '#dc2626', borderRadius: '20px', padding: '2px 8px', fontSize: '0.68rem', fontWeight: '700' }}>Suspendu</span>
+                        )}
+                        {p.statut === 'ACTIF' && (
+                          <span style={{ background: '#dcfce7', color: '#16a34a', borderRadius: '20px', padding: '2px 8px', fontSize: '0.68rem', fontWeight: '700' }}>Publié</span>
+                        )}
+                      </div>
                       <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '2px' }}>
-                        {categorie} · Stock : {stock}
+                        Stock : {stock}
                       </div>
                       <div style={{ fontWeight: '800', fontSize: '0.9rem', color: GREEN, marginTop: '4px' }}>
                         {prix} FCFA

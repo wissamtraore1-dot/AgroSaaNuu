@@ -144,19 +144,20 @@ export default function MarketPrices() {
       {/* HERO */}
       <div style={{ background: 'linear-gradient(135deg, #0d2b14 0%, #1a5c2a 60%, #2d8c47 100%)', padding: '2.5rem 0 2rem' }}>
         <div className="container-fluid px-4 px-lg-5">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', marginBottom: '1rem', color: 'rgba(255,255,255,0.6)' }}>
+          <motion.div style={{ textAlign: 'center' }} initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.82rem', marginBottom: '1rem', color: 'rgba(255,255,255,0.6)' }}>
             <Link to="/" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>Accueil</Link>
             <span>/</span><span style={{ color: 'white' }}>Prix du marché</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-            <div>
-              <h1 style={{ color: 'white', fontSize: 'clamp(1.4rem, 3vw, 2rem)', fontWeight: '800', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <BarChart2 size={26} color="#f0c040" /> Prix du marché
-              </h1>
-              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.88rem', margin: 0 }}>
-                {lastUpdate ? `Mise à jour : ${lastUpdate} · Source : MAEP / ONASA Bénin` : 'Chargement…'}
-              </p>
-            </div>
+
+          <h1 style={{ color: 'white', fontSize: 'clamp(1.4rem, 3vw, 2rem)', fontWeight: '800', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+            <BarChart2 size={26} color="#f0c040" /> Prix du marché
+          </h1>
+          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.88rem', margin: '0 0 1rem' }}>
+            {lastUpdate ? `Mise à jour : ${lastUpdate} · Source : MAEP / ONASA Bénin` : 'Chargement…'}
+          </p>
+
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}>
             <motion.button onClick={handleRefresh} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '10px', padding: '8px 16px', color: 'white', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer' }} whileHover={{ background: 'rgba(255,255,255,0.2)' }} whileTap={{ scale: 0.96 }}>
               <motion.div animate={{ rotate: refreshing ? 360 : 0 }} transition={{ duration: 0.8, repeat: refreshing ? Infinity : 0, ease: 'linear' }}><RefreshCw size={15} /></motion.div>
               Actualiser
@@ -165,7 +166,7 @@ export default function MarketPrices() {
 
           {/* Stats rapides */}
           {!loading && prixData.length > 0 && (
-            <div style={{ display: 'flex', gap: '12px', marginTop: '1.5rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
               {[
                 { label: 'En hausse', value: hausses, color: '#4ade80', bg: 'rgba(74,222,128,0.15)' },
                 { label: 'En baisse', value: baisses, color: '#f87171', bg: 'rgba(248,113,113,0.15)' },
@@ -182,6 +183,7 @@ export default function MarketPrices() {
               </div>}
             </div>
           )}
+          </motion.div>
         </div>
       </div>
 

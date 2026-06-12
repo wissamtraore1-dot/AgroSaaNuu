@@ -47,7 +47,8 @@ export default function Auth() {
   const [regStep,    setRegStep]    = useState('role'); // role | form | otp
   const [role,       setRole]       = useState('');
   const [nomComplet,  setNomComplet]  = useState('');
-  const [phone,       setPhone]       = useState('+229 ');
+  const [phone,       setPhone]       = useState('');
+  const [phoneError,  setPhoneError]  = useState('');
   const [regEmail,    setRegEmail]    = useState('');
   const [pwd,         setPwd]         = useState('');
   const [pwdConfirm,  setPwdConfirm]  = useState('');
@@ -81,10 +82,17 @@ export default function Auth() {
   // INSCRIPTION
   // ═══════════════════════════════════════
 
+  const handlePhoneChange = (e) => {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+    setPhone(digits);
+    clearError();
+    if (digits.length > 0 && digits.length < 10) setPhoneError('Le numéro doit contenir exactement 10 chiffres.');
+    else                                          setPhoneError('');
+  };
+
   const validerForm = () => {
     if (!nomComplet.trim()) { setError('Le nom complet est requis'); return false; }
-    const cleaned = phone.replace(/\s/g, '');
-    if (cleaned.length < 8) { setError('Numéro de téléphone invalide'); return false; }
+    if (phone.length !== 10) { setError('Le numéro de téléphone doit contenir exactement 10 chiffres.'); return false; }
     if (!regEmail.trim())   { setError('L\'adresse email est requise'); return false; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail)) { setError('Adresse email invalide'); return false; }
     if (!pwd.trim())        { setError('Le mot de passe est obligatoire'); return false; }
@@ -337,11 +345,22 @@ export default function Auth() {
                   <label style={LB}>Numéro de téléphone *</label>
                   <div style={{ position: 'relative' }}>
                     <Phone size={15} color="#9ca3af" style={IL} />
-                    <input type="tel" value={phone} onChange={e => { setPhone(e.target.value); clearError(); }}
-                      onFocus={() => setFocused('tel')} onBlur={() => setFocused('')}
-                      placeholder="+229 01 23 45 67 89" style={inp('tel')} />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={10}
+                      value={phone}
+                      onChange={handlePhoneChange}
+                      onFocus={() => setFocused('tel')}
+                      onBlur={() => setFocused('')}
+                      placeholder="Entrez un numéro de téléphone"
+                      style={{ ...inp('tel'), borderColor: phoneError ? '#ef4444' : undefined }}
+                    />
                   </div>
-                  <span style={{ fontSize: '0.74rem', color: '#9ca3af', marginTop: '3px', display: 'block' }}>Format Bénin : +229 XX XX XX XX</span>
+                  {phoneError
+                    ? <span style={{ fontSize: '0.74rem', color: '#ef4444', marginTop: '3px', display: 'block' }}>{phoneError}</span>
+                    : <span style={{ fontSize: '0.74rem', color: '#9ca3af', marginTop: '3px', display: 'block' }}>{phone.length}/10 chiffres</span>
+                  }
                 </div>
 
                 {/* Email */}

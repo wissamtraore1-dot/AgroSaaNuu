@@ -51,7 +51,7 @@ class DetailProduitView(APIView):
         produit.save(update_fields=['vues'])
         return Response({
             'success': True,
-            'produit': ProduitSerializer(produit).data,
+            'produit': ProduitSerializer(produit, context={'request': request}).data,
         })
 
 
@@ -106,10 +106,20 @@ class CreerProduitView(APIView):
         )
         if serializer.is_valid():
             produit = serializer.save()
+            # Enregistrer l'image uploadée
+            image_file = request.FILES.get('image')
+            if image_file:
+                from .models import ImageProduit
+                ImageProduit.objects.create(
+                    produit      = produit,
+                    image        = image_file,
+                    est_principale = True,
+                    ordre        = 0,
+                )
             return Response({
                 'success': True,
                 'message': 'Produit créé avec succès.',
-                'produit': ProduitSerializer(produit).data,
+                'produit': ProduitSerializer(produit, context={'request': request}).data,
             }, status=status.HTTP_201_CREATED)
         return Response({
             'success': False,
@@ -129,10 +139,21 @@ class ModifierProduitView(APIView):
         )
         if serializer.is_valid():
             serializer.save()
+            # Remplacer l'image principale si une nouvelle est uploadée
+            image_file = request.FILES.get('image')
+            if image_file:
+                from .models import ImageProduit
+                ImageProduit.objects.filter(produit=produit, est_principale=True).delete()
+                ImageProduit.objects.create(
+                    produit        = produit,
+                    image          = image_file,
+                    est_principale = True,
+                    ordre          = 0,
+                )
             return Response({
                 'success': True,
                 'message': 'Produit modifié.',
-                'produit': ProduitSerializer(produit).data,
+                'produit': ProduitSerializer(produit, context={'request': request}).data,
             })
         return Response({
             'success': False,
@@ -205,3 +226,42 @@ class MesFavorisView(generics.ListAPIView):
         return Produit.objects.filter(
             favoris__acheteur=self.request.user
         ).select_related('categorie', 'vendeur')
+
+
+class AdminListeProduitsView(APIView):
+    """GET /api/v1/products/admin/ — tous les produits pour l'admin"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not request.user.is_staff:
+            return Response({'message': 'Accès refusé.'}, status=status.HTTP_403_FORBIDDEN)
+        qs = Produit.objects.all().select_related('vendeur', 'categorie').prefetch_related('images').order_by('-created_at')
+        search  = request.query_params.get('search', '').strip()
+        statut_ = request.query_params.get('statut', '').strip()
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(Q(nom__icontains=search) | Q(vendeur__nom__icontains=search) | Q(ville__icontains=search))
+        if statut_:
+            qs = qs.filter(statut=statut_)
+        return Response({'results': ProduitSerializer(qs, many=True, context={'request': request}).data})
+
+
+class ModererProduitView(APIView):
+    """POST /api/v1/products/<pk>/moderer/"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        if not request.user.is_staff:
+            return Response({'message': 'Accès refusé.'}, status=status.HTTP_403_FORBIDDEN)
+        produit = get_object_or_404(Produit, pk=pk)
+        action  = request.data.get('action')
+        if action == 'approuver':
+            produit.statut = Produit.Statut.ACTIF
+        elif action == 'suspendre':
+            produit.statut = Produit.Statut.INACTIF
+        elif action == 'en_attente':
+            produit.statut = Produit.Statut.EN_ATTENTE
+        else:
+            return Response({'message': 'Action invalide.'}, status=status.HTTP_400_BAD_REQUEST)
+        produit.save(update_fields=['statut'])
+        return Response({'success': True, 'statut': produit.statut})

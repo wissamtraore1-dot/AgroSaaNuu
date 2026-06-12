@@ -34,7 +34,7 @@ const roles = [
 ];
 
 // ===== COMPOSANT FIELD =====
-function Field({ icon, label, name, value, onChange, placeholder, type = 'text', error }) {
+function Field({ icon, label, name, value, onChange, placeholder, type = 'text', error, ...rest }) {
   return (
     <div style={S.fieldWrap}>
       <label style={S.label}>{label}</label>
@@ -47,6 +47,7 @@ function Field({ icon, label, name, value, onChange, placeholder, type = 'text',
           onChange={onChange}
           placeholder={placeholder}
           style={{ ...S.input, paddingLeft: '2.5rem', borderColor: error ? '#ef4444' : '#e5e7eb' }}
+          {...rest}
         />
       </div>
       {error && <span style={{ fontSize: '0.78rem', color: '#ef4444', marginTop: '4px' }}>{error}</span>}
@@ -65,7 +66,8 @@ export default function Register() {
   const [error,   setError]   = useState('');
   const [showPwd, setShowPwd]     = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [cipError, setCipError]   = useState('');
+  const [cipError, setCipError]         = useState('');
+  const [telephoneError, setTelephoneError] = useState('');
 
   const [form, setForm] = useState({
     role: initialRole, prenom: '', nom: '', email: '', telephone: '',
@@ -74,6 +76,14 @@ export default function Register() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'telephone') {
+      const digitsOnly = value.replace(/\D/g, '').slice(0, 10);
+      setForm({ ...form, telephone: digitsOnly });
+      setError('');
+      if (digitsOnly.length > 0 && digitsOnly.length < 10) setTelephoneError('Le numéro doit contenir exactement 10 chiffres.');
+      else                                                  setTelephoneError('');
+      return;
+    }
     setForm({ ...form, [name]: value });
     setError('');
     if (name === 'cip') {
@@ -89,6 +99,8 @@ export default function Register() {
       if (!form.prenom || !form.nom || !form.email || !form.telephone || !form.cip) {
         setError('Veuillez remplir tous les champs obligatoires.'); return false;
       }
+      if (telephoneError)                               { setError(telephoneError); return false; }
+      if (form.telephone.length !== 10)                 { setError('Le numéro de téléphone doit contenir exactement 10 chiffres.'); return false; }
       if (cipError)                                     { setError(cipError); return false; }
       if (form.role === 'SELLER' && (!form.ville || !form.association)) {
         setError('Veuillez remplir les champs vendeur.'); return false;
@@ -252,7 +264,7 @@ export default function Register() {
                     <Field icon={<Mail size={16} color="#9ca3af" />} label="Email *" name="email" type="email" value={form.email} onChange={handleChange} placeholder="votre@email.com" />
                   </div>
                   <div className="col-12 col-md-6">
-                    <Field icon={<Phone size={16} color="#9ca3af" />} label="Téléphone *" name="telephone" value={form.telephone} onChange={handleChange} placeholder="+229 XX XX XX XX" />
+                    <Field icon={<Phone size={16} color="#9ca3af" />} label="Téléphone *" name="telephone" value={form.telephone} onChange={handleChange} placeholder="10 chiffres" error={telephoneError} inputMode="numeric" maxLength={10} />
                   </div>
                   <div className="col-12">
                     <Field icon={<User size={16} color="#9ca3af" />} label="Numéro CIP *" name="cip" value={form.cip} onChange={handleChange} placeholder="8 à 12 chiffres" error={cipError} />

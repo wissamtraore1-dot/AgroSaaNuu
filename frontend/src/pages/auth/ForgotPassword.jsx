@@ -63,6 +63,19 @@ export default function ForgotPassword() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
+        {/* Bouton retour */}
+        <div style={{ marginBottom: '1.2rem' }}>
+          <motion.button
+            onClick={() => navigate(-1)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '7px 14px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', color: '#374151' }}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+          >
+            <ArrowLeft size={16} color="#374151" />
+            Retour
+          </motion.button>
+        </div>
+
         <div style={s.card}>
 
           {/* Logo + Titre */}

@@ -13,45 +13,17 @@ import TransportService from '../../services/transport.service';
 
 const GREEN = '#1a5c2a';
 
-// Mapping statut commande → étapes timeline complétées
-const ETAPES_ORDRE = ['EN_ATTENTE', 'CONFIRME', 'PAYE', 'EN_PREPARATION', 'EN_LIVRAISON', 'RECEPTION_CONFIRMEE'];
+const ETAPES_ORDRE = ['PAIEMENT_EN_ATTENTE', 'PAIEMENT_RECU', 'EN_PREPARATION', 'EN_LIVRAISON', 'LIVREE', 'CONFIRMEE_RECEPTION', 'PAIEMENT_LIBERE'];
 
 const buildTimeline = (statutCommande, mission) => [
-  {
-    id:    'commande',
-    label: 'Commande passée',
-    icon:  Package,
-    fait:  true,
-    date:  null,
-  },
-  {
-    id:    'paiement',
-    label: 'Paiement sécurisé',
-    icon:  Shield,
-    fait:  ETAPES_ORDRE.indexOf(statutCommande) >= ETAPES_ORDRE.indexOf('PAYE'),
-    date:  null,
-  },
-  {
-    id:    'preparation',
-    label: 'En préparation',
-    icon:  Clock,
-    fait:  ETAPES_ORDRE.indexOf(statutCommande) >= ETAPES_ORDRE.indexOf('EN_PREPARATION'),
-    date:  null,
-  },
-  {
-    id:    'livraison',
-    label: 'En cours de livraison',
-    icon:  Truck,
-    fait:  ETAPES_ORDRE.indexOf(statutCommande) >= ETAPES_ORDRE.indexOf('EN_LIVRAISON'),
-    date:  mission?.date_debut ? new Date(mission.date_debut).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : null,
-  },
-  {
-    id:    'livree',
-    label: 'Livraison confirmée',
-    icon:  CheckCircle,
-    fait:  statutCommande === 'RECEPTION_CONFIRMEE',
-    date:  mission?.date_fin ? new Date(mission.date_fin).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : null,
-  },
+  { id: 'commande',     label: 'Commande passée',       icon: Package,     fait: true },
+  { id: 'paiement',     label: 'Paiement sécurisé',     icon: Shield,      fait: ETAPES_ORDRE.indexOf(statutCommande) >= ETAPES_ORDRE.indexOf('PAIEMENT_RECU') },
+  { id: 'preparation',  label: 'En préparation',         icon: Clock,       fait: ETAPES_ORDRE.indexOf(statutCommande) >= ETAPES_ORDRE.indexOf('EN_PREPARATION') },
+  { id: 'livraison',    label: 'En cours de livraison',  icon: Truck,       fait: ETAPES_ORDRE.indexOf(statutCommande) >= ETAPES_ORDRE.indexOf('EN_LIVRAISON'),
+    date: mission?.date_depart ? new Date(mission.date_depart).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : null },
+  { id: 'livree',       label: 'Livrée',                 icon: CheckCircle, fait: ETAPES_ORDRE.indexOf(statutCommande) >= ETAPES_ORDRE.indexOf('LIVREE'),
+    date: mission?.date_arrivee ? new Date(mission.date_arrivee).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : null },
+  { id: 'confirme',     label: 'Paiement libéré',        icon: Sparkles,    fait: statutCommande === 'PAIEMENT_LIBERE' },
 ];
 
 export default function OrderTracking() {
@@ -93,13 +65,24 @@ export default function OrderTracking() {
   }, [id, navigate]);
 
   const handleConfirmer = async () => {
-    if (note === 0) { setMessage('Veuillez donner une note avant de confirmer.'); return; }
     setSubmitting(true);
     try {
-      await OrderService.confirmerReception(id, {});
-      await OrderService.noterVendeur(id, { note, commentaire });
-      setConfirme(true);
-      setCommande(prev => ({ ...prev, statut: 'RECEPTION_CONFIRMEE' }));
+      const res = await OrderService.confirmerTripartite(id);
+      setCommande(prev => ({
+        ...prev,
+        confirme_acheteur:     res.confirme_acheteur     ?? prev.confirme_acheteur,
+        confirme_vendeur:      res.confirme_vendeur      ?? prev.confirme_vendeur,
+        confirme_transporteur: res.confirme_transporteur ?? prev.confirme_transporteur,
+        statut: res.message?.includes('libéré') ? 'PAIEMENT_LIBERE' : prev.statut,
+      }));
+      if (res.message?.includes('libéré')) {
+        setConfirme(true);
+        if (note > 0) {
+          try { await OrderService.noterVendeur(id, { note, commentaire }); } catch { /* silencieux */ }
+        }
+      } else {
+        setMessage(res.message || 'Confirmation enregistrée.');
+      }
     } catch {
       setMessage('Erreur lors de la confirmation. Réessayez.');
     } finally { setSubmitting(false); }
@@ -135,17 +118,18 @@ export default function OrderTracking() {
     </DashboardLayout>
   );
 
-  const statut     = commande.statut || commande.status || 'EN_ATTENTE';
-  const timeline   = buildTimeline(statut, mission);
-  const ref        = commande.reference || commande.numero || `#${String(id).slice(0, 8).toUpperCase()}`;
-  const vendeur    = commande.vendeur_nom || commande.vendeur?.nom_complet || '—';
-  const transporteur = mission?.transporteur_nom || mission?.transporteur?.nom_complet || '—';
-  const montant    = Number(commande.total || commande.montant_total || 0);
-  const adresse    = commande.adresse_livraison || commande.ville_arrivee || '—';
-  const dateCmd    = commande.created_at ? new Date(commande.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
+  const statut       = commande.statut || 'PAIEMENT_EN_ATTENTE';
+  const timeline     = buildTimeline(statut, mission);
+  const ref          = commande.reference || `#${String(id).slice(0, 8).toUpperCase()}`;
+  const vendeur      = commande.vendeur_nom || '—';
+  const transporteur = commande.transporteur_nom || mission?.transporteur_nom || '—';
+  const montant      = Number(commande.montant_total || 0);
+  const adresse      = commande.adresse_livraison || '—';
+  const dateCmd      = commande.created_at ? new Date(commande.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
 
-  const peutConfirmer = ['EN_LIVRAISON', 'LIVRE'].includes(statut) && !confirme;
-  const peutSignaler  = !['EN_ATTENTE', 'ANNULE', 'RECEPTION_CONFIRMEE'].includes(statut);
+  const dejaConfirme     = commande.confirme_acheteur;
+  const peutConfirmer    = ['EN_LIVRAISON', 'LIVREE'].includes(statut) && !dejaConfirme && !confirme;
+  const peutSignaler     = !['PAIEMENT_EN_ATTENTE', 'ANNULEE', 'PAIEMENT_LIBERE'].includes(statut);
 
   return (
     <DashboardLayout role="buyer">
@@ -222,6 +206,19 @@ export default function OrderTracking() {
                   <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#1a2e10', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <CheckCircle size={18} color={GREEN} /> Avez-vous reçu votre commande ?
                   </h3>
+
+                  {/* Badges confirmations tripartites */}
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                    {[
+                      { label: 'Acheteur',     done: commande.confirme_acheteur },
+                      { label: 'Vendeur',      done: commande.confirme_vendeur  },
+                      { label: 'Transporteur', done: commande.confirme_transporteur },
+                    ].map(({ label, done }) => (
+                      <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: done ? '#dcfce7' : '#f3f4f6', color: done ? '#16a34a' : '#6b7280', borderRadius: '20px', padding: '4px 12px', fontSize: '0.75rem', fontWeight: '700' }}>
+                        {done ? <CheckCircle size={12} /> : <Clock size={12} />} {label}
+                      </span>
+                    ))}
+                  </div>
 
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', background: '#f0fdf4', borderRadius: '12px', padding: '1rem', border: '1px solid #86efac', marginBottom: '1.2rem' }}>
                     <Shield size={16} color={GREEN} style={{ flexShrink: 0, marginTop: '2px' }} />

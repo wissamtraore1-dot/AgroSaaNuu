@@ -9,14 +9,18 @@ import OrderService from '../../services/order.service';
 import DashboardLayout from '../../Components/layout/DashboardLayout';
 
 const STATUT_LABEL = {
-  EN_ATTENTE:       { label: 'En attente',        color: '#d97706', bg: '#fffbeb' },
-  CONFIRME:         { label: 'Confirmée',          color: '#2563eb', bg: '#eff6ff' },
-  PAYE:             { label: 'Payée',              color: '#16a34a', bg: '#f0fdf4' },
-  EN_PREPARATION:   { label: 'En préparation',     color: '#7c3aed', bg: '#f5f3ff' },
-  EN_LIVRAISON:     { label: 'En livraison',       color: '#0891b2', bg: '#ecfeff' },
-  LIVRE:            { label: 'Livré',              color: '#16a34a', bg: '#f0fdf4' },
-  RECEPTION_CONFIRMEE: { label: 'Réceptionné',     color: '#059669', bg: '#ecfdf5' },
-  ANNULE:           { label: 'Annulée',            color: '#dc2626', bg: '#fef2f2' },
+  PAIEMENT_EN_ATTENTE:  { label: 'Paiement en attente', color: '#d97706', bg: '#fffbeb' },
+  PAIEMENT_RECU:        { label: 'Paiement sécurisé',   color: '#2563eb', bg: '#eff6ff' },
+  EN_PREPARATION:       { label: 'En préparation',       color: '#7c3aed', bg: '#f5f3ff' },
+  EN_LIVRAISON:         { label: 'En livraison',         color: '#0891b2', bg: '#ecfeff' },
+  LIVREE:               { label: 'Livrée',               color: '#16a34a', bg: '#f0fdf4' },
+  CONFIRMEE_RECEPTION:  { label: 'Réception confirmée',  color: '#059669', bg: '#ecfdf5' },
+  PAIEMENT_LIBERE:      { label: 'Clôturée',             color: '#15803d', bg: '#f0fdf4' },
+  ANNULEE:              { label: 'Annulée',              color: '#dc2626', bg: '#fef2f2' },
+  LITIGE:               { label: 'En litige',            color: '#dc2626', bg: '#fef2f2' },
+  // legacy aliases (au cas où)
+  EN_ATTENTE:           { label: 'En attente',           color: '#d97706', bg: '#fffbeb' },
+  ANNULE:               { label: 'Annulée',              color: '#dc2626', bg: '#fef2f2' },
 };
 
 const GREEN = '#1a5c2a';
@@ -44,16 +48,28 @@ export default function BuyerOrderDetail() {
   const statut = commande?.statut || commande?.status || '';
   const cfg    = STATUT_LABEL[statut] || { label: statut, color: '#6b7280', bg: '#f9fafb' };
 
-  // ── Confirmer la réception ──
+  // ── Confirmer la réception (système tripartite) ──
   const confirmerReception = async () => {
     setSubmitting(true);
     try {
-      await OrderService.confirmerReception(id, {});
-      setCommande(prev => ({ ...prev, statut: 'RECEPTION_CONFIRMEE', status: 'RECEPTION_CONFIRMEE' }));
-      setMessage('Réception confirmée ! Vous pouvez maintenant évaluer le vendeur.');
-      setAction('noter');
-    } catch {
-      setMessage('Erreur lors de la confirmation.');
+      const res = await OrderService.confirmerTripartite(id);
+      const toutLibere = res.message?.includes('libéré');
+      setCommande(prev => ({
+        ...prev,
+        confirme_acheteur:     res.confirme_acheteur     ?? true,
+        confirme_vendeur:      res.confirme_vendeur      ?? prev.confirme_vendeur,
+        confirme_transporteur: res.confirme_transporteur ?? prev.confirme_transporteur,
+        statut: toutLibere ? 'PAIEMENT_LIBERE' : prev.statut,
+      }));
+      if (toutLibere) {
+        setMessage('Paiement libéré au vendeur ! Vous pouvez maintenant évaluer votre expérience.');
+        setAction('noter');
+      } else {
+        setMessage(res.message || 'Confirmation enregistrée. En attente des autres parties.');
+        setAction('');
+      }
+    } catch (err) {
+      setMessage(err.response?.data?.message || 'Erreur lors de la confirmation. Réessayez.');
     } finally { setSubmitting(false); }
   };
 
@@ -101,9 +117,9 @@ export default function BuyerOrderDetail() {
   const ref     = commande.reference || commande.numero || `#${id.slice(0, 8).toUpperCase()}`;
   const vendeur = commande.vendeur_nom || commande.vendeur?.nom_complet || 'Vendeur';
 
-  const peutConfirmerReception = ['EN_LIVRAISON', 'LIVRE'].includes(statut);
-  const peutNoter              = statut === 'RECEPTION_CONFIRMEE' && action !== 'done';
-  const peutSignaler           = !['EN_ATTENTE', 'ANNULE'].includes(statut);
+  const peutConfirmerReception = ['EN_LIVRAISON', 'LIVREE'].includes(statut) && !commande?.confirme_acheteur;
+  const peutNoter              = ['CONFIRMEE_RECEPTION', 'PAIEMENT_LIBERE'].includes(statut) && action !== 'done';
+  const peutSignaler           = !['PAIEMENT_EN_ATTENTE', 'ANNULEE', 'ANNULE', 'PAIEMENT_LIBERE'].includes(statut);
 
   return (
     <DashboardLayout role="buyer">
@@ -180,9 +196,9 @@ export default function BuyerOrderDetail() {
       </div>
 
       {/* Suivi livraison */}
-      {['EN_LIVRAISON', 'LIVRE', 'RECEPTION_CONFIRMEE'].includes(statut) && (
+      {['EN_LIVRAISON', 'LIVREE', 'CONFIRMEE_RECEPTION', 'PAIEMENT_LIBERE'].includes(statut) && (
         <motion.button
-          onClick={() => navigate(`/buyer/order-tracking/${id}`)}
+          onClick={() => navigate(`/buyer/orders/${id}/tracking`)}
           style={{ width: '100%', background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: '12px', padding: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '700', color: '#2563eb', cursor: 'pointer', marginBottom: '12px', fontSize: '0.9rem' }}
           whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
         >

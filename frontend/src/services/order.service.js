@@ -36,11 +36,19 @@ const OrderService = {
     return response.data;
   },
 
+  // Vendeur ① — confirme avoir reçu la commande
   async confirmer(id) {
     const response = await api.post(`/orders/${id}/confirmer/`);
     return response.data;
   },
 
+  // Vendeur ② — confirme que le produit est prêt
+  async confirmerPreparation(id) {
+    const response = await api.post(`/orders/${id}/confirmer-preparation/`);
+    return response.data;
+  },
+
+  // Vendeur ③ — remet le colis au transporteur
   async enLivraison(id) {
     const response = await api.post(`/orders/${id}/en-livraison/`);
     return response.data;
@@ -137,6 +145,21 @@ const OrderService = {
 
   async noterVendeur(commandeId, { note, commentaire = '' }) {
     const response = await api.post(`/orders/${commandeId}/noter-vendeur/`, { note, commentaire });
+    return response.data;
+  },
+
+  async confirmerTripartite(commandeId) {
+    const response = await api.post(`/orders/${commandeId}/confirmer-tripartite/`);
+    return response.data;
+  },
+
+  async initierPaiementFedaPay({ commande_id, mode_paiement, telephone }) {
+    const response = await api.post('/orders/payment/initiate/', { commande_id, mode_paiement, telephone });
+    return response.data;
+  },
+
+  async simulerPaiement(commandeId, { telephone, reseau, montant }) {
+    const response = await api.post(`/orders/${commandeId}/simuler-paiement/`, { telephone, reseau, montant });
     return response.data;
   },
 

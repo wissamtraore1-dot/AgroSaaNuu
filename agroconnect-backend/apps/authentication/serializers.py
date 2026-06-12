@@ -17,6 +17,13 @@ class InscriptionSerializer(serializers.ModelSerializer):
             'password', 'password_confirm', 'association',
         ]
 
+    def validate_telephone(self, value):
+        if not re.match(r'^\d{10}$', value):
+            raise serializers.ValidationError(
+                'Le numéro de téléphone doit contenir exactement 10 chiffres.'
+            )
+        return value
+
     def validate_cip(self, value):
         if not re.match(r'^\d{8,12}$', value):
             raise serializers.ValidationError(
@@ -143,6 +150,13 @@ class UpdateProfilSerializer(serializers.ModelSerializer):
     class Meta:
         model  = User
         fields = ['prenom', 'nom', 'telephone', 'ville', 'adresse', 'bio', 'photo']
+
+    def validate_telephone(self, value):
+        if not re.match(r'^\d{10}$', value):
+            raise serializers.ValidationError(
+                'Le numéro de téléphone doit contenir exactement 10 chiffres.'
+            )
+        return value
 
 
 class ChangerMotDePasseSerializer(serializers.Serializer):

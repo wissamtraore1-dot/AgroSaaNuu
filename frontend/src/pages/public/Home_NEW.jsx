@@ -58,6 +58,13 @@ const fadeUp = {
   show:   { y: 0,  opacity: 1 },
 };
 
+// Extrait la photo principale d'un produit depuis le tableau images[]
+const getImagePrincipale = (p) => {
+  if (!p.images || p.images.length === 0) return null;
+  const principale = p.images.find(img => img.est_principale);
+  return (principale || p.images[0]).image || null;
+};
+
 // ===== COMPOSANT PRINCIPAL =====
 export default function Home() {
   const navigate = useNavigate();
@@ -288,7 +295,11 @@ export default function Home() {
                       style={styles.productCard}
                       whileHover={{ y: -5 }}
                     >
-                      <img src={p.image || 'https://via.placeholder.com/300x180'} alt={p.nom} style={styles.productImg} />
+                      {getImagePrincipale(p) && (
+                        <div style={styles.productImgWrap}>
+                          <img src={getImagePrincipale(p)} alt={p.nom} style={styles.productImg} />
+                        </div>
+                      )}
                       <div style={{ padding: '1rem' }}>
                         <h4 style={styles.productName}>{p.nom}</h4>
                         <p style={styles.productPrice}>{(p.prix || 0).toLocaleString('fr-FR')} FCFA</p>
@@ -369,14 +380,21 @@ export default function Home() {
                       style={styles.productCard}
                       whileHover={{ y: -5, boxShadow: '0 16px 40px rgba(0,0,0,0.13)' }}
                     >
-                      <div style={styles.productImgWrap}>
-                        <img
-                          src={p.image || 'https://via.placeholder.com/300x180?text=Produit'}
-                          alt={p.nom}
-                          style={styles.productImg}
-                        />
-                        <span style={styles.productBadge}>Disponible</span>
-                      </div>
+                      {getImagePrincipale(p) ? (
+                        <div style={styles.productImgWrap}>
+                          <img
+                            src={getImagePrincipale(p)}
+                            alt={p.nom}
+                            style={styles.productImg}
+                          />
+                          <span style={styles.productBadge}>Disponible</span>
+                        </div>
+                      ) : (
+                        <div style={{ ...styles.productImgWrap, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '6px' }}>
+                          <span style={{ fontSize: '2rem' }}>🌾</span>
+                          <span style={styles.productBadge}>Disponible</span>
+                        </div>
+                      )}
 
                       <div style={{ padding: '1rem' }}>
                         <h3 style={styles.productName}>{p.nom}</h3>

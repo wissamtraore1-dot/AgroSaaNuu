@@ -47,9 +47,10 @@ export default function Login() {
       const role = data.user?.role;
       const from = location.state?.from?.pathname;
       if (from)                              navigate(from, { replace: true });
-      else if (role === 'BUYER'        || isBuyer)       navigate('/buyer/dashboard',       { replace: true });
-      else if (role === 'SELLER'       || isSeller)      navigate('/seller/dashboard',      { replace: true });
-      else if (role === 'TRANSPORTER'  || isTransporter) navigate('/transporter/dashboard', { replace: true });
+      else if (role === 'ADMIN')                         navigate('/admin/dashboard',        { replace: true });
+      else if (role === 'BUYER'        || isBuyer)       navigate('/buyer/dashboard',        { replace: true });
+      else if (role === 'SELLER'       || isSeller)      navigate('/seller/dashboard',       { replace: true });
+      else if (role === 'TRANSPORTER'  || isTransporter) navigate('/transporter/dashboard',  { replace: true });
       else                                               navigate('/', { replace: true });
     } catch (err) {
       setError(err.message || 'Email ou mot de passe incorrect.');
