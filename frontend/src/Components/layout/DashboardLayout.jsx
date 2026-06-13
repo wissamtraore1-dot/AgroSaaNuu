@@ -38,6 +38,7 @@ const menuItemsByRole = {
     { icon: ClipboardList,   label: 'Enreg. véhicule', to: '/transporter/enregistrer-vehicule' },
     { icon: Truck,           label: 'Mes véhicules',   to: '/transporter/vehicles'            },
     { icon: MapPin,          label: 'Disponibilité',   to: '/transporter/availability'        },
+    { icon: DollarSign,      label: 'Mes tarifs',      to: '/transporter/tarifs'             },
     { icon: Navigation,      label: 'Missions',        to: '/transporter/missions'            },
     { icon: Package,         label: 'Livraisons',      to: '/transporter/deliveries'          },
     { icon: User,            label: 'Profil',          to: '/transporter/profile'             },

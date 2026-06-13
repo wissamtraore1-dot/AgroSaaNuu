@@ -278,7 +278,14 @@ class CompleteProfileView(APIView):
         if 'photo' in request.FILES:
             user.photo = request.FILES['photo']
 
-        user.save()
+        try:
+            user.save()
+        except Exception as e:
+            msg = str(e)
+            if 'cip' in msg.lower() and 'unique' in msg.lower():
+                msg = 'Ce numéro CIP est déjà utilisé par un autre compte.'
+            return Response({'success': False, 'message': msg}, status=status.HTTP_400_BAD_REQUEST)
+
         return Response({
             'success': True,
             'message': 'Profil mis à jour',

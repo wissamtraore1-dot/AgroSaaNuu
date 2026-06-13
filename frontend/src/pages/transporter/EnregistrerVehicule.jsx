@@ -309,12 +309,12 @@ export default function EnregistrerVehicule() {
               {/* Photo véhicule */}
               <div>
                 <label style={labelStyle}>Photo du véhicule (optionnel)</label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', border: `2px dashed ${photoVehicule ? ORANGE : '#e5e7eb'}`, borderRadius: '12px', padding: '1rem', cursor: 'pointer', background: photoVehicule ? '#fffbeb' : '#fafafa', transition: 'all 0.2s' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', border: `2px dashed ${photoVehicule ? ORANGE : '#e5e7eb'}`, borderRadius: '12px', padding: '1rem', cursor: 'pointer', background: photoVehicule ? '#fffbeb' : '#fafafa', transition: 'all 0.2s', overflow: 'hidden' }}>
                   {previewVehicule
-                    ? <img src={previewVehicule} alt="véhicule" style={{ height: '60px', objectFit: 'contain', borderRadius: '6px' }} />
-                    : <Upload size={20} color="#9ca3af" />
+                    ? <img src={previewVehicule} alt="véhicule" style={{ maxWidth: '100%', maxHeight: '120px', objectFit: 'contain', borderRadius: '8px' }} />
+                    : <Upload size={24} color="#9ca3af" />
                   }
-                  <span style={{ fontSize: '0.85rem', color: photoVehicule ? ORANGE : '#6b7280' }}>
+                  <span style={{ fontSize: '0.85rem', color: photoVehicule ? ORANGE : '#6b7280', textAlign: 'center', wordBreak: 'break-all' }}>
                     {photoVehicule ? photoVehicule.name : 'Ajouter une photo'}
                   </span>
                   <input type="file" accept="image/*" onChange={handleFile(setPhotoVehicule, setPreviewVehicule)} style={{ display: 'none' }} />

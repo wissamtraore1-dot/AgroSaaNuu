@@ -573,7 +573,6 @@ class TarifsParTrajetView(APIView):
     def _filtre_transporteur_actif(self):
         return dict(
             is_active=True,
-            transporter_profile__est_verifie=True,
             transporter_profile__est_disponible=True,
         )
 
@@ -615,7 +614,6 @@ class TarifsParTrajetView(APIView):
             ville_arrivee__iexact=ville_arrivee,
             est_actif=True,
             transporteur__is_active=True,
-            transporteur__transporter_profile__est_verifie=True,
             transporteur__transporter_profile__est_disponible=True,
         ).select_related('transporteur', 'transporteur__transporter_profile')
 
@@ -637,7 +635,6 @@ class TarifsParTrajetView(APIView):
             .filter(
                 est_actif=True,
                 transporteur__is_active=True,
-                transporteur__transporter_profile__est_verifie=True,
                 transporteur__transporter_profile__est_disponible=True,
             )
             .values_list('transporteur_id', flat=True)

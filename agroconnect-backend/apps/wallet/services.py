@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import transaction
 from .models import Wallet, Transaction, PlatformWallet, PlatformTransaction
 
@@ -27,8 +28,9 @@ def crediter_wallet(user, montant, description=''):
 @transaction.atomic
 def deposer(user, montant, mode, numero_mobile=''):
     from apps.common.utils import calculer_frais
+    montant = Decimal(str(montant))
     wallet  = obtenir_ou_creer_wallet(user)
-    frais   = calculer_frais(montant, mode)
+    frais   = Decimal(str(calculer_frais(float(montant), mode)))
     net     = montant - frais
 
     txn = Transaction.objects.create(
@@ -47,9 +49,10 @@ def deposer(user, montant, mode, numero_mobile=''):
 @transaction.atomic
 def retirer(user, montant, mode, numero_mobile=''):
     from apps.common.utils import calculer_frais
-    wallet = obtenir_ou_creer_wallet(user)
-    frais  = calculer_frais(montant, mode)
-    net    = montant - frais
+    montant = Decimal(str(montant))
+    wallet  = obtenir_ou_creer_wallet(user)
+    frais   = Decimal(str(calculer_frais(float(montant), mode)))
+    net     = montant - frais
 
     if wallet.solde_disponible < montant:
         raise ValueError('Solde insuffisant.')

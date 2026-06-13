@@ -362,7 +362,8 @@ class SellerProfileView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response({'success': True, 'message': 'Profil vendeur mis à jour.', 'profil': serializer.data})
-        return Response({'success': False, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        first_error = next(iter(serializer.errors.values()), ['Données invalides.'])[0]
+        return Response({'success': False, 'message': str(first_error)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class TransporterProfileView(APIView):
@@ -411,16 +412,23 @@ class UploadKYCDocumentView(APIView):
         
         try:
             if user.role == User.Role.SELLER:
-                profile = user.seller_profile
+                try:
+                    profile = user.seller_profile
+                except SellerProfile.DoesNotExist:
+                    profile = SellerProfile.objects.create(user=user)
                 if document_type == 'cip':
                     profile.cip_photo = cip_photo
                     profile.kyc_status = SellerProfile.KYCStatus.PENDING
                 elif document_type == 'business_license':
                     profile.licence_business = cip_photo
                 profile.save()
-                
+
             elif user.role == User.Role.TRANSPORTER:
-                profile = user.transporter_profile
+                try:
+                    profile = user.transporter_profile
+                except Exception:
+                    from apps.authentication.models import TransporterProfile as TP
+                    profile = TP.objects.create(user=user)
                 profile.cip_photo = cip_photo
                 profile.kyc_status = TransporterProfile.KYCStatus.PENDING
                 profile.save()

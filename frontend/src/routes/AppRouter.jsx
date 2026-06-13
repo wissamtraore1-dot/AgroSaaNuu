@@ -68,6 +68,7 @@ import EnregistrerVehicule   from '../pages/transporter/EnregistrerVehicule';
 import TransporterMissions   from '../pages/transporter/Missions';
 import TransporterDeliveries from '../pages/transporter/Deliveries';
 import TransporterAvailability from '../pages/transporter/Availability';
+import TransporterTarifs      from '../pages/transporter/Tarifs';
 
 // Finance
 import Wallet        from '../pages/finance/Wallet';
@@ -228,6 +229,9 @@ export default function AppRouter() {
           />
           <Route path="/transporter/availability"
             element={<ProtectedRoute roles={['TRANSPORTER']}><TransporterAvailability /></ProtectedRoute>}
+          />
+          <Route path="/transporter/tarifs"
+            element={<ProtectedRoute roles={['TRANSPORTER']}><TransporterTarifs /></ProtectedRoute>}
           />
 
           {/* ===== FINANCE — tous connectés ===== */}

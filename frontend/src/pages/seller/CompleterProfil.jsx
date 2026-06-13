@@ -121,7 +121,13 @@ export default function CompleterProfilVendeur() {
 
       setEtape(4); // succès
     } catch (err) {
-      setError(err.response?.data?.message || 'Une erreur est survenue. Réessayez.');
+      const d = err.response?.data;
+      const msg = d?.message
+        || (d?.errors ? Object.values(d.errors).flat().join(' ') : null)
+        || (typeof d === 'string' && d.includes('<') ? 'Erreur serveur (500). Vérifiez les logs Django.' : null)
+        || err.message
+        || 'Une erreur est survenue. Réessayez.';
+      setError(msg);
     } finally {
       setLoading(false);
     }

@@ -48,7 +48,8 @@ class DeposerView(APIView):
                     'success': False,
                     'message': str(e),
                 }, status=status.HTTP_400_BAD_REQUEST)
-        return Response({'success': False, 'errors': serializer.errors}, status=400)
+        first_err = next(iter(serializer.errors.values()), ['Données invalides.'])[0]
+        return Response({'success': False, 'message': str(first_err)}, status=400)
 
 
 class RetirerView(APIView):
@@ -70,12 +71,13 @@ class RetirerView(APIView):
                     'message':     'Retrait effectué.',
                     'transaction': TransactionSerializer(txn).data,
                 })
-            except ValueError as e:
+            except Exception as e:
                 return Response({
                     'success': False,
                     'message': str(e),
                 }, status=status.HTTP_400_BAD_REQUEST)
-        return Response({'success': False, 'errors': serializer.errors}, status=400)
+        first_err = next(iter(serializer.errors.values()), ['Données invalides.'])[0]
+        return Response({'success': False, 'message': str(first_err)}, status=400)
 
 
 class MesTransactionsView(generics.ListAPIView):
