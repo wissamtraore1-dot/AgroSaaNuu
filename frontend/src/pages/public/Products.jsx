@@ -35,6 +35,11 @@ export default function Products() {
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState('');
 
+  // Synchronise l'état local quand l'URL change (ex: recherche depuis le header)
+  useEffect(() => {
+    setSearch(searchParams.get('search') || '');
+  }, [searchParams]);
+
   useEffect(() => {
     let active = true;
     const load = async () => {

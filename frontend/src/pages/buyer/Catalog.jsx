@@ -26,12 +26,23 @@ export default function Catalog() {
   const [page,        setPage]        = useState(1);
   const [hasMore,     setHasMore]     = useState(false);
   const [addingId,    setAddingId]    = useState(null);
-  const [addedId,     setAddedId]     = useState(null);
+  const [addedIds,    setAddedIds]    = useState(new Set());
 
   /* â”€â”€ Chargement categories â”€â”€ */
   useEffect(() => {
     ProductService.getCategories()
       .then(data => setCategories(Array.isArray(data) ? data : data.results ?? []))
+      .catch(() => {});
+  }, []);
+
+  /* â”€â”€ Chargement panier initial â”€â”€ */
+  useEffect(() => {
+    CartService.monPanier()
+      .then(data => {
+        const lignes = data.lignes || data.items || [];
+        const ids = new Set(lignes.map(l => l.produit_id));
+        setAddedIds(ids);
+      })
       .catch(() => {});
   }, []);
 
@@ -59,12 +70,11 @@ export default function Catalog() {
 
   /* â”€â”€ Ajouter au panier â”€â”€ */
   const ajouterAuPanier = async (produit) => {
-    if (addingId === produit.id) return;
+    if (addingId === produit.id || addedIds.has(produit.id)) return;
     setAddingId(produit.id);
     try {
       await CartService.ajouter(produit.id, 1);
-      setAddedId(produit.id);
-      setTimeout(() => setAddedId(null), 2000);
+      setAddedIds(prev => new Set([...prev, produit.id]));
     } catch {
       /* silencieux */
     } finally {
@@ -144,7 +154,7 @@ export default function Catalog() {
               const image   = getImage(p);
               const enStock = p.est_disponible && Number(p.quantite) > 0;
               const estAjout = addingId === p.id;
-              const estAjoute = addedId === p.id;
+              const estAjoute = addedIds.has(p.id);
 
               return (
                 <div
@@ -206,17 +216,17 @@ export default function Catalog() {
 
                     <button
                       onClick={() => enStock && ajouterAuPanier(p)}
-                      disabled={!enStock || estAjout}
+                      disabled={!enStock || estAjout || estAjoute}
                       style={{
                         marginTop: 'auto',
                         width: '100%', padding: '0.65rem',
                         background: estAjoute
                           ? '#15803d'
                           : (!enStock ? '#f3f4f6' : `linear-gradient(135deg, ${GREEN}, #2d8c47)`),
-                        color: !enStock ? '#9ca3af' : 'white',
+                        color: (!enStock && !estAjoute) ? '#9ca3af' : 'white',
                         border: 'none', borderRadius: '10px',
                         fontWeight: '700', fontSize: '0.83rem',
-                        cursor: !enStock ? 'not-allowed' : 'pointer',
+                        cursor: (!enStock || estAjoute) ? 'default' : 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                         transition: 'background 0.3s',
                         opacity: estAjout ? 0.7 : 1,

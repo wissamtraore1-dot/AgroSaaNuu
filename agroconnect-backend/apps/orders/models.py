@@ -25,6 +25,9 @@ class Commande(TimeStampedModel):
         CELTIS = 'CELTIS', _('Celtis Cash')
         BANK   = 'BANK',   _('Virement bancaire')
 
+    panier_id           = models.UUIDField(null=True, blank=True, db_index=True)
+    groupe_vendeur_id   = models.UUIDField(null=True, blank=True, db_index=True)
+    nom_commande        = models.CharField(max_length=100, blank=True, default='')
     reference       = models.CharField(max_length=20, unique=True, blank=True)
     acheteur        = models.ForeignKey(
         User, on_delete=models.CASCADE,

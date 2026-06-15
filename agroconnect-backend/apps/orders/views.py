@@ -15,6 +15,39 @@ from .serializers import (
     PaiementSerializer,
 )
 from apps.authentication.permissions import IsBuyer, IsSeller
+from django.db import transaction as db_transaction
+
+
+def _decrementer_stock(commande):
+    """Soustrait la quantité commandée du stock produit. Passe en indisponible si stock = 0."""
+    try:
+        from apps.products.models import Produit
+        with db_transaction.atomic():
+            produit = Produit.objects.select_for_update().get(pk=commande.produit_id)
+            produit.quantite = max(0, produit.quantite - commande.quantite)
+            champs = ['quantite']
+            if produit.quantite == 0:
+                produit.est_disponible = False
+                champs.append('est_disponible')
+            produit.save(update_fields=champs)
+    except Exception:
+        pass
+
+
+def _restaurer_stock(commande):
+    """Remet la quantité commandée dans le stock produit lors d'une annulation."""
+    try:
+        from apps.products.models import Produit
+        with db_transaction.atomic():
+            produit = Produit.objects.select_for_update().get(pk=commande.produit_id)
+            produit.quantite += commande.quantite
+            champs = ['quantite']
+            if not produit.est_disponible and produit.quantite > 0:
+                produit.est_disponible = True
+                champs.append('est_disponible')
+            produit.save(update_fields=champs)
+    except Exception:
+        pass
 
 
 class PasserCommandeView(APIView):
@@ -39,15 +72,78 @@ class PasserCommandeView(APIView):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
-class MesCommandesAcheteurView(generics.ListAPIView):
-    """GET /api/v1/orders/mes-commandes/"""
-    serializer_class   = CommandeSerializer
+class MesCommandesAcheteurView(APIView):
+    """GET /api/v1/orders/mes-commandes/ — une carte par groupe-vendeur (groupe_vendeur_id)"""
     permission_classes = [IsBuyer]
 
-    def get_queryset(self):
-        return Commande.objects.filter(
-            acheteur=self.request.user
-        ).select_related('produit', 'vendeur')
+    _PRIO = {
+        'LITIGE': 0, 'ANNULEE': 1, 'PAIEMENT_EN_ATTENTE': 2,
+        'PAIEMENT_RECU': 3, 'EN_PREPARATION': 4, 'EN_LIVRAISON': 5,
+        'LIVREE': 6, 'CONFIRMEE_RECEPTION': 7, 'PAIEMENT_LIBERE': 8,
+    }
+
+    def get(self, request):
+        commandes = list(
+            Commande.objects.filter(acheteur=request.user)
+            .select_related('produit', 'vendeur')
+            .order_by('-created_at')
+        )
+
+        # Priorité : groupe_vendeur_id > panier_id > individuel
+        groupes = {}
+        for c in commandes:
+            if c.groupe_vendeur_id:
+                key = f'gv_{c.groupe_vendeur_id}'
+            elif c.panier_id:
+                key = f'p_{c.panier_id}'
+            else:
+                key = f'i_{c.id}'
+            groupes.setdefault(key, []).append(c)
+
+        result = []
+        for key, cmds in groupes.items():
+            cmds_sorted = sorted(cmds, key=lambda c: c.created_at)
+            first = cmds_sorted[0]
+            statut_agrege = min(cmds_sorted, key=lambda c: self._PRIO.get(c.statut, 99)).statut
+            result.append({
+                'groupe_vendeur_id': str(first.groupe_vendeur_id) if first.groupe_vendeur_id else None,
+                'panier_id':         str(first.panier_id)         if first.panier_id         else None,
+                'id':                str(first.id),
+                'reference':         first.reference,
+                'statut':            statut_agrege,
+                'created_at':        first.created_at.isoformat(),
+                'montant_total':     sum(float(c.montant_total) for c in cmds_sorted),
+                'nb_articles':       len(cmds_sorted),
+                'commande_ids':      [str(c.id) for c in cmds_sorted],
+                'nom_commande':      first.nom_commande or '',
+                'vendeur_nom':       (first.vendeur.nom_complet or first.vendeur.email) if first.vendeur else '?',
+                'lignes': [
+                    {
+                        'id':          str(c.id),
+                        'produit_nom': c.produit.nom if c.produit else '?',
+                        'quantite':    float(c.quantite),
+                        'montant':     float(c.montant_total),
+                        'vendeur_nom': (c.vendeur.nom_complet or c.vendeur.email) if c.vendeur else '?',
+                        'statut':      c.statut,
+                    }
+                    for c in cmds_sorted
+                ],
+            })
+
+        result.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+
+        statut_filtre = request.query_params.get('status', '').strip().upper()
+        if statut_filtre:
+            STATUS_GROUPS = {
+                'PAIEMENT_EN_ATTENTE': ['PAIEMENT_EN_ATTENTE'],
+                'EN_PREPARATION':      ['EN_PREPARATION', 'PAIEMENT_RECU'],
+                'LIVREE':              ['LIVREE', 'CONFIRMEE_RECEPTION', 'PAIEMENT_LIBERE'],
+                'ANNULEE':             ['ANNULEE'],
+            }
+            filter_statuts = STATUS_GROUPS.get(statut_filtre, [statut_filtre])
+            result = [r for r in result if r.get('statut') in filter_statuts]
+
+        return Response({'success': True, 'commandes': result, 'results': result})
 
 
 class MesCommandesVendeurView(generics.ListAPIView):
@@ -56,9 +152,17 @@ class MesCommandesVendeurView(generics.ListAPIView):
     permission_classes = [IsSeller]
 
     def get_queryset(self):
-        return Commande.objects.filter(
-            vendeur=self.request.user
-        ).select_related('produit', 'acheteur')
+        qs = Commande.objects.filter(vendeur=self.request.user).select_related('produit', 'acheteur')
+        statut = self.request.query_params.get('status', '').strip().upper()
+        if statut:
+            STATUS_GROUPS = {
+                'PAIEMENT_RECU':  ['PAIEMENT_RECU'],
+                'EN_PREPARATION': ['EN_PREPARATION'],
+                'EN_LIVRAISON':   ['EN_LIVRAISON'],
+                'LIVREE':         ['LIVREE', 'CONFIRMEE_RECEPTION', 'PAIEMENT_LIBERE'],
+            }
+            qs = qs.filter(statut__in=STATUS_GROUPS.get(statut, [statut]))
+        return qs
 
 
 class DetailCommandeView(APIView):
@@ -66,18 +170,90 @@ class DetailCommandeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
-        commande = get_object_or_404(
-            Commande, pk=pk
-        )
+        commande = get_object_or_404(Commande, pk=pk)
         if commande.acheteur != request.user and commande.vendeur != request.user:
-            return Response({
-                'success': False,
-                'message': 'Accès non autorisé.',
-            }, status=status.HTTP_403_FORBIDDEN)
-        return Response({
-            'success':  True,
-            'commande': CommandeSerializer(commande).data,
-        })
+            return Response({'success': False, 'message': 'Accès non autorisé.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Priorité : groupe_vendeur_id (1 vendeur) > panier_id (old data) > individuel
+        if commande.groupe_vendeur_id and commande.acheteur == request.user:
+            toutes = list(
+                Commande.objects.filter(groupe_vendeur_id=commande.groupe_vendeur_id, acheteur=request.user)
+                .select_related('produit', 'vendeur')
+                .prefetch_related('produit__images')
+                .order_by('created_at')
+            )
+        elif commande.panier_id and commande.acheteur == request.user:
+            toutes = list(
+                Commande.objects.filter(panier_id=commande.panier_id, acheteur=request.user)
+                .select_related('produit', 'vendeur')
+                .prefetch_related('produit__images')
+                .order_by('created_at')
+            )
+        else:
+            toutes = [commande]
+
+        def get_image(c):
+            if not c.produit:
+                return None
+            img = c.produit.images.filter(est_principale=True).first() or c.produit.images.first()
+            if img and img.image:
+                try:
+                    return request.build_absolute_uri(img.image.url)
+                except Exception:
+                    return img.image.url
+            return None
+
+        lignes = [
+            {
+                'id':            str(c.id),
+                'produit_nom':   c.produit.nom if c.produit else '?',
+                'produit_image': get_image(c),
+                'quantite':      float(c.quantite),
+                'prix_unitaire': float(c.prix_unitaire),
+                'montant':       float(c.montant_produit),
+                'vendeur_nom':   (c.vendeur.nom_complet or c.vendeur.email) if c.vendeur else '?',
+                'statut':        c.statut,
+                'frais_livraison': float(c.frais_livraison),
+            }
+            for c in toutes
+        ]
+
+        principale      = toutes[0] if toutes else commande
+        montant_total   = sum(float(c.montant_total)   for c in toutes)
+        montant_produits = sum(float(c.montant_produit) for c in toutes)
+        frais_paiement  = sum(float(c.frais_paiement)  for c in toutes)
+
+        data = CommandeSerializer(commande, context={'request': request}).data
+        data['lignes']           = lignes
+        data['nb_articles']      = len(lignes)
+        data['montant_total']    = montant_total
+        data['montant_produits'] = montant_produits
+        data['frais_livraison']  = float(principale.frais_livraison)
+        data['frais_paiement']   = frais_paiement
+        data['groupe_vendeur_id'] = str(commande.groupe_vendeur_id) if commande.groupe_vendeur_id else None
+        data['panier_id']        = str(commande.panier_id) if commande.panier_id else None
+        data['nom_commande']     = commande.nom_commande or ''
+
+        return Response({'success': True, 'commande': data})
+
+
+class RenommerCommandeView(APIView):
+    """PATCH /api/v1/orders/<id>/renommer/ — acheteur nomme sa commande (tout le groupe panier)"""
+    permission_classes = [IsBuyer]
+
+    def patch(self, request, pk):
+        commande = get_object_or_404(Commande, pk=pk, acheteur=request.user)
+        nom = request.data.get('nom_commande', '').strip()[:100]
+
+        if commande.groupe_vendeur_id:
+            Commande.objects.filter(groupe_vendeur_id=commande.groupe_vendeur_id, acheteur=request.user).update(nom_commande=nom)
+        elif commande.panier_id:
+            Commande.objects.filter(panier_id=commande.panier_id, acheteur=request.user).update(nom_commande=nom)
+        else:
+            commande.nom_commande = nom
+            commande.save(update_fields=['nom_commande'])
+
+        return Response({'success': True, 'nom_commande': nom})
 
 
 class ConfirmerCommandeView(APIView):
@@ -171,8 +347,11 @@ class AnnulerCommandeView(APIView):
             return Response({'success': False, 'message': 'Accès non autorisé.'}, status=403)
         if commande.statut not in [Commande.Statut.PAIEMENT_EN_ATTENTE, Commande.Statut.PAIEMENT_RECU]:
             return Response({'success': False, 'message': 'Commande non annulable.'}, status=400)
+        etait_payee = commande.statut == Commande.Statut.PAIEMENT_RECU
         commande.statut = Commande.Statut.ANNULEE
         commande.save(update_fields=['statut'])
+        if etait_payee:
+            _restaurer_stock(commande)
         return Response({'success': True, 'message': 'Commande annulée.'})
 
 
@@ -344,7 +523,8 @@ class ConfirmPaiementView(APIView):
         commande.statut = Commande.Statut.PAIEMENT_RECU
         commande.date_confirmation = timezone.now()
         commande.save()
-        
+        _decrementer_stock(commande)
+
         return Response({
             'success': True,
             'message': 'Paiement confirmé et en escrow.',
@@ -588,6 +768,7 @@ class FedaPayWebhookView(APIView):
             commande.statut            = Commande.Statut.PAIEMENT_RECU
             commande.date_confirmation = timezone.now()
             commande.save(update_fields=['statut', 'date_confirmation'])
+            _decrementer_stock(commande)
 
             try:
                 from apps.notifications.services import notifier_paiement_en_escrow
@@ -735,6 +916,7 @@ class SimulerPaiementView(APIView):
         commande.mode_paiement     = reseau
         commande.date_confirmation = timezone.now()
         commande.save(update_fields=['statut', 'mode_paiement', 'date_confirmation'])
+        _decrementer_stock(commande)
 
         try:
             from apps.notifications.services import notifier_paiement_en_escrow
@@ -748,6 +930,148 @@ class SimulerPaiementView(APIView):
             'reference':  paiement.reference_transaction,
             'montant':    str(paiement.montant),
             'reseau':     reseau,
+        }, status=201)
+
+
+class PanierSimulerPaiementView(APIView):
+    """
+    POST /api/v1/orders/panier/<panier_id>/simuler-paiement/
+    Paie en une seule fois toutes les commandes d'un même panier.
+    Body: { telephone, reseau }
+    """
+    permission_classes = [IsBuyer]
+
+    def post(self, request, panier_id):
+        commandes = list(
+            Commande.objects.filter(
+                panier_id=panier_id,
+                acheteur=request.user,
+                statut=Commande.Statut.PAIEMENT_EN_ATTENTE,
+            ).select_related('produit')
+        )
+
+        if not commandes:
+            return Response({'success': False, 'message': 'Aucune commande en attente pour ce panier.'}, status=400)
+
+        telephone = request.data.get('telephone', '').strip()
+        reseau    = request.data.get('reseau', 'MTN').strip()
+
+        if not telephone:
+            return Response({'success': False, 'message': 'Numéro de téléphone requis.'}, status=400)
+
+        reseaux_valides = ['MTN', 'MOOV', 'CELTIS', 'VIREMENT']
+        if reseau not in reseaux_valides:
+            return Response({'success': False, 'message': f'Réseau invalide. Choisir parmi {reseaux_valides}.'}, status=400)
+
+        import uuid as _uuid
+        montant_total = 0
+
+        for commande in commandes:
+            paiement, _ = Paiement.objects.get_or_create(
+                commande=commande,
+                defaults={
+                    'montant':       commande.montant_total,
+                    'mode_paiement': reseau,
+                    'statut':        Paiement.Statut.EN_ATTENTE,
+                }
+            )
+            paiement.statut                = Paiement.Statut.EN_ESCROW
+            paiement.mode_paiement         = reseau
+            paiement.reference_transaction = f'SIM-{_uuid.uuid4().hex[:12].upper()}'
+            paiement.date_recu             = timezone.now()
+            paiement.date_en_escrow        = timezone.now()
+            paiement.save(update_fields=['statut', 'mode_paiement', 'reference_transaction', 'date_recu', 'date_en_escrow'])
+
+            commande.statut            = Commande.Statut.PAIEMENT_RECU
+            commande.mode_paiement     = reseau
+            commande.date_confirmation = timezone.now()
+            commande.save(update_fields=['statut', 'mode_paiement', 'date_confirmation'])
+            _decrementer_stock(commande)
+
+            montant_total += float(commande.montant_total)
+
+            try:
+                from apps.notifications.services import notifier_paiement_en_escrow
+                notifier_paiement_en_escrow(commande)
+            except Exception:
+                pass
+
+        return Response({
+            'success':       True,
+            'message':       f'Paiement de {montant_total:,.0f} FCFA sécurisé en séquestre.',
+            'nb_commandes':  len(commandes),
+            'montant_total': montant_total,
+        }, status=201)
+
+
+class GroupeVendeurSimulerPaiementView(APIView):
+    """
+    POST /api/v1/orders/groupe/<groupe_vendeur_id>/simuler-paiement/
+    Paie toutes les commandes d'un même groupe-vendeur (même vendeur, même checkout).
+    Body: { telephone, reseau }
+    """
+    permission_classes = [IsBuyer]
+
+    def post(self, request, groupe_vendeur_id):
+        commandes = list(
+            Commande.objects.filter(
+                groupe_vendeur_id=groupe_vendeur_id,
+                acheteur=request.user,
+                statut=Commande.Statut.PAIEMENT_EN_ATTENTE,
+            ).select_related('produit')
+        )
+
+        if not commandes:
+            return Response({'success': False, 'message': 'Aucune commande en attente pour ce groupe.'}, status=400)
+
+        telephone = request.data.get('telephone', '').strip()
+        reseau    = request.data.get('reseau', 'MTN').strip()
+
+        if not telephone:
+            return Response({'success': False, 'message': 'Numéro de téléphone requis.'}, status=400)
+
+        reseaux_valides = ['MTN', 'MOOV', 'CELTIS', 'VIREMENT']
+        if reseau not in reseaux_valides:
+            return Response({'success': False, 'message': f'Réseau invalide. Choisir parmi {reseaux_valides}.'}, status=400)
+
+        import uuid as _uuid
+        montant_total = 0
+
+        for commande in commandes:
+            paiement, _ = Paiement.objects.get_or_create(
+                commande=commande,
+                defaults={
+                    'montant':       commande.montant_total,
+                    'mode_paiement': reseau,
+                    'statut':        Paiement.Statut.EN_ATTENTE,
+                }
+            )
+            paiement.statut                = Paiement.Statut.EN_ESCROW
+            paiement.mode_paiement         = reseau
+            paiement.reference_transaction = f'SIM-{_uuid.uuid4().hex[:12].upper()}'
+            paiement.date_recu             = timezone.now()
+            paiement.date_en_escrow        = timezone.now()
+            paiement.save(update_fields=['statut', 'mode_paiement', 'reference_transaction', 'date_recu', 'date_en_escrow'])
+
+            commande.statut            = Commande.Statut.PAIEMENT_RECU
+            commande.mode_paiement     = reseau
+            commande.date_confirmation = timezone.now()
+            commande.save(update_fields=['statut', 'mode_paiement', 'date_confirmation'])
+            _decrementer_stock(commande)
+
+            montant_total += float(commande.montant_total)
+
+            try:
+                from apps.notifications.services import notifier_paiement_en_escrow
+                notifier_paiement_en_escrow(commande)
+            except Exception:
+                pass
+
+        return Response({
+            'success':       True,
+            'message':       f'{len(commandes)} commande(s) payée(s) — {montant_total:,.0f} FCFA sécurisés.',
+            'nb_commandes':  len(commandes),
+            'montant_total': montant_total,
         }, status=201)
 
 

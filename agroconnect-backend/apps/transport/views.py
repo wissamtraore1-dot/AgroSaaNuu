@@ -63,7 +63,6 @@ class ListeTransporteursView(generics.ListAPIView):
     def get(self, request):
         transporteurs = User.objects.filter(
             role='TRANSPORTER', is_active=True,
-            transporter_profile__est_verifie=True,
         ).select_related('transporter_profile')
         from apps.authentication.serializers import UserSerializer
         return Response({
@@ -204,8 +203,26 @@ class AccepterMissionView(APIView):
                                        'Vous serez notifié(e) une fois approuvé(e).',
             }, status=status.HTTP_403_FORBIDDEN)
 
+        delai = request.data.get('delai_livraison_jours')
+        if delai is not None:
+            try:
+                delai = int(delai)
+                if delai < 1:
+                    delai = 1
+            except (ValueError, TypeError):
+                delai = None
+
+        unite_brut = request.data.get('delai_livraison_unite', 'JOURS').strip().upper()
+        unite = unite_brut if unite_brut in ('HEURES', 'JOURS', 'MOIS') else 'JOURS'
+
         mission.statut = MissionTransport.Statut.ACCEPTEE
-        mission.save(update_fields=['statut'])
+        champs = ['statut']
+        if delai is not None:
+            mission.delai_livraison_jours = delai
+            mission.delai_livraison_unite = unite
+            champs += ['delai_livraison_jours', 'delai_livraison_unite']
+        mission.save(update_fields=champs)
+
         return Response({
             'success': True,
             'message': 'Mission acceptée.',
@@ -576,6 +593,53 @@ class TarifsParTrajetView(APIView):
             transporter_profile__est_disponible=True,
         )
 
+    def _delai_typique(self, transporteur_id):
+        """Récupère le dernier délai annoncé par ce transporteur lors d'une mission acceptée."""
+        mission = (
+            MissionTransport.objects
+            .filter(
+                transporteur_id=transporteur_id,
+                statut__in=[MissionTransport.Statut.ACCEPTEE, MissionTransport.Statut.EN_COURS, MissionTransport.Statut.TERMINEE],
+                delai_livraison_jours__isnull=False,
+            )
+            .order_by('-created_at')
+            .only('delai_livraison_jours', 'delai_livraison_unite')
+            .first()
+        )
+        if mission:
+            return mission.delai_livraison_jours, mission.delai_livraison_unite or 'JOURS'
+        return None, None
+
+    def _disponibilite(self, transporteur_id):
+        """Retourne (en_mission: bool, fin_estimee_iso: str|None) pour ce transporteur."""
+        from datetime import timedelta
+        mission_active = (
+            MissionTransport.objects
+            .filter(
+                transporteur_id=transporteur_id,
+                statut__in=[MissionTransport.Statut.ACCEPTEE, MissionTransport.Statut.EN_COURS],
+            )
+            .order_by('-created_at')
+            .only('date_depart', 'delai_livraison_jours', 'delai_livraison_unite', 'created_at')
+            .first()
+        )
+        if not mission_active:
+            return False, None
+        delai = mission_active.delai_livraison_jours
+        unite = mission_active.delai_livraison_unite or 'JOURS'
+        if not delai:
+            return True, None
+        base = mission_active.date_depart or mission_active.created_at
+        if not base:
+            return True, None
+        if unite == 'HEURES':
+            fin = base + timedelta(hours=delai)
+        elif unite == 'MOIS':
+            fin = base + timedelta(days=delai * 30)
+        else:
+            fin = base + timedelta(days=delai)
+        return True, fin.isoformat()
+
     def _serialiser_transporteur(self, user, tarif_montant, trajet_label, request):
         """Construit manuellement l'objet renvoyé au front pour un transporteur sans TarifLivraison."""
         profil       = getattr(user, 'transporter_profile', None)
@@ -585,6 +649,8 @@ class TarifsParTrajetView(APIView):
                 photo = request.build_absolute_uri(profil.photo.url)
             except Exception:
                 photo = None
+        delai_val, delai_unite = self._delai_typique(user.id)
+        en_mission, fin_estimee = self._disponibilite(user.id)
         return {
             'id':               None,
             'transporteur':     str(user.id),
@@ -597,6 +663,10 @@ class TarifsParTrajetView(APIView):
             'ville_arrivee':     '',
             'est_trajet_exact':  False,
             'trajet_fallback':   trajet_label,
+            'delai_typique':     delai_val,
+            'delai_typique_unite': delai_unite,
+            'en_mission':          en_mission,
+            'fin_mission_estimee': fin_estimee,
         }
 
     def get(self, request):
@@ -622,6 +692,20 @@ class TarifsParTrajetView(APIView):
         ).data
 
         if serialized_exacts:
+            # Enrichir chaque entrée avec tous les tarifs du transporteur + disponibilité
+            for item in serialized_exacts:
+                t_id = item.get('transporteur')
+                if t_id:
+                    tous = TarifLivraison.objects.filter(
+                        transporteur_id=t_id, est_actif=True
+                    ).order_by('ville_depart', 'ville_arrivee').values('ville_depart', 'ville_arrivee', 'tarif')
+                    item['tarifs_liste'] = [
+                        {'ville_depart': r['ville_depart'], 'ville_arrivee': r['ville_arrivee'], 'tarif': int(r['tarif'])}
+                        for r in tous
+                    ]
+                    en_mission, fin_estimee = self._disponibilite(t_id)
+                    item['en_mission']          = en_mission
+                    item['fin_mission_estimee'] = fin_estimee
             return Response({
                 'success': True,
                 'tarifs':        serialized_exacts,
@@ -629,7 +713,7 @@ class TarifsParTrajetView(APIView):
                 'trajet_exact':  True,
             })
 
-        # ── Niveau 2 : tarifs sur d'autres trajets ────────────────────────────
+        # ── Niveau 2 : un seul objet par transporteur avec tous ses tarifs ────
         ids_avec_tarif = (
             TarifLivraison.objects
             .filter(
@@ -641,25 +725,50 @@ class TarifsParTrajetView(APIView):
             .distinct()
         )
 
-        tarifs_autres_objs = []
+        autres_tarifs_data = []
         for t_id in ids_avec_tarif:
-            tarif = (
+            tarifs_du_t = (
                 TarifLivraison.objects
                 .filter(transporteur_id=t_id, est_actif=True)
                 .select_related('transporteur', 'transporteur__transporter_profile')
                 .order_by('tarif')
-                .first()
             )
-            if tarif:
-                tarifs_autres_objs.append(tarif)
+            if not tarifs_du_t.exists():
+                continue
+            t_user  = tarifs_du_t[0].transporteur
+            profil  = getattr(t_user, 'transporter_profile', None)
+            photo   = None
+            if profil and getattr(profil, 'photo', None):
+                try:
+                    photo = request.build_absolute_uri(profil.photo.url)
+                except Exception:
+                    photo = None
+            min_t = tarifs_du_t.first()
+            delai_val, delai_unite = self._delai_typique(t_id)
+            en_mission, fin_estimee = self._disponibilite(t_id)
+            autres_tarifs_data.append({
+                'id':               str(min_t.id),
+                'transporteur':     str(t_user.id),
+                'transporteur_nom': t_user.nom_complet or t_user.email,
+                'transporteur_photo': photo,
+                'note_transporteur': float(profil.note_moyenne) if profil else 0.0,
+                'total_missions':    profil.total_missions if profil else 0,
+                'tarif':             str(min_t.tarif),
+                'ville_depart':      min_t.ville_depart,
+                'ville_arrivee':     min_t.ville_arrivee,
+                'est_trajet_exact':  False,
+                'trajet_fallback':   f"{min_t.ville_depart} → {min_t.ville_arrivee}",
+                'delai_typique':     delai_val,
+                'delai_typique_unite': delai_unite,
+                'en_mission':          en_mission,
+                'fin_mission_estimee': fin_estimee,
+                'tarifs_liste': [
+                    {'ville_depart': t.ville_depart, 'ville_arrivee': t.ville_arrivee, 'tarif': int(t.tarif)}
+                    for t in tarifs_du_t
+                ],
+            })
 
-        if tarifs_autres_objs:
-            autres_tarifs_data = TarifLivraisonSerializer(
-                tarifs_autres_objs, many=True, context={'request': request}
-            ).data
-            for item in autres_tarifs_data:
-                item['est_trajet_exact'] = False
-                item['trajet_fallback']  = f"{item.get('ville_depart', '?')} → {item.get('ville_arrivee', '?')}"
+        if autres_tarifs_data:
             return Response({
                 'success': True,
                 'tarifs':        [],
@@ -741,3 +850,42 @@ class NoterTransporteurView(APIView):
             pass
 
         return Response({'success': True, 'message': 'Transporteur noté. Merci !'})
+
+
+class ProfilPublicTransporteurView(APIView):
+    """GET /api/v1/transport/transporteurs/<id>/ — profil public + tarifs (sans auth)"""
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        transporteur = get_object_or_404(User, pk=pk, role='TRANSPORTER', is_active=True)
+        try:
+            profil = transporteur.transporter_profile
+        except Exception:
+            profil = None
+
+        tarifs = TarifLivraison.objects.filter(
+            transporteur=transporteur,
+            est_actif=True,
+        ).order_by('ville_depart', 'ville_arrivee')
+
+        return Response({
+            'success': True,
+            'transporteur': {
+                'id':           str(transporteur.id),
+                'nom':          transporteur.nom_complet or f"{transporteur.prenom or ''} {transporteur.nom or ''}".strip() or transporteur.email,
+                'ville':        transporteur.ville or '',
+                'note':         float(profil.note_moyenne) if profil else 0.0,
+                'missions':     profil.total_missions if profil else 0,
+                'zones':        profil.zones if profil else [],
+                'est_disponible': profil.est_disponible if profil else False,
+                'est_certifie': profil.est_certifie if profil else False,
+                'tarifs': [
+                    {
+                        'ville_depart':  t.ville_depart,
+                        'ville_arrivee': t.ville_arrivee,
+                        'tarif':         int(t.tarif),
+                    }
+                    for t in tarifs
+                ],
+            },
+        })

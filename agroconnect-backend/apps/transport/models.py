@@ -87,14 +87,21 @@ class MissionTransport(TimeStampedModel):
         Vehicule, on_delete=models.SET_NULL,
         null=True, related_name='missions'
     )
-    statut          = models.CharField(max_length=15, choices=Statut.choices, default=Statut.EN_ATTENTE)
-    ville_depart    = models.CharField(max_length=100)
-    ville_arrivee   = models.CharField(max_length=100)
-    tarif           = models.DecimalField(max_digits=10, decimal_places=2)
-    date_depart     = models.DateTimeField(null=True, blank=True)
-    date_arrivee    = models.DateTimeField(null=True, blank=True)
-    note            = models.PositiveSmallIntegerField(null=True, blank=True)
-    commentaire     = models.TextField(blank=True, default='')
+    class UniteDelai(models.TextChoices):
+        HEURES = 'HEURES', _('Heure(s)')
+        JOURS  = 'JOURS',  _('Jour(s)')
+        MOIS   = 'MOIS',   _('Mois')
+
+    statut                 = models.CharField(max_length=15, choices=Statut.choices, default=Statut.EN_ATTENTE)
+    ville_depart           = models.CharField(max_length=100)
+    ville_arrivee          = models.CharField(max_length=100)
+    tarif                  = models.DecimalField(max_digits=10, decimal_places=2)
+    delai_livraison_jours  = models.PositiveSmallIntegerField(null=True, blank=True)
+    delai_livraison_unite  = models.CharField(max_length=10, choices=UniteDelai.choices, default=UniteDelai.JOURS, blank=True)
+    date_depart            = models.DateTimeField(null=True, blank=True)
+    date_arrivee           = models.DateTimeField(null=True, blank=True)
+    note                   = models.PositiveSmallIntegerField(null=True, blank=True)
+    commentaire            = models.TextField(blank=True, default='')
 
     class Meta:
         db_table = 'missions_transport'

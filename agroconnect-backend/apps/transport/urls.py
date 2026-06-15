@@ -4,6 +4,7 @@ from . import views
 urlpatterns = [
     # ─── Publics / consultation ───────────────────────────────────────────────
     path('transporteurs/',                         views.ListeTransporteursView.as_view()),
+    path('transporteurs/<uuid:pk>/',               views.ProfilPublicTransporteurView.as_view()),
     path('disponibles/',                           views.TransporteursDisponiblesView.as_view()),
     path('estimation/',                            views.EstimationCoutView.as_view()),
 

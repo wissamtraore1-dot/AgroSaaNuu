@@ -65,6 +65,8 @@ class PasserCommandeSerializer(serializers.Serializer):
     tarif_livraison     = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True, default=None)
     ville_depart        = serializers.CharField(required=False, allow_blank=True, default='')
     ville_arrivee       = serializers.CharField(required=False, allow_blank=True, default='')
+    panier_id           = serializers.UUIDField(required=False, allow_null=True, default=None)
+    groupe_vendeur_id   = serializers.UUIDField(required=False, allow_null=True, default=None)
 
     def validate_produit_id(self, value):
         try:
@@ -89,8 +91,10 @@ class PasserCommandeSerializer(serializers.Serializer):
         produit         = self.context['produit']
         quantite        = validated_data['quantite']
         mode            = validated_data['mode_paiement']
-        transporteur_id = validated_data.get('transporteur_id')
-        tarif_custom    = validated_data.get('tarif_livraison')
+        transporteur_id   = validated_data.get('transporteur_id')
+        tarif_custom      = validated_data.get('tarif_livraison')
+        panier_id         = validated_data.get('panier_id')
+        groupe_vendeur_id = validated_data.get('groupe_vendeur_id')
 
         montant_produit = float(produit.prix) * float(quantite)
         frais_livraison = float(tarif_custom) if tarif_custom else 5000
@@ -107,6 +111,8 @@ class PasserCommandeSerializer(serializers.Serializer):
                 pass
 
         commande = Commande.objects.create(
+            panier_id           = panier_id,
+            groupe_vendeur_id   = groupe_vendeur_id,
             acheteur            = acheteur,
             vendeur             = produit.vendeur,
             produit             = produit,

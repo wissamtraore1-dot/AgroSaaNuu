@@ -72,8 +72,11 @@ const TransportService = {
   },
 
   // Accept mission
-  acceptMission: async (id) => {
-    const { data } = await api.post(`/transport/missions/${id}/accepter/`);
+  acceptMission: async (id, delaiValeur, delaiUnite = 'JOURS') => {
+    const body = delaiValeur != null
+      ? { delai_livraison_jours: delaiValeur, delai_livraison_unite: delaiUnite }
+      : {};
+    const { data } = await api.post(`/transport/missions/${id}/accepter/`, body);
     return data;
   },
 
@@ -163,6 +166,12 @@ const TransportService = {
     const { data } = await api.get('/transport/tarifs/trajet/', {
       params: { ville_depart, ville_arrivee },
     });
+    return data;
+  },
+
+  // Profil public complet d'un transporteur (zones + tarifs, sans auth)
+  getTransporteurProfil: async (id) => {
+    const { data } = await api.get(`/transport/transporteurs/${id}/`);
     return data;
   },
 };

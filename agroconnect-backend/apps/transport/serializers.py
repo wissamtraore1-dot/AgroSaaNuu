@@ -40,6 +40,7 @@ class MissionTransportSerializer(serializers.ModelSerializer):
             'acheteur_nom', 'vendeur_nom', 'produit_nom',
             'vehicule', 'statut',
             'ville_depart', 'ville_arrivee', 'tarif', 'tarif_str',
+            'delai_livraison_jours', 'delai_livraison_unite',
             'date_depart', 'date_arrivee',
             'note', 'commentaire', 'created_at',
             'confirme_transporteur',

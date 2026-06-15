@@ -4,8 +4,8 @@ import { Link } from 'react-router-dom';
 import {
   Search, MapPin, Star, Truck,
   CheckCircle, Clock, X, ChevronDown,
-  Phone, MessageSquare, ArrowUpRight,
-  Shield, AlertTriangle,
+  ArrowUpRight,
+  Shield, AlertTriangle, Loader,
 } from 'lucide-react';
 
 const VILLES_BENIN = [
@@ -29,14 +29,17 @@ const getInitials = (name = '') =>
   name.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('') || 'TR';
 
 export default function Transporters() {
-  const [search,      setSearch]      = useState('');
-  const [ville,       setVille]       = useState('Toutes');
-  const [statut,      setStatut]      = useState('Tous');
-  const [tri,         setTri]         = useState('note');
-  const [selected,    setSelected]    = useState(null);
-  const [data,        setData]        = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState('');
+  const [search,        setSearch]        = useState('');
+  const [ville,         setVille]         = useState('Toutes');
+  const [statut,        setStatut]        = useState('Tous');
+  const [tri,           setTri]           = useState('note');
+  const [selected,      setSelected]      = useState(null);
+  const [profilDetail,  setProfilDetail]  = useState(null);
+  const [loadingProfil, setLoadingProfil] = useState(false);
+  const [data,          setData]          = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [error,         setError]         = useState('');
+
 
   useEffect(() => {
     let active = true;
@@ -55,7 +58,6 @@ export default function Transporters() {
           missions:     u.transporter_profile?.total_missions || 0,
           statut:       u.transporter_profile?.est_disponible ? 'Disponible' : 'En mission',
           verifie:      u.transporter_profile?.est_certifie || false,
-          telephone:    u.telephone || '',
         })));
       } catch (err) {
         if (active) {
@@ -70,6 +72,20 @@ export default function Transporters() {
     })();
     return () => { active = false; };
   }, []);
+
+  const ouvrirProfil = async (t) => {
+    setSelected(t);
+    setProfilDetail(null);
+    setLoadingProfil(true);
+    try {
+      const res = await TransportService.getTransporteurProfil(t.id);
+      setProfilDetail(res.transporteur);
+    } catch {
+      setProfilDetail({ ...t, tarifs: [] });
+    } finally {
+      setLoadingProfil(false);
+    }
+  };
 
   const villes = useMemo(() => ['Toutes', ...Array.from(new Set(data.map((t) => t.localisation).filter(Boolean)))], [data]);
 
@@ -255,25 +271,14 @@ export default function Transporters() {
                       {/* FOOTER */}
                       <div style={styles.cardFooter}>
                         <motion.button
-                          style={styles.btnVoir}
-                          onClick={() => setSelected(t)}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
+                          style={{ ...styles.btnVoir, flex: 1 }}
+                          onClick={() => ouvrirProfil(t)}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.97 }}
                         >
                           <ArrowUpRight size={15} />
                           Voir profil
                         </motion.button>
-                        <Link to={`/auth/login`} style={{ textDecoration: 'none' }}>
-                          <motion.button
-                            style={{ ...styles.btnContacter, opacity: t.statut === 'Indisponible' ? 0.5 : 1 }}
-                            disabled={t.statut === 'Indisponible'}
-                            whileHover={{ scale: t.statut !== 'Indisponible' ? 1.05 : 1 }}
-                            whileTap={{ scale: t.statut !== 'Indisponible' ? 0.95 : 1 }}
-                          >
-                            <MessageSquare size={15} />
-                            Contacter
-                          </motion.button>
-                        </Link>
                       </div>
 
                     </motion.div>
@@ -289,74 +294,111 @@ export default function Transporters() {
       {/* ===== MODAL DÉTAIL ===== */}
       <AnimatePresence>
         {selected && (
-          <motion.div style={styles.overlay} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelected(null)}>
+          <motion.div style={styles.overlay} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setSelected(null); setProfilDetail(null); }}>
             <motion.div style={styles.modal} onClick={(e) => e.stopPropagation()} initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.85, opacity: 0 }} transition={{ duration: 0.3 }}>
-              <button style={styles.closeBtn} onClick={() => setSelected(null)}><X size={20} color="#6b7280" /></button>
+              <button style={styles.closeBtn} onClick={() => { setSelected(null); setProfilDetail(null); }}><X size={20} color="#6b7280" /></button>
 
-              <div style={styles.modalHeader}>
-                <div style={styles.modalInitialsAvatar}>{getInitials(selected.nom)}</div>
-                <div>
-                  <div style={styles.nomWrap}>
-                    <h2 style={{ ...styles.nom, fontSize: '1.3rem' }}>{selected.nom}</h2>
-                    {selected.verifie && <span style={styles.verifiePill}><Shield size={11} /> Vérifié</span>}
-                  </div>
-                  <span style={{
-                    ...styles.statutPill,
-                    background: selected.statut === 'Disponible' ? '#dcfce7' : '#fef3c7',
-                    color:      selected.statut === 'Disponible' ? '#16a34a' : '#d97706',
-                  }}>
-                    {selected.statut}
-                  </span>
-                </div>
-              </div>
+              {/* Utiliser profilDetail si disponible, sinon les données de la liste */}
+              {(() => {
+                const d = profilDetail || selected;
+                const nom       = d.nom || selected.nom;
+                const ville     = d.ville || d.localisation || selected.localisation;
+                const note      = d.note ?? selected.note ?? 0;
+                const missions  = d.missions ?? selected.missions ?? 0;
+                const zones     = d.zones || selected.zones || [];
+                const verifie   = d.est_certifie ?? d.verifie ?? selected.verifie ?? false;
+                const statut    = (d.est_disponible ?? (selected.statut === 'Disponible')) ? 'Disponible' : 'En mission';
+                const tarifs    = d.tarifs || [];
 
-              <div style={styles.modalStats}>
-                <div style={styles.modalStat}>
-                  <div style={styles.modalStatVal}>{selected.note > 0 ? selected.note.toFixed(1) : '—'}</div>
-                  <div style={styles.modalStatLabel}>Note</div>
-                </div>
-                <div style={styles.modalStat}>
-                  <div style={styles.modalStatVal}>{selected.missions}</div>
-                  <div style={styles.modalStatLabel}>Missions</div>
-                </div>
-                <div style={styles.modalStat}>
-                  <div style={styles.modalStatVal}>{selected.zones.length}</div>
-                  <div style={styles.modalStatLabel}>Zones</div>
-                </div>
-              </div>
+                return (
+                  <>
+                    <div style={styles.modalHeader}>
+                      <div style={styles.modalInitialsAvatar}>{getInitials(nom)}</div>
+                      <div>
+                        <div style={styles.nomWrap}>
+                          <h2 style={{ ...styles.nom, fontSize: '1.3rem' }}>{nom}</h2>
+                          {verifie && <span style={styles.verifiePill}><Shield size={11} /> Vérifié</span>}
+                        </div>
+                        <span style={{
+                          ...styles.statutPill,
+                          background: statut === 'Disponible' ? '#dcfce7' : '#fef3c7',
+                          color:      statut === 'Disponible' ? '#16a34a' : '#d97706',
+                        }}>
+                          {statut}
+                        </span>
+                      </div>
+                    </div>
 
-              <div style={styles.modalInfoRow}>
-                <MapPin size={16} color="#1a5c2a" />
-                <span>{selected.localisation}</span>
-              </div>
+                    <div style={styles.modalStats}>
+                      <div style={styles.modalStat}>
+                        <div style={styles.modalStatVal}>{note > 0 ? Number(note).toFixed(1) : '—'}</div>
+                        <div style={styles.modalStatLabel}>Note</div>
+                      </div>
+                      <div style={styles.modalStat}>
+                        <div style={styles.modalStatVal}>{missions}</div>
+                        <div style={styles.modalStatLabel}>Missions</div>
+                      </div>
+                      <div style={styles.modalStat}>
+                        <div style={styles.modalStatVal}>{zones.length}</div>
+                        <div style={styles.modalStatLabel}>Zones</div>
+                      </div>
+                    </div>
 
-              {selected.zones.length > 0 && (
-                <div style={{ margin: '1rem 0' }}>
-                  <p style={{ fontSize: '0.82rem', fontWeight: '700', color: '#6b7280', marginBottom: '8px' }}>ZONES COUVERTES</p>
-                  <div style={styles.zonesWrap}>
-                    {selected.zones.map((z, i) => <span key={i} style={styles.zoneTag}>{z}</span>)}
-                  </div>
-                </div>
-              )}
+                    {/* Ville d'origine */}
+                    <div style={styles.modalInfoRow}>
+                      <MapPin size={16} color="#1a5c2a" />
+                      <span style={{ fontWeight: '600', color: '#374151' }}>Basé à {ville}</span>
+                    </div>
 
-              <div style={{ display: 'flex', gap: '12px', marginTop: '1.2rem' }}>
-                {selected.telephone && (
-                  <a href={`tel:${selected.telephone}`} style={{ flex: 1, textDecoration: 'none' }}>
-                    <motion.button style={styles.modalBtnPhone} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                      <Phone size={16} /> Appeler
-                    </motion.button>
-                  </a>
-                )}
-                <Link to="/auth/login" style={{ flex: 2, textDecoration: 'none' }}>
-                  <motion.button style={styles.modalBtnMsg} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                    <MessageSquare size={16} /> Contacter (connexion requise)
-                  </motion.button>
-                </Link>
-              </div>
+                    {/* Zones couvertes */}
+                    {zones.length > 0 && (
+                      <div style={{ margin: '1rem 0 0.5rem' }}>
+                        <p style={{ fontSize: '0.78rem', fontWeight: '700', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Zones couvertes</p>
+                        <div style={styles.zonesWrap}>
+                          {zones.map((z, i) => <span key={i} style={styles.zoneTag}>{z}</span>)}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Tarifs */}
+                    <div style={{ marginTop: '1rem' }}>
+                      <p style={{ fontSize: '0.78rem', fontWeight: '700', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tarifs de livraison</p>
+                      {loadingProfil ? (
+                        <div style={{ textAlign: 'center', padding: '1.5rem', color: '#9ca3af', fontSize: '0.85rem' }}>
+                          <Loader size={20} style={{ animation: 'spin 1s linear infinite', marginBottom: '6px' }} />
+                          <div>Chargement…</div>
+                        </div>
+                      ) : tarifs.length === 0 ? (
+                        <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '1rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.83rem' }}>
+                          Ce transporteur n'a pas encore défini de tarifs.
+                        </div>
+                      ) : (
+                        <div style={{ background: '#f9fafb', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', padding: '8px 12px', background: '#f3f4f6', fontSize: '0.72rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            <span>Départ</span><span>Arrivée</span><span style={{ textAlign: 'right' }}>Tarif</span>
+                          </div>
+                          {tarifs.map((t, i) => (
+                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', padding: '9px 12px', borderTop: '1px solid #e5e7eb', alignItems: 'center', fontSize: '0.85rem' }}>
+                              <span style={{ fontWeight: '600', color: '#1a2e10' }}>{t.ville_depart}</span>
+                              <span style={{ fontWeight: '600', color: '#1a2e10' }}>{t.ville_arrivee}</span>
+                              <span style={{ fontWeight: '800', color: '#1a5c2a', whiteSpace: 'nowrap' }}>{Number(t.tarif).toLocaleString('fr-FR')} FCFA</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ marginTop: '1.2rem', padding: '0.9rem', background: '#f9fafb', borderRadius: '12px', textAlign: 'center', fontSize: '0.83rem', color: '#6b7280' }}>
+                      Pour contacter ce transporteur, <Link to="/auth/login" style={{ color: '#1a5c2a', fontWeight: '700', textDecoration: 'none' }}>connectez-vous</Link>
+                    </div>
+                  </>
+                );
+              })()}
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
     </div>
   );

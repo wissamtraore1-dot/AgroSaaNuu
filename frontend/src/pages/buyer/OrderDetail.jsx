@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Package, CheckCircle, Truck, Star,
-  AlertTriangle, MapPin, Loader, X,
+  AlertTriangle, MapPin, Loader, X, Pencil, Check,
 } from 'lucide-react';
 import OrderService from '../../services/order.service';
 import DashboardLayout from '../../Components/layout/DashboardLayout';
@@ -18,37 +18,57 @@ const STATUT_LABEL = {
   PAIEMENT_LIBERE:      { label: 'Clôturée',             color: '#15803d', bg: '#f0fdf4' },
   ANNULEE:              { label: 'Annulée',              color: '#dc2626', bg: '#fef2f2' },
   LITIGE:               { label: 'En litige',            color: '#dc2626', bg: '#fef2f2' },
-  // legacy aliases (au cas où)
-  EN_ATTENTE:           { label: 'En attente',           color: '#d97706', bg: '#fffbeb' },
-  ANNULE:               { label: 'Annulée',              color: '#dc2626', bg: '#fef2f2' },
 };
 
 const GREEN = '#1a5c2a';
+
+const PLACEHOLDER = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 46 46"><rect width="46" height="46" fill="%23f3f4f6"/><text x="23" y="28" text-anchor="middle" font-size="18" fill="%239ca3af">📦</text></svg>';
 
 export default function BuyerOrderDetail() {
   const { id }   = useParams();
   const navigate = useNavigate();
 
-  const [commande,      setCommande]      = useState(null);
-  const [loading,       setLoading]       = useState(true);
-  const [action,        setAction]        = useState('');   // 'reception' | 'noter' | 'litige'
-  const [noteVendeur,   setNoteVendeur]   = useState(0);
-  const [commentaire,   setCommentaire]   = useState('');
-  const [descLitige,    setDescLitige]    = useState('');
-  const [submitting,    setSubmitting]    = useState(false);
-  const [message,       setMessage]       = useState('');
+  const [commande,    setCommande]    = useState(null);
+  const [loading,     setLoading]     = useState(true);
+  const [action,      setAction]      = useState('');
+  const [noteVendeur, setNoteVendeur] = useState(0);
+  const [commentaire, setCommentaire] = useState('');
+  const [descLitige,  setDescLitige]  = useState('');
+  const [submitting,  setSubmitting]  = useState(false);
+  const [message,     setMessage]     = useState('');
+
+  // Renommage
+  const [renomEdit,   setRenomEdit]   = useState(false);
+  const [nomTemp,     setNomTemp]     = useState('');
+  const [savingNom,   setSavingNom]   = useState(false);
 
   useEffect(() => {
     OrderService.detail(id)
-      .then(data => setCommande(data.commande ?? data))
+      .then(data => {
+        const cmd = data.commande ?? data;
+        setCommande(cmd);
+        setNomTemp(cmd.nom_commande || '');
+      })
       .catch(() => setMessage('Commande introuvable.'))
       .finally(() => setLoading(false));
   }, [id]);
 
-  const statut = commande?.statut || commande?.status || '';
+  const statut = commande?.statut || '';
   const cfg    = STATUT_LABEL[statut] || { label: statut, color: '#6b7280', bg: '#f9fafb' };
 
-  // ── Confirmer la réception (système tripartite) ──
+  const sauvegarderNom = async () => {
+    setSavingNom(true);
+    try {
+      await OrderService.renommerCommande(id, nomTemp.trim());
+      setCommande(prev => ({ ...prev, nom_commande: nomTemp.trim() }));
+      setRenomEdit(false);
+    } catch {
+      setMessage('Erreur lors du renommage.');
+    } finally {
+      setSavingNom(false);
+    }
+  };
+
   const confirmerReception = async () => {
     setSubmitting(true);
     try {
@@ -57,7 +77,6 @@ export default function BuyerOrderDetail() {
       setCommande(prev => ({
         ...prev,
         confirme_acheteur:     res.confirme_acheteur     ?? true,
-        confirme_vendeur:      res.confirme_vendeur      ?? prev.confirme_vendeur,
         confirme_transporteur: res.confirme_transporteur ?? prev.confirme_transporteur,
         statut: toutLibere ? 'PAIEMENT_LIBERE' : prev.statut,
       }));
@@ -73,7 +92,6 @@ export default function BuyerOrderDetail() {
     } finally { setSubmitting(false); }
   };
 
-  // ── Noter le vendeur ──
   const soumettreNote = async () => {
     if (noteVendeur === 0) { setMessage('Sélectionnez une note.'); return; }
     setSubmitting(true);
@@ -86,7 +104,6 @@ export default function BuyerOrderDetail() {
     } finally { setSubmitting(false); }
   };
 
-  // ── Signaler un problème ──
   const signalerProbleme = async () => {
     if (!descLitige.trim()) { setMessage('Décrivez le problème.'); return; }
     setSubmitting(true);
@@ -101,25 +118,32 @@ export default function BuyerOrderDetail() {
   };
 
   if (loading) return (
-    <div style={{ padding: '3rem', textAlign: 'center', color: '#9ca3af' }}>
-      <Loader size={24} style={{ animation: 'spin 1s linear infinite' }} />
-    </div>
+    <DashboardLayout role="buyer">
+      <div style={{ padding: '3rem', textAlign: 'center', color: '#9ca3af' }}>
+        <Loader size={24} style={{ animation: 'spin 1s linear infinite' }} />
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </DashboardLayout>
   );
 
   if (!commande) return (
-    <div style={{ padding: '3rem', textAlign: 'center', color: '#9ca3af' }}>
-      Commande introuvable.
-    </div>
+    <DashboardLayout role="buyer">
+      <div style={{ padding: '3rem', textAlign: 'center', color: '#9ca3af' }}>Commande introuvable.</div>
+    </DashboardLayout>
   );
 
-  const items   = commande.items || commande.lignes || [];
-  const total   = commande.total || commande.montant_total || 0;
-  const ref     = commande.reference || commande.numero || `#${id.slice(0, 8).toUpperCase()}`;
-  const vendeur = commande.vendeur_nom || commande.vendeur?.nom_complet || 'Vendeur';
+  const lignes          = commande.lignes || [];
+  const montantTotal    = commande.montant_total || 0;
+  const montantProduits = commande.montant_produits || commande.montant_produit || 0;
+  const fraisLivraison  = commande.frais_livraison || 0;
+  const fraisPaiement   = commande.frais_paiement  || 0;
+  const ref             = commande.reference || `#${id.slice(0, 8).toUpperCase()}`;
+  const nomAffiche      = commande.nom_commande || ref;
+  const vendeur         = commande.vendeur_nom || commande.vendeur?.nom_complet || 'Vendeur';
 
   const peutConfirmerReception = ['EN_LIVRAISON', 'LIVREE'].includes(statut) && !commande?.confirme_acheteur;
   const peutNoter              = ['CONFIRMEE_RECEPTION', 'PAIEMENT_LIBERE'].includes(statut) && action !== 'done';
-  const peutSignaler           = !['PAIEMENT_EN_ATTENTE', 'ANNULEE', 'ANNULE', 'PAIEMENT_LIBERE'].includes(statut);
+  const peutSignaler           = !['PAIEMENT_EN_ATTENTE', 'ANNULEE', 'PAIEMENT_LIBERE'].includes(statut);
 
   return (
     <DashboardLayout role="buyer">
@@ -148,50 +172,146 @@ export default function BuyerOrderDetail() {
         )}
       </AnimatePresence>
 
-      {/* En-tête commande */}
+      {/* ── En-tête commande ── */}
       <div style={{ background: 'white', borderRadius: '16px', padding: '1.25rem', border: '1.5px solid #e5e7eb', marginBottom: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px', marginBottom: '0.75rem' }}>
-          <div>
-            <h2 style={{ margin: '0 0 4px', fontSize: '1.1rem', fontWeight: '800', color: '#1a2e10' }}>Commande {ref}</h2>
-            <p style={{ margin: 0, fontSize: '0.82rem', color: '#6b7280' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px', marginBottom: '0.6rem' }}>
+
+          {/* Nom / titre de la commande */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {renomEdit ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  autoFocus
+                  value={nomTemp}
+                  onChange={e => setNomTemp(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') sauvegarderNom(); if (e.key === 'Escape') setRenomEdit(false); }}
+                  placeholder={`Ex: Marché du ${new Date().toLocaleDateString('fr-FR')}`}
+                  style={{ flex: 1, padding: '6px 10px', border: '2px solid ' + GREEN, borderRadius: '8px', fontSize: '1rem', fontWeight: '700', color: '#1a2e10', outline: 'none', minWidth: 0 }}
+                />
+                <motion.button
+                  onClick={sauvegarderNom}
+                  disabled={savingNom}
+                  style={{ background: GREEN, border: 'none', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'white', flexShrink: 0 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  {savingNom ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} />}
+                </motion.button>
+                <motion.button
+                  onClick={() => { setRenomEdit(false); setNomTemp(commande.nom_commande || ''); }}
+                  style={{ background: '#f3f4f6', border: 'none', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#6b7280', flexShrink: 0 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <X size={14} />
+                </motion.button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#1a2e10', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {nomAffiche}
+                </h2>
+                <motion.button
+                  onClick={() => { setNomTemp(commande.nom_commande || ''); setRenomEdit(true); }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#9ca3af', padding: '2px', flexShrink: 0 }}
+                  whileHover={{ color: GREEN }}
+                  title="Renommer cette commande"
+                >
+                  <Pencil size={14} />
+                </motion.button>
+              </div>
+            )}
+
+            {commande.nom_commande && (
+              <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#9ca3af' }}>Référence : {ref}</p>
+            )}
+            <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: '#6b7280' }}>
               {commande.created_at ? new Date(commande.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : ''}
+              {lignes.length > 1 && <span style={{ marginLeft: '8px', fontWeight: '700', color: GREEN }}>{lignes.length} articles</span>}
             </p>
           </div>
-          <span style={{ background: cfg.bg, color: cfg.color, borderRadius: '20px', padding: '4px 14px', fontWeight: '700', fontSize: '0.82rem' }}>
+
+          <span style={{ background: cfg.bg, color: cfg.color, borderRadius: '20px', padding: '4px 14px', fontWeight: '700', fontSize: '0.82rem', flexShrink: 0 }}>
             {cfg.label}
           </span>
         </div>
-        <p style={{ margin: 0, fontSize: '0.85rem', color: '#374151' }}>
-          Vendeur : <strong>{vendeur}</strong>
-        </p>
+
+        {lignes.length === 0 && (
+          <p style={{ margin: 0, fontSize: '0.85rem', color: '#374151' }}>
+            Vendeur : <strong>{vendeur}</strong>
+          </p>
+        )}
       </div>
 
-      {/* Articles */}
+      {/* ── Articles commandés ── */}
       <div style={{ background: 'white', borderRadius: '16px', padding: '1.25rem', border: '1.5px solid #e5e7eb', marginBottom: '12px' }}>
-        <p style={{ margin: '0 0 12px', fontWeight: '700', color: '#1a2e10', display: 'flex', alignItems: 'center', gap: '7px' }}>
-          <Package size={16} /> Articles ({items.length})
+        <p style={{ margin: '0 0 14px', fontWeight: '700', color: '#1a2e10', display: 'flex', alignItems: 'center', gap: '7px', fontSize: '0.95rem' }}>
+          <Package size={16} color={GREEN} /> Articles commandés ({lignes.length})
         </p>
-        {items.map((item, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: i < items.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
-            <img
-              src={item.image || item.produit_image || '/assets/images/placeholder.png'}
-              alt={item.nom || item.name}
-              style={{ width: '46px', height: '46px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
-            />
-            <div style={{ flex: 1 }}>
-              <p style={{ margin: '0 0 2px', fontWeight: '600', fontSize: '0.9rem', color: '#1a2e10' }}>{item.nom || item.name}</p>
-              <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280' }}>
-                {item.quantite || item.qty} × {Number(item.prix_unitaire || item.price).toLocaleString('fr-FR')} FCFA
-              </p>
-            </div>
-            <span style={{ fontWeight: '700', fontSize: '0.9rem', color: '#1a2e10' }}>
-              {((item.quantite || item.qty) * (item.prix_unitaire || item.price)).toLocaleString('fr-FR')} FCFA
-            </span>
+
+        {lignes.length === 0 ? (
+          <p style={{ color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>Aucun article trouvé.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+            {lignes.map((ligne, i) => (
+              <div
+                key={i}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  padding: '10px 0',
+                  borderBottom: i < lignes.length - 1 ? '1px solid #f3f4f6' : 'none',
+                }}
+              >
+                {/* Image */}
+                <img
+                  src={ligne.produit_image || PLACEHOLDER}
+                  alt={ligne.produit_nom}
+                  onError={e => { e.target.src = PLACEHOLDER; }}
+                  style={{ width: '52px', height: '52px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0, background: '#f3f4f6' }}
+                />
+
+                {/* Infos */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: '0 0 2px', fontWeight: '700', fontSize: '0.9rem', color: '#1a2e10', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {ligne.produit_nom}
+                  </p>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280' }}>
+                    {ligne.quantite} × {Number(ligne.prix_unitaire).toLocaleString('fr-FR')} FCFA
+                    {lignes.length > 1 && <span style={{ marginLeft: '8px', color: '#9ca3af' }}>· {ligne.vendeur_nom}</span>}
+                  </p>
+                </div>
+
+                {/* Montant ligne */}
+                <span style={{ fontWeight: '800', fontSize: '0.92rem', color: '#1a2e10', flexShrink: 0 }}>
+                  {Number(ligne.montant).toLocaleString('fr-FR')} FCFA
+                </span>
+              </div>
+            ))}
           </div>
-        ))}
-        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '10px', fontWeight: '800', fontSize: '1rem', color: '#1a2e10' }}>
-          <span>Total</span>
-          <span style={{ color: GREEN }}>{Number(total).toLocaleString('fr-FR')} FCFA</span>
+        )}
+
+        {/* Récapitulatif financier */}
+        <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1.5px solid #f3f4f6', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {lignes.length > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.83rem', color: '#6b7280' }}>
+              <span>Sous-total articles</span>
+              <span>{Number(montantProduits).toLocaleString('fr-FR')} FCFA</span>
+            </div>
+          )}
+          {fraisLivraison > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.83rem', color: '#6b7280' }}>
+              <span>Frais de livraison</span>
+              <span>{Number(fraisLivraison).toLocaleString('fr-FR')} FCFA</span>
+            </div>
+          )}
+          {fraisPaiement > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.83rem', color: '#6b7280' }}>
+              <span>Frais de paiement</span>
+              <span>{Number(fraisPaiement).toLocaleString('fr-FR')} FCFA</span>
+            </div>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '800', fontSize: '1rem', color: '#1a2e10', paddingTop: '4px', borderTop: '1px solid #e5e7eb', marginTop: '2px' }}>
+            <span>Total</span>
+            <span style={{ color: GREEN }}>{Number(montantTotal).toLocaleString('fr-FR')} FCFA</span>
+          </div>
         </div>
       </div>
 
@@ -249,7 +369,7 @@ export default function BuyerOrderDetail() {
         )}
       </AnimatePresence>
 
-      {/* ── ÉVALUER LE VENDEUR (extends Confirmer réception) ── */}
+      {/* ── ÉVALUER LE VENDEUR ── */}
       {(peutNoter || action === 'noter') && (
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -258,11 +378,7 @@ export default function BuyerOrderDetail() {
           <p style={{ margin: '0 0 4px', fontWeight: '700', color: '#1a2e10', display: 'flex', alignItems: 'center', gap: '7px' }}>
             <Star size={16} color="#f59e0b" fill="#f59e0b" /> Évaluer le vendeur
           </p>
-          <p style={{ margin: '0 0 12px', fontSize: '0.82rem', color: '#6b7280' }}>
-            Votre avis aide les autres acheteurs.
-          </p>
-
-          {/* Étoiles */}
+          <p style={{ margin: '0 0 12px', fontSize: '0.82rem', color: '#6b7280' }}>Votre avis aide les autres acheteurs.</p>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
             {[1, 2, 3, 4, 5].map(n => (
               <motion.button
@@ -271,15 +387,10 @@ export default function BuyerOrderDetail() {
                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                 whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
               >
-                <Star
-                  size={28}
-                  color="#f59e0b"
-                  fill={n <= noteVendeur ? '#f59e0b' : 'none'}
-                />
+                <Star size={28} color="#f59e0b" fill={n <= noteVendeur ? '#f59e0b' : 'none'} />
               </motion.button>
             ))}
           </div>
-
           <textarea
             value={commentaire}
             onChange={e => setCommentaire(e.target.value)}
@@ -287,7 +398,6 @@ export default function BuyerOrderDetail() {
             rows={3}
             style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: '10px', padding: '0.7rem', fontSize: '0.88rem', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
           />
-
           <motion.button
             onClick={soumettreNote}
             disabled={submitting || noteVendeur === 0}
@@ -348,6 +458,7 @@ export default function BuyerOrderDetail() {
       )}
 
     </div>
+    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </DashboardLayout>
   );
 }
