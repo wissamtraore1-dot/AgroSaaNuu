@@ -14,7 +14,6 @@ import DashboardLayout from '../../Components/layout/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
 import OrderService from '../../services/order.service';
 import ProductService from '../../services/product.service';
-import WalletService from '../../services/wallet.service';
 
 const BLEU  = '#2563eb';
 const GREEN = '#1a5c2a';
@@ -57,22 +56,20 @@ export default function BuyerDashboard() {
     const charger = async () => {
       try {
         setLoading(true);
-        const [ordersRes, favorisRes, walletRes] = await Promise.allSettled([
+        const [ordersRes, favorisRes] = await Promise.allSettled([
           OrderService.getBuyerOrders({ page: 1 }),
           ProductService.mesFavoris(),
-          WalletService.monWallet(),
         ]);
 
         const orders = ordersRes.status  === 'fulfilled' ? (ordersRes.value.results  || ordersRes.value  || []) : [];
         const favs   = favorisRes.status === 'fulfilled' ? (Array.isArray(favorisRes.value) ? favorisRes.value : favorisRes.value.results || []) : [];
-        const wallet = walletRes.status  === 'fulfilled' ? walletRes.value : null;
 
         setCommandes(orders.slice(0, 4));
         setFavoris(favs.slice(0, 3));
 
         const enCours  = orders.filter(c => ['EN_PREPARATION', 'EN_LIVRAISON', 'PAIEMENT_RECU'].includes(c.status)).length;
         const livrees  = orders.filter(c => ['LIVREE', 'CONFIRMEE_RECEPTION', 'PAIEMENT_LIBERE'].includes(c.status)).length;
-        const depenses = Number(wallet?.solde_depense ?? wallet?.total_spent ?? 0) || orders.reduce((s, c) => s + Number(c.total || 0), 0);
+        const depenses = orders.reduce((s, c) => s + Number(c.total || 0), 0);
         const total    = ordersRes.status === 'fulfilled' ? (ordersRes.value.count ?? orders.length) : orders.length;
 
         setStats({ total, enCours, livrees, depenses });

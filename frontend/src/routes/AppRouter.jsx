@@ -228,21 +228,21 @@ export default function AppRouter() {
             element={<ProtectedRoute roles={['TRANSPORTER']}><TransporterTarifs /></ProtectedRoute>}
           />
 
-          {/* ===== FINANCE — tous connectés ===== */}
+          {/* ===== FINANCE — vendeurs et transporteurs uniquement ===== */}
           <Route path="/finance/wallet"
-            element={<ProtectedRoute><Wallet /></ProtectedRoute>}
+            element={<ProtectedRoute roles={['SELLER','TRANSPORTER']}><Wallet /></ProtectedRoute>}
           />
           <Route path="/finance/deposit"
-            element={<ProtectedRoute><Deposit /></ProtectedRoute>}
+            element={<ProtectedRoute roles={['SELLER','TRANSPORTER']}><Deposit /></ProtectedRoute>}
           />
           <Route path="/finance/withdraw"
-            element={<ProtectedRoute><Withdraw /></ProtectedRoute>}
+            element={<ProtectedRoute roles={['SELLER','TRANSPORTER']}><Withdraw /></ProtectedRoute>}
           />
           <Route path="/finance/transactions"
-            element={<ProtectedRoute><Transactions /></ProtectedRoute>}
+            element={<ProtectedRoute roles={['SELLER','TRANSPORTER']}><Transactions /></ProtectedRoute>}
           />
           <Route path="/finance/payment-status"
-            element={<ProtectedRoute><PaymentStatus /></ProtectedRoute>}
+            element={<ProtectedRoute roles={['SELLER','TRANSPORTER']}><PaymentStatus /></ProtectedRoute>}
           />
 
           {/* ===== NOTIFICATIONS — tous connectés ===== */}

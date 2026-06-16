@@ -6,7 +6,7 @@ import {
   Edit3, Save, X, Camera,
   ShoppingBag, TrendingUp, CheckCircle, Clock,
   Eye, EyeOff, Lock, AlertCircle, Loader,
-  Bell, CreditCard, Navigation, Package, Lightbulb,
+  Bell, Navigation, Package,
   XCircle,
 } from 'lucide-react';
 import DashboardLayout from '../../Components/layout/DashboardLayout';
@@ -241,11 +241,10 @@ export default function BuyerProfile() {
         {/* TABS */}
         <div style={S.tabs}>
           {[
-            { id: 'infos',     Icon: User,        label: 'Informations' },
-            { id: 'commandes', Icon: Package,     label: 'Commandes'    },
-            { id: 'paiement',  Icon: CreditCard,  label: 'Paiement'     },
-            { id: 'securite',  Icon: Lock,        label: 'Sécurité'     },
-            { id: 'notifs',    Icon: Bell,        label: 'Notifications' },
+            { id: 'infos',     Icon: User,    label: 'Informations'  },
+            { id: 'commandes', Icon: Package, label: 'Commandes'      },
+            { id: 'securite',  Icon: Lock,    label: 'Sécurité'       },
+            { id: 'notifs',    Icon: Bell,    label: 'Notifications'  },
           ].map(tab => (
             <motion.button
               key={tab.id}
@@ -370,36 +369,6 @@ export default function BuyerProfile() {
                   </table>
                 </div>
               )}
-            </motion.div>
-          )}
-
-          {/* TAB PAIEMENT */}
-          {activeTab === 'paiement' && (
-            <motion.div key="paiement" style={S.card} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-              <h3 style={S.cardTitle}><CreditCard size={18} color={BLEU} /><span> Paiement & Portefeuille</span></h3>
-
-              <div style={{ background: `linear-gradient(135deg, #0d2b14, ${BLEU})`, borderRadius: '16px', padding: '1.5rem', color: 'white', marginBottom: '1.5rem' }}>
-                <div style={{ fontSize: '0.82rem', opacity: 0.8, marginBottom: '6px' }}>Portefeuille AgroConnect</div>
-                <div style={{ fontSize: '2rem', fontWeight: '900', marginBottom: '8px' }}>— FCFA</div>
-                <div style={{ fontSize: '0.78rem', opacity: 0.7 }}>Consultez votre solde en temps réel</div>
-              </div>
-
-              <motion.button
-                onClick={() => navigate('/buyer/wallet')}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', background: `linear-gradient(135deg, #0d2b14, ${BLEU})`, color: 'white', border: 'none', borderRadius: '12px', padding: '0.8rem 1.5rem', fontWeight: '700', fontSize: '0.88rem', cursor: 'pointer', marginBottom: '1.5rem' }}
-                whileHover={{ scale: 1.02 }}
-              >
-                Accéder à mon portefeuille →
-              </motion.button>
-
-              <div style={{ background: '#f0f9ff', borderRadius: '14px', padding: '1rem', border: '1px solid #bae6fd' }}>
-                <div style={{ fontSize: '0.88rem', fontWeight: '700', color: '#0369a1', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}><Lightbulb size={15} /> Comment ça marche ?</div>
-                <ul style={{ fontSize: '0.82rem', color: '#0284c7', lineHeight: 1.8, margin: 0, paddingLeft: '1.2rem' }}>
-                  <li>Rechargez votre portefeuille par Mobile Money ou virement</li>
-                  <li>Les fonds sont sécurisés en séquestre lors d'une commande</li>
-                  <li>Confirmez la réception pour libérer le paiement au vendeur</li>
-                </ul>
-              </div>
             </motion.div>
           )}
 
