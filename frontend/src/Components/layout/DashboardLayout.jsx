@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, ShoppingBag,
   DollarSign, User, LogOut, Menu, X, Bell, ChevronDown,
   ShoppingCart, Heart, Truck, MapPin, Navigation, ShieldAlert,
-  ClipboardList, Wallet, Star, Home,
+  ClipboardList, Wallet, Home,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import logo from '../../assets/images/logo.jpeg';
@@ -30,8 +30,7 @@ const menuItemsByRole = {
     { icon: ShoppingBag,     label: 'Mes commandes',   to: '/buyer/orders'      },
     { icon: ShieldAlert,     label: 'Mes problèmes',   to: '/buyer/problemes'   },
     { icon: Heart,           label: 'Favoris',         to: '/buyer/favorites'   },
-    { icon: Star,            label: 'Mes points',      to: '/buyer/points'      },
-    { icon: User,            label: 'Profil',          to: '/buyer/profile'     },
+{ icon: User,            label: 'Profil',          to: '/buyer/profile'     },
   ],
   transporter: [
     { icon: LayoutDashboard, label: 'Tableau de bord', to: '/transporter/dashboard'           },

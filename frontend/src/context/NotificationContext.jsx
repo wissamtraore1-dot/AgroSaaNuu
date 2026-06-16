@@ -50,12 +50,6 @@ export const NotificationProvider = ({ children }) => {
   const notifyDeliveryConfirmed = () =>
     success('Delivery confirmed! Funds have been released to the seller.', '📦 Delivered');
 
-  const notifyPointsEarned = (points) =>
-    notify({ type: 'success', title: '⭐ Points Earned', message: `You earned ${points} pts on this purchase!`, duration: 5000 });
-
-  const notifyPointsRedeemed = (points, fcfa) =>
-    success(`${points} pts converted to ${fcfa.toLocaleString('fr-BJ')} FCFA in your wallet.`, '💰 Points Converted');
-
   const notifyFundsReleased = (amount) =>
     success(`${amount.toLocaleString('fr-BJ')} FCFA released to your wallet.`, '💳 Funds Released');
 
@@ -71,8 +65,6 @@ export const NotificationProvider = ({ children }) => {
       notifyPaymentSuccess,
       notifyPaymentFailed,
       notifyDeliveryConfirmed,
-      notifyPointsEarned,
-      notifyPointsRedeemed,
       notifyFundsReleased,
     }}>
       {children}

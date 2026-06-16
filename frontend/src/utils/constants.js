@@ -103,8 +103,6 @@ export const ORDER_STATUS = {
     ESCROW_LOCK:    'escrow_lock',
     ESCROW_RELEASE: 'escrow_release',
     REFUND:         'refund',
-    POINTS_CREDIT:  'points_credit',
-    POINTS_REDEEM:  'points_redeem',
   };
   
   export const TRANSACTION_TYPE_LABELS = {
@@ -114,8 +112,6 @@ export const ORDER_STATUS = {
     [TRANSACTION_TYPE.ESCROW_LOCK]:    'Funds secured',
     [TRANSACTION_TYPE.ESCROW_RELEASE]: 'Funds released',
     [TRANSACTION_TYPE.REFUND]:         'Refund',
-    [TRANSACTION_TYPE.POINTS_CREDIT]:  'Points earned',
-    [TRANSACTION_TYPE.POINTS_REDEEM]:  'Points converted',
   };
     // ─── Transaction Icons ───────────────────────────────────────
 export const TRANSACTION_TYPE_ICONS = {
@@ -125,8 +121,6 @@ export const TRANSACTION_TYPE_ICONS = {
   [TRANSACTION_TYPE.ESCROW_LOCK]:    '🔒',
   [TRANSACTION_TYPE.ESCROW_RELEASE]: '🔓',
   [TRANSACTION_TYPE.REFUND]:         '💰',
-  [TRANSACTION_TYPE.POINTS_CREDIT]:  '⭐',
-  [TRANSACTION_TYPE.POINTS_REDEEM]:  '🎁',
 };
   
   export const TRANSACTION_TYPE_COLORS = {
@@ -136,61 +130,6 @@ export const TRANSACTION_TYPE_ICONS = {
     [TRANSACTION_TYPE.ESCROW_LOCK]:    'warning',
     [TRANSACTION_TYPE.ESCROW_RELEASE]: 'success',
     [TRANSACTION_TYPE.REFUND]:         'info',
-    [TRANSACTION_TYPE.POINTS_CREDIT]:  'success',
-    [TRANSACTION_TYPE.POINTS_REDEEM]:  'info',
-  };
-  
-  // ─── Loyalty / Points System ─────────────────────────────────
-  export const LOYALTY = {
-    POINTS_PER_1000_FCFA:     1,    // 1 point par 1000 FCFA dépensés (aligné backend)
-    MIN_POINTS_TO_REDEEM:   500,    // minimum requis pour convertir en FCFA
-    FCFA_PER_POINT:           5,    // 1 point = 5 FCFA lors de l'échange
-    MAX_POINTS_USAGE_PERCENT: 30,   // max 30% d'une commande payable en points
-
-    // Clés = valeurs retournées par le backend (PointsFidelite.Niveau)
-    TIERS: {
-      BRONZE:  { name: 'Bronze',  min: 0,    max: 499,  color: '#CD7F32' },
-      ARGENT:  { name: 'Argent',  min: 500,  max: 1999, color: '#A8A9AD' },
-      OR:      { name: 'Or',      min: 2000, max: 4999, color: '#FFD700' },
-      PLATINE: { name: 'Platine', min: 5000, max: null, color: '#4F46E5' },
-    },
-
-    TIER_MULTIPLIERS: {
-      BRONZE:  1,
-      ARGENT:  1.5,
-      OR:      2,
-      PLATINE: 3,
-    },
-  };
-
-  // Helper — points gagnés pour un achat
-  export const calcPointsEarned = (amountFcfa, tierKey = 'BRONZE') => {
-    const base = Math.floor(amountFcfa / 1000) * LOYALTY.POINTS_PER_1000_FCFA;
-    const multiplier = LOYALTY.TIER_MULTIPLIERS[tierKey] ?? 1;
-    return Math.floor(base * multiplier);
-  };
-
-  // Helper — valeur FCFA d'un nombre de points
-  export const calcPointsValue = (points) =>
-    points * LOYALTY.FCFA_PER_POINT;
-
-  // Helper — tier à partir du total de points (calcul local)
-  export const getTier = (totalPoints) => {
-    const entries = Object.entries(LOYALTY.TIERS);
-    for (let i = entries.length - 1; i >= 0; i--) {
-      const [key, tier] = entries[i];
-      if (totalPoints >= tier.min) return { key, ...tier };
-    }
-    return { key: 'BRONZE', ...LOYALTY.TIERS.BRONZE };
-  };
-
-  // Helper — progression vers le prochain tier (%)
-  export const getTierProgress = (totalPoints) => {
-    const tier = getTier(totalPoints);
-    if (!tier.max) return 100;
-    const range = tier.max - tier.min;
-    const progress = totalPoints - tier.min;
-    return Math.min(Math.round((progress / range) * 100), 100);
   };
   
   // ─── User Roles ──────────────────────────────────────────────
@@ -230,8 +169,7 @@ export const TRANSACTION_TYPE_ICONS = {
     BUYER_ORDERS:          '/buyer/orders',
     BUYER_ORDER_DETAIL:    '/buyer/orders/:id',
     BUYER_TRACKING:        '/buyer/orders/:id/tracking',
-    BUYER_POINTS:          '/buyer/points',
-    BUYER_PROFILE:         '/buyer/profile',
+BUYER_PROFILE:         '/buyer/profile',
   
     SELLER_DASHBOARD:      '/seller/dashboard',
     SELLER_PRODUCTS:       '/seller/products',

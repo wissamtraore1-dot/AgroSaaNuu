@@ -15,7 +15,6 @@ import Checkout     from '../pages/buyer/Checkout';
 import Orders       from '../pages/buyer/Orders';
 import OrderDetail  from '../pages/buyer/OrderDetail';
 import OrderTracking from '../pages/buyer/OrderTracking';
-import Points       from '../pages/buyer/Points';
 import Profile      from '../pages/buyer/Profile';
 
 const BuyerRoutes = () => (
@@ -30,8 +29,7 @@ const BuyerRoutes = () => (
         <Route path="/buyer/orders"                 element={<Orders />} />
         <Route path="/buyer/orders/:id"             element={<OrderDetail />} />
         <Route path="/buyer/orders/:id/tracking"    element={<OrderTracking />} />
-        <Route path="/buyer/points"                 element={<Points />} />
-        <Route path="/buyer/profile"                element={<Profile />} />
+<Route path="/buyer/profile"                element={<Profile />} />
       </Route>
     </Route>
   </Route>

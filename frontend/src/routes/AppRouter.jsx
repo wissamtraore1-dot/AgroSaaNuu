@@ -5,7 +5,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '../context/AuthContext';
 import { NotificationProvider } from '../context/NotificationContext';
-import { LoyaltyProvider } from '../context/LoyaltyContext';
 import { WalletProvider } from '../context/WalletContext';
 import { CartProvider } from '../context/CartContext';
 import Notification from '../Components/common/Notification';
@@ -44,7 +43,6 @@ import BuyerOrders        from '../pages/buyer/Orders';
 import BuyerOrderDetail   from '../pages/buyer/OrderDetail';
 import BuyerOrderTracking from '../pages/buyer/OrderTracking';
 import BuyerReceipt       from '../pages/buyer/Receipt';
-import BuyerPoints        from '../pages/buyer/Points';
 import MesLitiges         from '../pages/buyer/MesLitiges';
 import BuyerFavorites     from '../pages/buyer/Favorites';
 
@@ -105,7 +103,6 @@ export default function AppRouter() {
         <NotificationProvider>
           <WalletProvider>
           <CartProvider>
-          <LoyaltyProvider>
           <Notification />
           <Routes>
 
@@ -166,10 +163,7 @@ export default function AppRouter() {
           <Route path="/buyer/receipt/:id"
             element={<ProtectedRoute roles={['BUYER']}><BuyerReceipt /></ProtectedRoute>}
           />
-          <Route path="/buyer/points"
-            element={<ProtectedRoute roles={['BUYER']}><BuyerPoints /></ProtectedRoute>}
-          />
-          <Route path="/buyer/favorites"
+<Route path="/buyer/favorites"
             element={<ProtectedRoute roles={['BUYER']}><BuyerFavorites /></ProtectedRoute>}
           />
           <Route path="/buyer/problemes"
@@ -275,7 +269,6 @@ export default function AppRouter() {
           <Route path="*"             element={<NotFound />}     />
 
           </Routes>
-          </LoyaltyProvider>
           </CartProvider>
           </WalletProvider>
         </NotificationProvider>

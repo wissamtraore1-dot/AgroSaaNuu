@@ -44,8 +44,7 @@ LOCAL_APPS = [
     'apps.products.apps.ProductsConfig',
     'apps.orders.apps.OrdersConfig',
     'apps.wallet.apps.WalletConfig',
-    'apps.loyalty.apps.LoyaltyConfig',
-    'apps.transport.apps.TransportConfig',
+'apps.transport.apps.TransportConfig',
     'apps.notifications.apps.NotificationsConfig',
     'apps.news.apps.NewsConfig',
     'apps.market_prices.apps.MarketPricesConfig',
@@ -168,13 +167,6 @@ COMMISSION_RATE      = 0.02
 MTN_FRAIS_RATE       = 0.01
 MOOV_FRAIS_RATE      = 0.01
 CELTIS_FRAIS_RATE    = 0.005
-POINTS_PER_1000_FCFA = 1
-
-# ===== FIDÉLITÉ =====
-FCFA_PAR_POINT      = 5
-MIN_POINTS_ECHANGE  = 500
-MAX_POINTS_USAGE_PC = 30
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # APIS EXTERNES GRATUITS
 # ═══════════════════════════════════════════════════════════════════════════════

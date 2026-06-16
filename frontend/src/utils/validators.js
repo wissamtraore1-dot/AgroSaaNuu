@@ -135,27 +135,3 @@ export const getRequiredError = (value, fieldName = 'This field') => {
   return null;
 };
 
-// ─── Points ──────────────────────────────────────────────────
-/**
- * Check if points amount is valid to redeem.
- */
-export const isValidPointsRedeem = (points, availablePoints, minRedeem) => {
-  const n = Number(points);
-  return (
-    isValidAmount(n) &&
-    Number.isInteger(n) &&
-    n <= availablePoints &&
-    n >= minRedeem
-  );
-};
-
-export const getPointsRedeemError = (points, availablePoints, minRedeem) => {
-  const n = Number(points);
-  if (!points || points === '')   return 'Enter a points amount';
-  if (!Number.isInteger(n))       return 'Points must be a whole number';
-  if (n < minRedeem)
-    return `Minimum redemption is ${minRedeem} pts`;
-  if (n > availablePoints)
-    return `You only have ${availablePoints} pts available`;
-  return null;
-};
