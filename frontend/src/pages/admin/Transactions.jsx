@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { CreditCard, TrendingUp, TrendingDown, Search } from 'lucide-react';
+import { CreditCard, TrendingUp, TrendingDown, Search, ArrowDownCircle, X } from 'lucide-react';
 import AdminLayout from '../../Components/layout/AdminLayout';
 import AdminService from '../../services/admin.service';
 
@@ -13,10 +13,16 @@ const TYPE_STYLE = {
 };
 
 export default function AdminTransactions() {
-  const [txs,     setTxs]     = useState([]);
-  const [wallet,  setWallet]  = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [search,  setSearch]  = useState('');
+  const [txs,          setTxs]          = useState([]);
+  const [wallet,       setWallet]       = useState(null);
+  const [loading,      setLoading]      = useState(true);
+  const [search,       setSearch]       = useState('');
+  const [showRetrait,  setShowRetrait]  = useState(false);
+  const [montant,      setMontant]      = useState('');
+  const [description,  setDescription]  = useState('');
+  const [saving,       setSaving]       = useState(false);
+  const [errRetrait,   setErrRetrait]   = useState('');
+  const [msgRetrait,   setMsgRetrait]   = useState('');
 
   const charger = () => {
     setLoading(true);
@@ -31,6 +37,26 @@ export default function AdminTransactions() {
 
   useEffect(() => { charger(); }, []);
 
+  const handleRetrait = async () => {
+    const m = parseFloat(montant);
+    if (!m || m <= 0) return setErrRetrait('Montant invalide.');
+    if (!description.trim()) return setErrRetrait('Veuillez saisir un motif.');
+    setErrRetrait('');
+    setSaving(true);
+    try {
+      await AdminService.retirerPlateforme(m, description.trim());
+      setMsgRetrait(`Retrait de ${m.toLocaleString('fr-FR')} FCFA effectué.`);
+      setShowRetrait(false);
+      setMontant('');
+      setDescription('');
+      charger();
+    } catch (e) {
+      setErrRetrait(e?.response?.data?.message || 'Erreur lors du retrait.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <AdminLayout>
       <div>
@@ -41,22 +67,38 @@ export default function AdminTransactions() {
 
         {/* Wallet plateforme */}
         {wallet && (
-          <div className="row g-3 mb-4">
-            {[
-              { label: 'Solde disponible',    value: wallet.solde_disponible ?? wallet.available ?? 0, color: '#1a5c2a', bg: '#f0fdf4' },
-              { label: 'En escrow',           value: wallet.solde_escrow ?? wallet.in_escrow ?? 0,      color: '#2563eb', bg: '#eff6ff' },
-              { label: 'Commissions totales', value: wallet.total_commissions ?? 0,                     color: '#7c3aed', bg: '#f5f3ff' },
-              { label: 'Volume total',        value: wallet.volume_total ?? 0,                          color: '#d97706', bg: '#fffbeb' },
-            ].map((c, i) => (
-              <div key={i} className="col-6 col-md-3">
-                <div style={{ background: c.bg, borderRadius: '14px', padding: '1rem', border: `1px solid ${c.color}22` }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: '600', color: c.color, marginBottom: '4px' }}>{c.label}</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: '800', color: c.color }}>
-                    {Number(c.value).toLocaleString('fr-FR')} FCFA
+          <>
+            <div className="row g-3 mb-3">
+              {[
+                { label: 'Solde disponible',    value: wallet.solde_disponible ?? wallet.available ?? wallet.solde ?? 0, color: '#1a5c2a', bg: '#f0fdf4' },
+                { label: 'En escrow',           value: wallet.solde_escrow ?? wallet.in_escrow ?? 0,                     color: '#2563eb', bg: '#eff6ff' },
+                { label: 'Commissions totales', value: wallet.total_commissions ?? 0,                                    color: '#7c3aed', bg: '#f5f3ff' },
+                { label: 'Total retiré',        value: wallet.total_retire ?? 0,                                         color: '#d97706', bg: '#fffbeb' },
+              ].map((c, i) => (
+                <div key={i} className="col-6 col-md-3">
+                  <div style={{ background: c.bg, borderRadius: '14px', padding: '1rem', border: `1px solid ${c.color}22` }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '600', color: c.color, marginBottom: '4px' }}>{c.label}</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: '800', color: c.color }}>
+                      {Number(c.value).toLocaleString('fr-FR')} FCFA
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            <div style={{ marginBottom: '1.2rem' }}>
+              <button
+                onClick={() => { setShowRetrait(true); setErrRetrait(''); setMsgRetrait(''); }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', background: '#1a5c2a', color: 'white', border: 'none', borderRadius: '10px', padding: '0.6rem 1.2rem', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer' }}
+              >
+                <ArrowDownCircle size={16} /> Retirer des fonds
+              </button>
+            </div>
+          </>
+        )}
+
+        {msgRetrait && (
+          <div style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#16a34a', borderRadius: '10px', padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.85rem' }}>
+            {msgRetrait}
           </div>
         )}
 
@@ -131,6 +173,71 @@ export default function AdminTransactions() {
           </div>
         </div>
       </div>
+      {/* Modal retrait */}
+      {showRetrait && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999, padding: '1rem' }}>
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            style={{ background: 'white', borderRadius: '20px', padding: '2rem', maxWidth: '420px', width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.2rem' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1a2e10', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ArrowDownCircle size={18} color="#1a5c2a" /> Retrait plateforme
+              </h3>
+              <button onClick={() => setShowRetrait(false)} style={{ background: '#f3f4f6', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <X size={15} color="#6b7280" />
+              </button>
+            </div>
+
+            {wallet && (
+              <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '0.75rem 1rem', marginBottom: '1.2rem', fontSize: '0.83rem', color: '#1a5c2a', fontWeight: '600' }}>
+                Solde disponible : {Number(wallet.solde_disponible ?? wallet.solde ?? 0).toLocaleString('fr-FR')} FCFA
+              </div>
+            )}
+
+            {errRetrait && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '10px', padding: '0.65rem 1rem', marginBottom: '1rem', fontSize: '0.83rem' }}>
+                {errRetrait}
+              </div>
+            )}
+
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#374151', marginBottom: '5px' }}>
+              Montant (FCFA) *
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={montant}
+              onChange={e => setMontant(e.target.value)}
+              placeholder="Ex : 50000"
+              style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: '10px', padding: '0.65rem 0.9rem', fontSize: '0.9rem', outline: 'none', marginBottom: '1rem', boxSizing: 'border-box' }}
+            />
+
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#374151', marginBottom: '5px' }}>
+              Motif *
+            </label>
+            <textarea
+              rows={3}
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Ex : Retrait mensuel de trésorerie..."
+              style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: '10px', padding: '0.65rem 0.9rem', fontSize: '0.85rem', outline: 'none', resize: 'none', marginBottom: '1.2rem', boxSizing: 'border-box' }}
+            />
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowRetrait(false)} style={{ padding: '0.6rem 1.2rem', background: '#f3f4f6', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600', fontSize: '0.85rem' }}>
+                Annuler
+              </button>
+              <button
+                onClick={handleRetrait}
+                disabled={saving || !montant || !description.trim()}
+                style={{ padding: '0.6rem 1.4rem', background: saving || !montant || !description.trim() ? '#e5e7eb' : '#1a5c2a', color: saving || !montant || !description.trim() ? '#9ca3af' : 'white', border: 'none', borderRadius: '10px', cursor: saving || !montant || !description.trim() ? 'not-allowed' : 'pointer', fontWeight: '700', fontSize: '0.85rem' }}
+              >
+                {saving ? 'En cours...' : 'Confirmer le retrait'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
     </AdminLayout>
   );
 }

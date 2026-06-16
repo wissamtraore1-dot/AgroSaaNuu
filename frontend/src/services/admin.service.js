@@ -72,6 +72,9 @@ const AdminService = {
   getPlatformWallet: () =>
     api.get('/wallet/plateforme/').then(r => r.data),
 
+  retirerPlateforme: (montant, description) =>
+    api.post('/wallet/plateforme/retirer/', { montant, description }).then(r => r.data),
+
   // ── Litiges ───────────────────────────────────────────────
   getLitiges: (params = {}) =>
     api.get('/orders/problemes/', { params }).then(r => r.data),
