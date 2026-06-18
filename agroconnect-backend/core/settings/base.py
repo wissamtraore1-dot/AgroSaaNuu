@@ -87,7 +87,7 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 # ===== BASE DE DONNÉES =====
 DATABASES = {
-    'default': env.db('DATABASE_URL', default='sqlite:///db.sqlite3')
+    'default': env.db('DATABASE_URL')
 }
 
 # ===== AUTH USER =====
