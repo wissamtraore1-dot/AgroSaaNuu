@@ -147,7 +147,7 @@ export default function Auth() {
       navigate(`/${u.role.toLowerCase()}/dashboard`, { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'Code invalide ou expiré');
-      if (err.response?.data?.message?.includes('expiré')) setRegStep('form');
+      if (err.response?.data?.message?.includes('expiré')) setRegStep('role');
     } finally { setLoading(false); }
   };
 
@@ -224,405 +224,450 @@ export default function Auth() {
   // RENDU
   // ═══════════════════════════════════════
 
+  // Couleur du rôle sélectionné
+  const roleInfo = ROLES.find(r => r.id === role);
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex' }}>
 
-      {/* ── PANNEAU GAUCHE (branding) ── */}
-      <div style={{
-        flex: '0 0 45%', background: 'linear-gradient(160deg, #0d2b14 0%, #1a5c2a 55%, #2d8c47 100%)',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        padding: '3rem 3rem', position: 'relative', overflow: 'hidden',
-      }} className="d-none d-lg-flex">
+      {/* ══════════════════════════════════════════════
+          MODE INSCRIPTION — deux panneaux côte à côte
+      ══════════════════════════════════════════════ */}
+      {mode === 'register' && regStep !== 'otp' && (
+        <>
+          {/* ── Panneau gauche : sélecteur de rôle ── */}
+          <div style={{ flex: '0 0 42%', background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.5rem', borderRight: '1px solid #e5e7eb', overflowY: 'auto' }}>
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}
+              style={{ width: '100%', maxWidth: '380px' }}>
 
-        {/* Cercles décoratifs */}
-        <div style={{ position: 'absolute', top: '-60px', right: '-60px', width: '260px', height: '260px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
-        <div style={{ position: 'absolute', bottom: '-80px', left: '-40px', width: '320px', height: '320px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
-
-        <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}
-          style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
-          <img src={logo} alt="AgroSaaNuu" style={{ width: '80px', height: '80px', borderRadius: '20px', objectFit: 'cover', marginBottom: '1.4rem', boxShadow: '0 8px 30px rgba(0,0,0,0.25)', border: '3px solid rgba(240,192,64,0.4)' }} />
-          <h2 style={{ color: 'white', fontWeight: '900', fontSize: '2rem', marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>
-            Agro<span style={{ color: '#f0c040' }}>SaaNuu</span>
-          </h2>
-          <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.95rem', marginBottom: '2.5rem', lineHeight: 1.6 }}>
-            La marketplace agricole du Bénin
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
-            {[
-              { icon: '🛡️', title: 'Paiements sécurisés', desc: 'Système escrow — argent bloqué jusqu\'à livraison' },
-              { icon: '📊', title: 'Prix du marché en temps réel', desc: 'Maïs, riz, mil, soja — toujours au juste prix' },
-              { icon: '🚚', title: 'Réseau de transporteurs vérifiés', desc: 'Livraison fiable dans tout le Bénin' },
-            ].map((f, i) => (
-              <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + i * 0.1 }}
-                style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: 'rgba(255,255,255,0.07)', borderRadius: '14px', padding: '0.9rem 1.1rem' }}>
-                <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>{f.icon}</span>
-                <div>
-                  <p style={{ margin: 0, color: 'white', fontWeight: '700', fontSize: '0.88rem' }}>{f.title}</p>
-                  <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', marginTop: '2px' }}>{f.desc}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', marginTop: '2.5rem' }}>
-            {[['500+', 'Vendeurs'], ['12k+', 'Acheteurs'], ['98%', 'Satisfaction']].map(([v, l]) => (
-              <div key={l} style={{ textAlign: 'center' }}>
-                <p style={{ margin: 0, color: '#f0c040', fontWeight: '900', fontSize: '1.4rem' }}>{v}</p>
-                <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>{l}</p>
+              {/* Logo mobile */}
+              <div className="d-flex d-md-none flex-column align-items-center" style={{ marginBottom: '1.2rem' }}>
+                <img src={logo} alt="AgroSaaNuu" style={{ width: '44px', height: '44px', borderRadius: '10px', objectFit: 'cover' }} />
+                <span style={{ fontWeight: '900', color: '#1a2e10', marginTop: '6px' }}>Agro<span style={{ color: '#1a5c2a' }}>SaaNuu</span></span>
               </div>
-            ))}
+
+              <h2 style={{ fontSize: '1.4rem', fontWeight: '900', color: '#1a2e10', marginBottom: '0.3rem' }}>Créer un compte</h2>
+              <p style={{ fontSize: '0.88rem', color: '#6b7280', marginBottom: '1.6rem' }}>
+                Quel est votre rôle sur la plateforme ?
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {ROLES.map(({ id, Icon, label, desc, color, bg }) => (
+                  <motion.button key={id}
+                    onClick={() => { setRole(id); clearError(); }}
+                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '14px', padding: '1rem 1.2rem',
+                      border: `2px solid ${role === id ? color : '#e5e7eb'}`,
+                      borderRadius: '16px',
+                      background: role === id ? bg : 'white',
+                      cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s',
+                      boxShadow: role === id ? `0 0 0 3px ${color}22, 0 4px 16px ${color}18` : '0 1px 4px rgba(0,0,0,0.05)',
+                    }}
+                  >
+                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1.5px solid ${color}30` }}>
+                      <Icon size={22} color={color} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ margin: 0, fontWeight: '700', color: '#1a2e10', fontSize: '0.95rem' }}>{label}</p>
+                      <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280', marginTop: '2px' }}>{desc}</p>
+                    </div>
+                    <div style={{
+                      width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0,
+                      border: `2px solid ${role === id ? color : '#d1d5db'}`,
+                      background: role === id ? color : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.2s',
+                    }}>
+                      {role === id && <Check size={12} color="white" strokeWidth={3} />}
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+
+              <p style={{ textAlign: 'center', fontSize: '0.84rem', color: '#9ca3af', margin: '1.4rem 0 0' }}>
+                Déjà inscrit ?{' '}
+                <Link to="/auth/login" style={{ color: GREEN, fontWeight: '700', textDecoration: 'none' }}>
+                  Connexion
+                </Link>
+              </p>
+            </motion.div>
           </div>
-        </motion.div>
-      </div>
 
-      {/* ── PANNEAU DROIT (formulaire) ── */}
-      <div style={{ flex: 1, background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.5rem', overflowY: 'auto' }}>
-        <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-          style={{ width: '100%', maxWidth: '460px' }}
-        >
+          {/* ── Panneau droit : formulaire ── */}
+          <div style={{ flex: 1, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.5rem', overflowY: 'auto' }}>
+            <div style={{ width: '100%', maxWidth: '440px' }}>
 
-        {/* Carte */}
-        <div style={{ background: 'white', borderRadius: '24px', padding: '2.4rem 2.2rem', boxShadow: '0 4px 32px rgba(0,0,0,0.09)', border: '1px solid #e5e7eb' }}>
+              <AnimatePresence mode="wait">
+                {!role ? (
+                  /* Placeholder — aucun rôle sélectionné */
+                  <motion.div key="placeholder" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+                    <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.2rem' }}>
+                      <User size={36} color="#d1d5db" />
+                    </div>
+                    <p style={{ fontWeight: '700', color: '#9ca3af', fontSize: '1rem', marginBottom: '0.4rem' }}>Choisissez votre rôle</p>
+                    <p style={{ fontSize: '0.85rem', color: '#d1d5db' }}>Le formulaire d'inscription apparaîtra ici</p>
+                  </motion.div>
+                ) : (
+                  /* Formulaire selon le rôle */
+                  <motion.form key={`form-${role}`} {...slide} onSubmit={handleSubmitForm}>
 
-          {/* Logo (mobile uniquement — masqué si panneau gauche visible) */}
-          <div className="d-flex d-lg-none flex-column align-items-center" style={{ marginBottom: '1.4rem' }}>
-            <img src={logo} alt="AgroSaaNuu" style={{ width: '52px', height: '52px', borderRadius: '50%', objectFit: 'cover', marginBottom: '0.5rem' }} />
-            <span style={{ fontSize: '1.3rem', fontWeight: '900', color: '#1a2e10' }}>Agro<span style={{ color: '#1a5c2a' }}>SaaNuu</span></span>
-          </div>
-
-          {/* Erreur */}
-          <AnimatePresence>
-            {error && (
-              <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '0.7rem 1rem', marginBottom: '1rem', fontSize: '0.84rem', color: '#dc2626' }}
-              >
-                <AlertCircle size={15} /> {error}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <AnimatePresence mode="wait">
-
-            {/* ══════════════════════════════════
-                INSCRIPTION — Étape 1 : Rôle
-            ══════════════════════════════════ */}
-            {mode === 'register' && regStep === 'role' && (
-              <motion.div key="role" {...slide}>
-                <p style={{ textAlign: 'center', fontSize: '0.92rem', fontWeight: '700', color: '#1a2e10', marginBottom: '0.3rem' }}>
-                  Créer un compte
-                </p>
-                <p style={{ textAlign: 'center', fontSize: '0.84rem', color: '#6b7280', marginBottom: '1.4rem' }}>
-                  Quel est votre rôle sur la plateforme ?
-                </p>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {ROLES.map(({ id, Icon, label, desc, color, bg }) => (
-                    <motion.button key={id}
-                      onClick={() => { setRole(id); setRegStep('form'); clearError(); }}
-                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                      style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '1rem', border: `2px solid ${role === id ? color : '#e5e7eb'}`, borderRadius: '14px', background: role === id ? bg : 'white', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', boxShadow: role === id ? `0 0 0 3px ${color}22` : 'none' }}
-                    >
-                      <div style={{ width: '46px', height: '46px', borderRadius: '10px', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1px solid ${color}30` }}>
-                        <Icon size={22} color={color} />
+                    {/* En-tête avec couleur du rôle */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '1.6rem', paddingBottom: '1.2rem', borderBottom: '1px solid #f0f0f0' }}>
+                      <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: roleInfo?.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1.5px solid ${roleInfo?.color}30` }}>
+                        {roleInfo && <roleInfo.Icon size={20} color={roleInfo.color} />}
                       </div>
                       <div>
-                        <p style={{ margin: 0, fontWeight: '700', color: '#1a2e10', fontSize: '0.95rem' }}>{label}</p>
-                        <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280', marginTop: '2px' }}>{desc}</p>
+                        <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#1a2e10' }}>
+                          Inscription {roleInfo?.label}
+                        </h3>
+                        <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280' }}>Remplissez vos informations</p>
                       </div>
-                      {role === id && <Check size={18} color={color} style={{ marginLeft: 'auto' }} />}
+                    </div>
+
+                    {/* Erreur */}
+                    <AnimatePresence>
+                      {error && (
+                        <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '0.7rem 1rem', marginBottom: '1rem', fontSize: '0.84rem', color: '#dc2626' }}>
+                          <AlertCircle size={15} /> {error}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Nom complet */}
+                    <div style={FW}>
+                      <label style={LB}>Nom complet *</label>
+                      <div style={{ position: 'relative' }}>
+                        <User size={15} color="#9ca3af" style={IL} />
+                        <input type="text" value={nomComplet} onChange={e => { setNomComplet(e.target.value); clearError(); }}
+                          onFocus={() => setFocused('nom')} onBlur={() => setFocused('')}
+                          placeholder="Prénom et Nom" style={inp('nom')} />
+                      </div>
+                    </div>
+
+                    {/* Téléphone */}
+                    <div style={FW}>
+                      <label style={LB}>Numéro de téléphone *</label>
+                      <div style={{ position: 'relative' }}>
+                        <Phone size={15} color="#9ca3af" style={IL} />
+                        <input type="text" inputMode="numeric" maxLength={10} value={phone}
+                          onChange={handlePhoneChange}
+                          onFocus={() => setFocused('tel')} onBlur={() => setFocused('')}
+                          placeholder="Entrez un numéro de téléphone"
+                          style={{ ...inp('tel'), borderColor: phoneError ? '#ef4444' : undefined }} />
+                      </div>
+                      {phoneError
+                        ? <span style={{ fontSize: '0.74rem', color: '#ef4444', marginTop: '3px', display: 'block' }}>{phoneError}</span>
+                        : <span style={{ fontSize: '0.74rem', color: '#9ca3af', marginTop: '3px', display: 'block' }}>{phone.length}/10 chiffres</span>
+                      }
+                    </div>
+
+                    {/* Email */}
+                    <div style={FW}>
+                      <label style={LB}>Adresse email *</label>
+                      <div style={{ position: 'relative' }}>
+                        <Mail size={15} color="#9ca3af" style={IL} />
+                        <input type="email" value={regEmail}
+                          onChange={e => { setRegEmail(e.target.value); clearError(); }}
+                          onFocus={() => setFocused('regEmail')} onBlur={() => setFocused('')}
+                          placeholder="votre@email.com" style={inp('regEmail')} autoComplete="email" />
+                      </div>
+                      {regEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail) && (
+                        <span style={{ fontSize: '0.74rem', color: '#ef4444', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}><XCircle size={13} /> Format invalide</span>
+                      )}
+                      {regEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail) && (
+                        <span style={{ fontSize: '0.74rem', color: '#16a34a', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle size={13} /> Email valide</span>
+                      )}
+                    </div>
+
+                    {/* Mot de passe */}
+                    <div style={FW}>
+                      <label style={LB}>Mot de passe *</label>
+                      <div style={{ position: 'relative' }}>
+                        <Lock size={15} color="#9ca3af" style={IL} />
+                        <input type={showPwd ? 'text' : 'password'} value={pwd}
+                          onChange={e => { setPwd(e.target.value); clearError(); }}
+                          onFocus={() => setFocused('pwd')} onBlur={() => setFocused('')}
+                          placeholder="Minimum 8 caractères"
+                          style={{ ...inp('pwd'), paddingRight: '3rem' }} />
+                        <button type="button" onClick={() => setShowPwd(v => !v)}
+                          style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}>
+                          {showPwd ? <EyeOff size={17} color="#9ca3af" /> : <Eye size={17} color="#9ca3af" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Confirmation */}
+                    <div style={FW}>
+                      <label style={LB}>Confirmer le mot de passe *</label>
+                      <div style={{ position: 'relative' }}>
+                        <Lock size={15} color="#9ca3af" style={IL} />
+                        <input type={showPwd ? 'text' : 'password'} value={pwdConfirm}
+                          onChange={e => { setPwdConfirm(e.target.value); clearError(); }}
+                          onFocus={() => setFocused('pwdc')} onBlur={() => setFocused('')}
+                          placeholder="Répétez le mot de passe"
+                          style={{ ...inp('pwdc'), borderColor: pwdConfirm && pwdConfirm !== pwd ? '#ef4444' : undefined }} />
+                      </div>
+                      {pwdConfirm && pwdConfirm !== pwd && <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}><XCircle size={13} /> Ne correspondent pas</span>}
+                      {pwdConfirm && pwdConfirm === pwd && pwd.length > 0 && <span style={{ fontSize: '0.75rem', color: '#16a34a', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle size={13} /> Correspondent</span>}
+                    </div>
+
+                    <motion.button type="submit" style={{ ...btnPrimary, opacity: loading ? 0.75 : 1 }}
+                      disabled={loading} whileHover={{ scale: loading ? 1 : 1.02 }} whileTap={{ scale: loading ? 1 : 0.98 }}>
+                      <AnimatePresence mode="wait" initial={false}>
+                        {loading ? (
+                          <motion.span key="l" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                            <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div>
+                            Création du compte…
+                          </motion.span>
+                        ) : (
+                          <motion.span key="i" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                            <Check size={15} /> S'inscrire
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
                     </motion.button>
-                  ))}
-                </div>
 
-                <p style={{ textAlign: 'center', fontSize: '0.84rem', color: '#9ca3af', margin: '1.2rem 0 0' }}>
-                  Déjà inscrit ?{' '}
-                  <Link to="/auth/login" style={{ color: GREEN, fontWeight: '700', textDecoration: 'none' }}>
-                    Connexion
-                  </Link>
-                </p>
-              </motion.div>
-            )}
-
-            {/* ══════════════════════════════════
-                INSCRIPTION — Étape 2 : Formulaire
-            ══════════════════════════════════ */}
-            {mode === 'register' && regStep === 'form' && (
-              <motion.form key="reg-form" {...slide} onSubmit={handleSubmitForm}>
-                <p style={{ fontSize: '0.82rem', color: '#6b7280', marginBottom: '1.2rem', textAlign: 'center' }}>
-                  {role === 'BUYER' && 'Inscription Acheteur'}
-                  {role === 'SELLER' && 'Inscription Vendeur'}
-                  {role === 'TRANSPORTER' && 'Inscription Transporteur'}
-                </p>
-
-                {/* Nom complet */}
-                <div style={FW}>
-                  <label style={LB}>Nom complet *</label>
-                  <div style={{ position: 'relative' }}>
-                    <User size={15} color="#9ca3af" style={IL} />
-                    <input type="text" value={nomComplet} onChange={e => { setNomComplet(e.target.value); clearError(); }}
-                      onFocus={() => setFocused('nom')} onBlur={() => setFocused('')}
-                      placeholder="Prénom et Nom" style={inp('nom')} />
-                  </div>
-                </div>
-
-                {/* Téléphone */}
-                <div style={FW}>
-                  <label style={LB}>Numéro de téléphone *</label>
-                  <div style={{ position: 'relative' }}>
-                    <Phone size={15} color="#9ca3af" style={IL} />
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={10}
-                      value={phone}
-                      onChange={handlePhoneChange}
-                      onFocus={() => setFocused('tel')}
-                      onBlur={() => setFocused('')}
-                      placeholder="Entrez un numéro de téléphone"
-                      style={{ ...inp('tel'), borderColor: phoneError ? '#ef4444' : undefined }}
-                    />
-                  </div>
-                  {phoneError
-                    ? <span style={{ fontSize: '0.74rem', color: '#ef4444', marginTop: '3px', display: 'block' }}>{phoneError}</span>
-                    : <span style={{ fontSize: '0.74rem', color: '#9ca3af', marginTop: '3px', display: 'block' }}>{phone.length}/10 chiffres</span>
-                  }
-                </div>
-
-                {/* Email */}
-                <div style={FW}>
-                  <label style={LB}>Adresse email *</label>
-                  <div style={{ position: 'relative' }}>
-                    <Mail size={15} color="#9ca3af" style={IL} />
-                    <input
-                      type="email"
-                      value={regEmail}
-                      onChange={e => { setRegEmail(e.target.value); clearError(); }}
-                      onFocus={() => setFocused('regEmail')}
-                      onBlur={() => setFocused('')}
-                      placeholder="votre@email.com"
-                      style={inp('regEmail')}
-                      autoComplete="email"
-                    />
-                  </div>
-                  {regEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail) && (
-                    <span style={{ fontSize: '0.74rem', color: '#ef4444', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}><XCircle size={13} /> Format email invalide</span>
-                  )}
-                  {regEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail) && (
-                    <span style={{ fontSize: '0.74rem', color: '#16a34a', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle size={13} /> Email valide</span>
-                  )}
-                </div>
-
-                {/* Mot de passe */}
-                <div style={FW}>
-                  <label style={LB}>Mot de passe *</label>
-                  <div style={{ position: 'relative' }}>
-                    <Lock size={15} color="#9ca3af" style={IL} />
-                    <input type={showPwd ? 'text' : 'password'} value={pwd}
-                      onChange={e => { setPwd(e.target.value); clearError(); }}
-                      onFocus={() => setFocused('pwd')} onBlur={() => setFocused('')}
-                      placeholder="Minimum 8 caractères"
-                      style={{ ...inp('pwd'), paddingRight: '3rem' }} />
-                    <button type="button" onClick={() => setShowPwd(v => !v)}
-                      style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}>
-                      {showPwd ? <EyeOff size={17} color="#9ca3af" /> : <Eye size={17} color="#9ca3af" />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Confirmation mot de passe */}
-                <div style={FW}>
-                  <label style={LB}>Confirmer le mot de passe *</label>
-                  <input type={showPwd ? 'text' : 'password'} value={pwdConfirm}
-                    onChange={e => { setPwdConfirm(e.target.value); clearError(); }}
-                    onFocus={() => setFocused('pwdc')} onBlur={() => setFocused('')}
-                    placeholder="Répétez le mot de passe"
-                    style={{ ...inp('pwdc'), paddingLeft: '1rem', borderColor: pwdConfirm && pwdConfirm !== pwd ? '#ef4444' : undefined }}
-                  />
-                  {pwdConfirm && pwdConfirm !== pwd && <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}><XCircle size={13} /> Ne correspondent pas</span>}
-                  {pwdConfirm && pwdConfirm === pwd && pwd.length > 0 && <span style={{ fontSize: '0.75rem', color: '#16a34a', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle size={13} /> Correspondent</span>}
-                </div>
-
-                <motion.button type="submit" style={{ ...btnPrimary, opacity: loading ? 0.75 : 1 }}
-                  disabled={loading} whileHover={{ scale: loading ? 1 : 1.02 }} whileTap={{ scale: loading ? 1 : 0.98 }}
-                >
-                  <AnimatePresence mode="wait" initial={false}>
-                    {loading ? (
-                      <motion.span key="loading" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div>
-                        <span> Création du compte…</span>
-                      </motion.span>
-                    ) : (
-                      <motion.span key="idle" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-                        <Check size={15} /><span> S'inscrire</span>
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                </motion.button>
-
-              </motion.form>
-            )}
-
-            {/* ══════════════════════════════════
-                INSCRIPTION — Étape 3 : OTP
-            ══════════════════════════════════ */}
-            {mode === 'register' && regStep === 'otp' && (
-              <motion.form key="reg-otp" {...slide} onSubmit={handleVerifyRegOTP}>
-                <p style={{ textAlign: 'center', fontSize: '1rem', fontWeight: '700', color: '#1a2e10', marginBottom: '0.3rem' }}>
-                  Vérification du numéro
-                </p>
-                <p style={{ textAlign: 'center', fontSize: '0.88rem', color: '#6b7280', marginBottom: '1.5rem' }}>
-                  Code envoyé au <strong style={{ color: '#1a2e10' }}>{phone}</strong>
-                </p>
-
-                {devOtp && (
-                  <div style={{ background: '#fefce8', border: '1px solid #fde047', borderRadius: '10px', padding: '0.6rem 1rem', marginBottom: '1rem', textAlign: 'center' }}>
-                    <span style={{ fontSize: '0.78rem', color: '#92400e', display: 'block', marginBottom: '2px' }}>Code de vérification (serveur local)</span>
-                    <strong style={{ fontSize: '1.3rem', letterSpacing: '0.2em', color: '#713f12' }}>{devOtp}</strong>
-                  </div>
+                  </motion.form>
                 )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </>
+      )}
 
-                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '1.2rem' }}>
-                  {otp.map((d, i) => (
-                    <input key={i} id={`otp-${i}`} type="text" inputMode="numeric" maxLength="1" value={d}
-                      onChange={e => {
-                        if (!/^\d?$/.test(e.target.value)) return;
-                        const next = [...otp]; next[i] = e.target.value; setOtp(next);
-                        if (e.target.value && i < 5) document.getElementById(`otp-${i + 1}`)?.focus();
-                      }}
-                      onKeyDown={e => { if (e.key === 'Backspace' && !d && i > 0) document.getElementById(`otp-${i - 1}`)?.focus(); }}
-                      autoFocus={i === 0}
-                      style={{ width: '46px', height: '52px', fontSize: '1.4rem', fontWeight: '700', textAlign: 'center', border: `2px solid ${d ? GREEN : '#e5e7eb'}`, borderRadius: '10px', outline: 'none', color: '#1a2e10', background: d ? '#f0fdf4' : '#fafafa', transition: 'all 0.15s' }}
-                    />
-                  ))}
-                </div>
+      {/* ══════════════════════════════════════════════
+          MODE INSCRIPTION — Étape OTP (plein écran centré)
+      ══════════════════════════════════════════════ */}
+      {mode === 'register' && regStep === 'otp' && (
+        <div style={{ flex: 1, background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+            style={{ width: '100%', maxWidth: '420px', background: 'white', borderRadius: '24px', padding: '2.4rem 2rem', boxShadow: '0 4px 32px rgba(0,0,0,0.09)', border: '1px solid #e5e7eb' }}>
 
-                <div style={{ textAlign: 'center', marginBottom: '1.2rem', minHeight: '22px' }}>
-                  {timer > 0
-                    ? <span style={{ fontSize: '0.84rem', color: '#6b7280' }}>Expire dans <strong style={{ color: GREEN }}>{fmtTimer(timer)}</strong></span>
-                    : <button type="button" onClick={handleResendReg} style={{ background: 'none', border: 'none', color: GREEN, cursor: 'pointer', fontWeight: '600', fontSize: '0.88rem', textDecoration: 'underline' }}>Renvoyer le code</button>
-                  }
-                </div>
+            <div style={{ textAlign: 'center', marginBottom: '1.4rem' }}>
+              <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#f0fdf4', border: '2px solid #1a5c2a30', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.8rem' }}>
+                <Phone size={26} color={GREEN} />
+              </div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1a2e10', margin: 0 }}>Vérification du numéro</h3>
+              <p style={{ fontSize: '0.87rem', color: '#6b7280', marginTop: '0.4rem', marginBottom: 0 }}>
+                Code envoyé au <strong style={{ color: '#1a2e10' }}>{phone}</strong>
+              </p>
+            </div>
 
-                <motion.button type="submit"
-                  style={{ ...btnPrimary, opacity: (loading || otp.join('').length !== 6) ? 0.65 : 1 }}
-                  disabled={loading || otp.join('').length !== 6}
-                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                >
-                  <AnimatePresence mode="wait" initial={false}>
-                    {loading ? (
-                      <motion.span key="loading" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div>
-                        <span> Création du compte…</span>
-                      </motion.span>
-                    ) : (
-                      <motion.span key="idle" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-                        <Check size={16} /><span> Créer mon compte</span>
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                </motion.button>
-              </motion.form>
+            {devOtp && (
+              <div style={{ background: '#fefce8', border: '1px solid #fde047', borderRadius: '10px', padding: '0.6rem 1rem', marginBottom: '1rem', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.78rem', color: '#92400e', display: 'block', marginBottom: '2px' }}>Code (serveur local)</span>
+                <strong style={{ fontSize: '1.3rem', letterSpacing: '0.2em', color: '#713f12' }}>{devOtp}</strong>
+              </div>
             )}
 
-            {/* ══════════════════════════════════
-                CONNEXION
-            ══════════════════════════════════ */}
-            {mode === 'login' && (
-              <motion.form key="login" {...slide} onSubmit={handleLogin}>
+            <AnimatePresence>
+              {error && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '0.7rem 1rem', marginBottom: '1rem', fontSize: '0.84rem', color: '#dc2626' }}>
+                  <AlertCircle size={15} /> {error}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-                <p style={{ textAlign: 'center', fontSize: '1.05rem', fontWeight: '800', color: '#1a2e10', marginBottom: '1.5rem' }}>
-                  Connexion
-                </p>
+            <form onSubmit={handleVerifyRegOTP}>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '1.2rem' }}>
+                {otp.map((d, i) => (
+                  <input key={i} id={`otp-${i}`} type="text" inputMode="numeric" maxLength="1" value={d}
+                    onChange={e => {
+                      if (!/^\d?$/.test(e.target.value)) return;
+                      const next = [...otp]; next[i] = e.target.value; setOtp(next);
+                      if (e.target.value && i < 5) document.getElementById(`otp-${i + 1}`)?.focus();
+                    }}
+                    onKeyDown={e => { if (e.key === 'Backspace' && !d && i > 0) document.getElementById(`otp-${i - 1}`)?.focus(); }}
+                    autoFocus={i === 0}
+                    style={{ width: '50px', height: '56px', fontSize: '1.5rem', fontWeight: '700', textAlign: 'center', border: `2px solid ${d ? GREEN : '#e5e7eb'}`, borderRadius: '12px', outline: 'none', color: '#1a2e10', background: d ? '#f0fdf4' : '#fafafa', transition: 'all 0.15s' }}
+                  />
+                ))}
+              </div>
 
-                {/* Email ou téléphone */}
-                <div style={FW}>
-                  <label style={LB}>Email ou numéro de téléphone</label>
-                  <div style={{ position: 'relative' }}>
-                    <User size={15} color="#9ca3af" style={IL} />
-                    <input
-                      type="text"
-                      value={loginId}
-                      onChange={e => { setLoginId(e.target.value); clearError(); }}
-                      onFocus={() => setFocused('loginId')}
-                      onBlur={() => setFocused('')}
-                      placeholder=""
-                      style={inp('loginId')}
-                      autoComplete="username"
-                      autoFocus
-                    />
-                  </div>
-                </div>
+              <div style={{ textAlign: 'center', marginBottom: '1.2rem', minHeight: '22px' }}>
+                {timer > 0
+                  ? <span style={{ fontSize: '0.84rem', color: '#6b7280' }}>Expire dans <strong style={{ color: GREEN }}>{fmtTimer(timer)}</strong></span>
+                  : <button type="button" onClick={handleResendReg} style={{ background: 'none', border: 'none', color: GREEN, cursor: 'pointer', fontWeight: '600', fontSize: '0.88rem', textDecoration: 'underline' }}>Renvoyer le code</button>
+                }
+              </div>
 
-                {/* Mot de passe */}
-                <div style={FW}>
-                  <label style={LB}>Mot de passe</label>
-                  <div style={{ position: 'relative' }}>
-                    <Lock size={15} color="#9ca3af" style={IL} />
-                    <input
-                      type={showLoginPwd ? 'text' : 'password'}
-                      value={loginPwd}
-                      onChange={e => { setLoginPwd(e.target.value); clearError(); }}
-                      onFocus={() => setFocused('loginPwd')}
-                      onBlur={() => setFocused('')}
-                      placeholder=""
-                      style={{ ...inp('loginPwd'), paddingRight: '3rem' }}
-                      autoComplete="current-password"
-                    />
-                    <button type="button" onClick={() => setShowLoginPwd(v => !v)}
-                      style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}>
-                      {showLoginPwd ? <EyeOff size={17} color="#9ca3af" /> : <Eye size={17} color="#9ca3af" />}
-                    </button>
-                  </div>
-                </div>
+              <motion.button type="submit"
+                style={{ ...btnPrimary, opacity: (loading || otp.join('').length !== 6) ? 0.65 : 1 }}
+                disabled={loading || otp.join('').length !== 6}
+                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <AnimatePresence mode="wait" initial={false}>
+                  {loading ? (
+                    <motion.span key="l" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                      <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div>
+                      Création du compte…
+                    </motion.span>
+                  ) : (
+                    <motion.span key="i" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                      <Check size={16} /> Créer mon compte
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.button>
 
-                {/* Mot de passe oublié */}
-                <div style={{ textAlign: 'right', marginBottom: '1.2rem', marginTop: '-0.4rem' }}>
-                  <Link to="/auth/forgot-password" style={{ fontSize: '0.83rem', color: GREEN, textDecoration: 'none', fontWeight: '600' }}>
-                    Mot de passe oublié ?
-                  </Link>
-                </div>
-
-                {/* Bouton connexion */}
-                <motion.button type="submit"
-                  style={{ ...btnPrimary, borderRadius: '50px', fontSize: '1rem', padding: '0.95rem', letterSpacing: '0.02em', opacity: loading ? 0.75 : 1 }}
-                  disabled={loading} whileHover={{ scale: loading ? 1 : 1.02 }} whileTap={{ scale: loading ? 1 : 0.98 }}
-                >
-                  <AnimatePresence mode="wait" initial={false}>
-                    {loading ? (
-                      <motion.span key="loading" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div>
-                        <span> Connexion…</span>
-                      </motion.span>
-                    ) : (
-                      <motion.span key="idle"
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-                        Connexion
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                </motion.button>
-
-                {/* Inscription */}
-                <p style={{ textAlign: 'center', fontSize: '0.84rem', color: '#6b7280', marginTop: '1rem', marginBottom: 0 }}>
-                  Pas encore de compte ?{' '}
-                  <Link to="/auth/register" style={{ color: GREEN, fontWeight: '700', textDecoration: 'none' }}>
-                    Inscription
-                  </Link>
-                </p>
-
-              </motion.form>
-            )}
-
-          </AnimatePresence>
+              <p style={{ textAlign: 'center', fontSize: '0.83rem', color: '#9ca3af', marginTop: '1rem', marginBottom: 0 }}>
+                <button type="button" onClick={() => { setRegStep('role'); clearError(); }}
+                  style={{ background: 'none', border: 'none', color: GREEN, cursor: 'pointer', fontWeight: '600', fontSize: '0.83rem' }}>
+                  ← Modifier mes informations
+                </button>
+              </p>
+            </form>
+          </motion.div>
         </div>
-        </motion.div>
-      </div>
+      )}
+
+      {/* ══════════════════════════════════════════════
+          MODE CONNEXION — branding gauche + formulaire droite
+      ══════════════════════════════════════════════ */}
+      {mode === 'login' && (
+        <>
+          {/* Panneau gauche branding */}
+          <div style={{
+            flex: '0 0 45%', background: 'linear-gradient(160deg, #0d2b14 0%, #1a5c2a 55%, #2d8c47 100%)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            padding: '3rem', position: 'relative', overflow: 'hidden',
+          }} className="d-none d-lg-flex">
+            <div style={{ position: 'absolute', top: '-60px', right: '-60px', width: '260px', height: '260px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+            <div style={{ position: 'absolute', bottom: '-80px', left: '-40px', width: '320px', height: '320px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+            <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}
+              style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+              <img src={logo} alt="AgroSaaNuu" style={{ width: '80px', height: '80px', borderRadius: '20px', objectFit: 'cover', marginBottom: '1.4rem', boxShadow: '0 8px 30px rgba(0,0,0,0.25)', border: '3px solid rgba(240,192,64,0.4)' }} />
+              <h2 style={{ color: 'white', fontWeight: '900', fontSize: '2rem', marginBottom: '0.5rem' }}>
+                Agro<span style={{ color: '#f0c040' }}>SaaNuu</span>
+              </h2>
+              <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.95rem', marginBottom: '2.5rem', lineHeight: 1.6 }}>
+                La marketplace agricole du Bénin
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
+                {[
+                  { icon: '🛡️', title: 'Paiements sécurisés', desc: 'Escrow — argent bloqué jusqu\'à livraison' },
+                  { icon: '📊', title: 'Prix du marché en temps réel', desc: 'Maïs, riz, mil, soja — au juste prix' },
+                  { icon: '🚚', title: 'Transporteurs vérifiés', desc: 'Livraison fiable dans tout le Bénin' },
+                ].map((f, i) => (
+                  <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + i * 0.1 }}
+                    style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: 'rgba(255,255,255,0.07)', borderRadius: '14px', padding: '0.9rem 1.1rem' }}>
+                    <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>{f.icon}</span>
+                    <div>
+                      <p style={{ margin: 0, color: 'white', fontWeight: '700', fontSize: '0.88rem' }}>{f.title}</p>
+                      <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', marginTop: '2px' }}>{f.desc}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', marginTop: '2rem' }}>
+                {[['500+', 'Vendeurs'], ['12k+', 'Acheteurs'], ['98%', 'Satisfaction']].map(([v, l]) => (
+                  <div key={l}>
+                    <p style={{ margin: 0, color: '#f0c040', fontWeight: '900', fontSize: '1.4rem' }}>{v}</p>
+                    <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>{l}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Panneau droit formulaire connexion */}
+          <div style={{ flex: 1, background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.5rem', overflowY: 'auto' }}>
+            <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+              style={{ width: '100%', maxWidth: '420px' }}>
+
+              {/* Logo mobile */}
+              <div className="d-flex d-lg-none flex-column align-items-center" style={{ marginBottom: '1.4rem' }}>
+                <img src={logo} alt="AgroSaaNuu" style={{ width: '44px', height: '44px', borderRadius: '10px', objectFit: 'cover' }} />
+                <span style={{ fontWeight: '900', color: '#1a2e10', marginTop: '6px' }}>Agro<span style={{ color: '#1a5c2a' }}>SaaNuu</span></span>
+              </div>
+
+              <div style={{ background: 'white', borderRadius: '24px', padding: '2.4rem 2.2rem', boxShadow: '0 4px 32px rgba(0,0,0,0.09)', border: '1px solid #e5e7eb' }}>
+
+                <h2 style={{ fontSize: '1.4rem', fontWeight: '900', color: '#1a2e10', marginBottom: '0.3rem' }}>Bon retour</h2>
+                <p style={{ fontSize: '0.87rem', color: '#6b7280', marginBottom: '1.6rem' }}>Connectez-vous à votre compte</p>
+
+                <AnimatePresence>
+                  {error && (
+                    <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '0.7rem 1rem', marginBottom: '1rem', fontSize: '0.84rem', color: '#dc2626' }}>
+                      <AlertCircle size={15} /> {error}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                  <div style={FW}>
+                    <label style={LB}>Email ou numéro de téléphone</label>
+                    <div style={{ position: 'relative' }}>
+                      <User size={15} color="#9ca3af" style={IL} />
+                      <input type="text" value={loginId}
+                        onChange={e => { setLoginId(e.target.value); clearError(); }}
+                        onFocus={() => setFocused('loginId')} onBlur={() => setFocused('')}
+                        placeholder="votre@email.com ou 0700000000"
+                        style={inp('loginId')} autoComplete="username" autoFocus />
+                    </div>
+                  </div>
+
+                  <div style={FW}>
+                    <label style={LB}>Mot de passe</label>
+                    <div style={{ position: 'relative' }}>
+                      <Lock size={15} color="#9ca3af" style={IL} />
+                      <input type={showLoginPwd ? 'text' : 'password'} value={loginPwd}
+                        onChange={e => { setLoginPwd(e.target.value); clearError(); }}
+                        onFocus={() => setFocused('loginPwd')} onBlur={() => setFocused('')}
+                        placeholder="Votre mot de passe"
+                        style={{ ...inp('loginPwd'), paddingRight: '3rem' }} autoComplete="current-password" />
+                      <button type="button" onClick={() => setShowLoginPwd(v => !v)}
+                        style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}>
+                        {showLoginPwd ? <EyeOff size={17} color="#9ca3af" /> : <Eye size={17} color="#9ca3af" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: 'right', marginTop: '-0.4rem' }}>
+                    <Link to="/auth/forgot-password" style={{ fontSize: '0.83rem', color: GREEN, textDecoration: 'none', fontWeight: '600' }}>
+                      Mot de passe oublié ?
+                    </Link>
+                  </div>
+
+                  <motion.button type="submit"
+                    style={{ ...btnPrimary, borderRadius: '50px', fontSize: '1rem', padding: '0.95rem', opacity: loading ? 0.75 : 1 }}
+                    disabled={loading} whileHover={{ scale: loading ? 1 : 1.02 }} whileTap={{ scale: loading ? 1 : 0.98 }}>
+                    <AnimatePresence mode="wait" initial={false}>
+                      {loading ? (
+                        <motion.span key="l" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                          <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div>
+                          Connexion…
+                        </motion.span>
+                      ) : (
+                        <motion.span key="i" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                          Se connecter
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </motion.button>
+
+                  <p style={{ textAlign: 'center', fontSize: '0.84rem', color: '#6b7280', margin: '0.4rem 0 0' }}>
+                    Pas encore de compte ?{' '}
+                    <Link to="/auth/register" style={{ color: GREEN, fontWeight: '700', textDecoration: 'none' }}>
+                      S'inscrire gratuitement
+                    </Link>
+                  </p>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        </>
+      )}
+
     </div>
   );
 }
