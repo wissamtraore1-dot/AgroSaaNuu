@@ -4,38 +4,44 @@ import { Link } from 'react-router-dom';
 import {
   ChevronLeft, ChevronRight, ArrowRight,
   Truck, User, Users, Shield, TrendingUp,
-  Newspaper, MapPin, ArrowUpRight, Wheat
+  Newspaper, MapPin, ArrowUpRight, Wheat, ExternalLink
 } from 'lucide-react';
 import ProductService from '../../services/product.service';
 import TransportService from '../../services/transport.service';
+import api from '../../services/api';
 
-// ===== SLIDES ÉDITORIAUX (contenu plateforme, pas données utilisateurs) =====
-const slides = [
+const FALLBACK_IMAGES = [
+  'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=1400&q=80',
+  'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1400&q=80',
+  'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=1400&q=80',
+  'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=1400&q=80',
+  'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=1400&q=80',
+];
+
+const FALLBACK_SLIDES = [
   {
-    id: 1,
+    id: 'f1',
     title: 'Céréales de qualité directement des coopératives du Bénin',
     description: 'Maïs, riz, soja — achetez en direct auprès des producteurs locaux.',
-    image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=1400&q=80',
+    image: FALLBACK_IMAGES[0],
     bg: 'linear-gradient(135deg, rgba(10,40,15,0.88) 0%, rgba(26,92,42,0.72) 100%)',
-    cta: 'Voir les produits', ctaLink: '/products',
+    cta: 'Voir les produits', ctaLink: '/products', external: false,
   },
   {
-    id: 2,
+    id: 'f2',
     title: 'Réseau de transporteurs vérifiés dans tout le Bénin',
     description: 'Livraison sécurisée de vos céréales — pick-up, camion 5t, 10t et plus.',
     image: 'https://images.unsplash.com/photo-1592838064575-70ed626d3a0e?w=1400&q=80',
     bg: 'linear-gradient(135deg, rgba(5,20,40,0.88) 0%, rgba(10,60,100,0.72) 100%)',
-    cta: 'Trouver un transporteur', ctaLink: '/transporters',
-  },
-  {
-    id: 3,
-    title: 'Rejoignez la plateforme agricole numéro 1 du Bénin',
-    description: 'Vendeurs, acheteurs, transporteurs — créez votre espace en 2 minutes.',
-    image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=1400&q=80',
-    bg: 'linear-gradient(135deg, rgba(30,20,5,0.88) 0%, rgba(120,80,10,0.72) 100%)',
-    cta: "S'inscrire gratuitement", ctaLink: '/auth/register',
+    cta: 'Trouver un transporteur', ctaLink: '/transporters', external: false,
   },
 ];
+
+function fallbackImg(seed = '') {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (Math.imul(31, h) + seed.charCodeAt(i)) | 0;
+  return FALLBACK_IMAGES[Math.abs(h) % FALLBACK_IMAGES.length];
+}
 
 const features = [
   { icon: Truck,      label: 'Livraison',    to: '/transporters',          desc: "Transport adapté à vos marchandises",      color: '#1a5c2a' },
@@ -72,18 +78,20 @@ export default function Home() {
   const [direction, setDirection] = useState(1);
   const [paused,    setPaused]    = useState(false);
 
+  const [slides,        setSlides]        = useState(FALLBACK_SLIDES);
   const [products,      setProducts]      = useState([]);
   const [transporteurs, setTransporteurs] = useState([]);
   const [loadingData,   setLoadingData]   = useState(true);
 
-  // Chargement des vraies données
+  // Chargement des données
   useEffect(() => {
     let active = true;
     (async () => {
       try {
-        const [prodRes, transpRes] = await Promise.allSettled([
+        const [prodRes, transpRes, newsRes] = await Promise.allSettled([
           ProductService.liste({ page_size: 3 }),
           TransportService.getTransporters({ page: 1 }),
+          api.get('/news/external/'),
         ]);
 
         if (!active) return;
@@ -113,6 +121,23 @@ export default function Home() {
             verifie:      u.transporter_profile?.est_certifie || false,
           })));
         }
+
+        if (newsRes.status === 'fulfilled') {
+          const articles = newsRes.value.data?.articles || [];
+          const mapped = articles.slice(0, 5).map((a, idx) => ({
+            id:          a.url || idx,
+            title:       a.titre,
+            description: a.extrait || '',
+            image:       a.image || fallbackImg(a.titre || String(idx)),
+            bg:          'linear-gradient(135deg, rgba(8,30,12,0.85) 0%, rgba(20,70,30,0.70) 100%)',
+            source:      a.source || '',
+            date:        a.date || '',
+            cta:         'Lire l\'article',
+            ctaLink:     a.url || '/news',
+            external:    !!a.url,
+          }));
+          if (mapped.length > 0) setSlides(mapped);
+        }
       } finally {
         if (active) setLoadingData(false);
       }
@@ -127,7 +152,7 @@ export default function Home() {
       setCurrent((p) => (p + 1) % slides.length);
     }, 5000);
     return () => clearInterval(t);
-  }, [paused, current]);
+  }, [paused, current, slides.length]);
 
   const goTo = (i) => {
     setDirection(i > current ? 1 : -1);
@@ -136,7 +161,7 @@ export default function Home() {
     setTimeout(() => setPaused(false), 8000);
   };
 
-  const slide = slides[current];
+  const slide = slides[Math.min(current, slides.length - 1)];
 
   return (
     <div style={{ background: '#f8f9f4' }}>
@@ -179,18 +204,33 @@ export default function Home() {
                 style={{ maxWidth: '620px' }}
               >
 
+                {slide.source && (
+                  <div style={styles.newsTag}>
+                    <Newspaper size={12} />
+                    {slide.source}
+                    {slide.date && <span style={{ opacity: 0.7 }}> · {new Date(slide.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>}
+                  </div>
+                )}
                 <h1 style={styles.heroTitle}>{slide.title}</h1>
-                <p  style={styles.heroDesc}>{slide.description}</p>
+                {slide.description && (
+                  <p style={styles.heroDesc}>{slide.description}</p>
+                )}
 
                 <div className="d-flex gap-3 flex-wrap">
                   <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
-                    <Link to={slide.ctaLink} style={styles.btnGold}>
-                      {slide.cta} <ArrowRight size={16} />
-                    </Link>
+                    {slide.external ? (
+                      <a href={slide.ctaLink} target="_blank" rel="noopener noreferrer" style={styles.btnGold}>
+                        {slide.cta} <ExternalLink size={15} />
+                      </a>
+                    ) : (
+                      <Link to={slide.ctaLink} style={styles.btnGold}>
+                        {slide.cta} <ArrowRight size={16} />
+                      </Link>
+                    )}
                   </motion.div>
                   <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
-                    <Link to="/auth/register" style={styles.btnGhost}>
-                      Créer un compte
+                    <Link to="/news" style={styles.btnGhost}>
+                      Toutes les actualités
                     </Link>
                   </motion.div>
                 </div>
@@ -464,6 +504,19 @@ const styles = {
     padding: '0.28rem 1rem',
     borderRadius: '30px',
     fontSize: '0.8rem',
+    fontWeight: '600',
+    marginBottom: '1rem',
+  },
+  newsTag: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    background: 'rgba(240,192,64,0.18)',
+    border: '1px solid #f0c040',
+    color: '#f0c040',
+    padding: '0.28rem 1rem',
+    borderRadius: '30px',
+    fontSize: '0.78rem',
     fontWeight: '600',
     marginBottom: '1rem',
   },
