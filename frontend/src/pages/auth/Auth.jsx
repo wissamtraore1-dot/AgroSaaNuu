@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import AuthService from '../../services/auth.service';
 import {
-  Phone, Mail, Eye, EyeOff, ArrowLeft, AlertCircle,
+  Phone, Mail, Eye, EyeOff, AlertCircle,
   Check, ShoppingCart, Store, Truck, Lock, Loader, User,
   XCircle, CheckCircle,
 } from 'lucide-react';
@@ -224,16 +224,6 @@ export default function Auth() {
   // RENDU
   // ═══════════════════════════════════════
 
-  const showBack = mode === 'register' && regStep !== 'role';
-
-  const handleBack = () => {
-    clearError();
-    if (mode === 'register') {
-      if (regStep === 'form') setRegStep('role');
-      if (regStep === 'otp')  setRegStep('form');
-    }
-  };
-
   return (
     <div style={{ minHeight: '100vh', background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem', position: 'relative', overflow: 'hidden' }}>
 
@@ -245,16 +235,6 @@ export default function Auth() {
       <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
         style={{ width: '100%', maxWidth: '420px', position: 'relative', zIndex: 1 }}
       >
-
-        {/* Bouton retour */}
-        <div style={{ marginBottom: '1rem' }}>
-          <motion.button onClick={showBack ? handleBack : () => navigate('/')}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.7)', border: '1px solid #e0d8cc', borderRadius: '10px', padding: '7px 14px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', color: '#374151', backdropFilter: 'blur(4px)' }}
-            whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-          >
-            <ArrowLeft size={16} /> Retour
-          </motion.button>
-        </div>
 
         {/* Carte */}
         <div style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', padding: '2.2rem 2rem', boxShadow: '0 8px 40px rgba(0,0,0,0.08)', backdropFilter: 'blur(8px)' }}>
