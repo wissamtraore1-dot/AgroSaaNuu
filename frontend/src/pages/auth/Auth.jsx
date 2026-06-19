@@ -225,24 +225,70 @@ export default function Auth() {
   // ═══════════════════════════════════════
 
   return (
-    <div style={{ minHeight: '100vh', background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', display: 'flex' }}>
 
-      {/* Cercles décoratifs background */}
-      <div style={{ position: 'absolute', top: '-80px',  left: '-80px',  width: '300px', height: '300px', borderRadius: '50%', background: 'rgba(180,160,120,0.12)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: '-60px', right: '-60px', width: '260px', height: '260px', borderRadius: '50%', background: 'rgba(180,160,120,0.12)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', top: '40%',    right: '-40px',  width: '180px', height: '180px', borderRadius: '50%', background: 'rgba(180,160,120,0.08)', pointerEvents: 'none' }} />
+      {/* ── PANNEAU GAUCHE (branding) ── */}
+      <div style={{
+        flex: '0 0 45%', background: 'linear-gradient(160deg, #0d2b14 0%, #1a5c2a 55%, #2d8c47 100%)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: '3rem 3rem', position: 'relative', overflow: 'hidden',
+      }} className="d-none d-lg-flex">
 
-      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-        style={{ width: '100%', maxWidth: '420px', position: 'relative', zIndex: 1 }}
-      >
+        {/* Cercles décoratifs */}
+        <div style={{ position: 'absolute', top: '-60px', right: '-60px', width: '260px', height: '260px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+        <div style={{ position: 'absolute', bottom: '-80px', left: '-40px', width: '320px', height: '320px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+
+        <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}
+          style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+          <img src={logo} alt="AgroSaaNuu" style={{ width: '80px', height: '80px', borderRadius: '20px', objectFit: 'cover', marginBottom: '1.4rem', boxShadow: '0 8px 30px rgba(0,0,0,0.25)', border: '3px solid rgba(240,192,64,0.4)' }} />
+          <h2 style={{ color: 'white', fontWeight: '900', fontSize: '2rem', marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>
+            Agro<span style={{ color: '#f0c040' }}>SaaNuu</span>
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.95rem', marginBottom: '2.5rem', lineHeight: 1.6 }}>
+            La marketplace agricole du Bénin
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
+            {[
+              { icon: '🛡️', title: 'Paiements sécurisés', desc: 'Système escrow — argent bloqué jusqu\'à livraison' },
+              { icon: '📊', title: 'Prix du marché en temps réel', desc: 'Maïs, riz, mil, soja — toujours au juste prix' },
+              { icon: '🚚', title: 'Réseau de transporteurs vérifiés', desc: 'Livraison fiable dans tout le Bénin' },
+            ].map((f, i) => (
+              <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + i * 0.1 }}
+                style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: 'rgba(255,255,255,0.07)', borderRadius: '14px', padding: '0.9rem 1.1rem' }}>
+                <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>{f.icon}</span>
+                <div>
+                  <p style={{ margin: 0, color: 'white', fontWeight: '700', fontSize: '0.88rem' }}>{f.title}</p>
+                  <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', marginTop: '2px' }}>{f.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', marginTop: '2.5rem' }}>
+            {[['500+', 'Vendeurs'], ['12k+', 'Acheteurs'], ['98%', 'Satisfaction']].map(([v, l]) => (
+              <div key={l} style={{ textAlign: 'center' }}>
+                <p style={{ margin: 0, color: '#f0c040', fontWeight: '900', fontSize: '1.4rem' }}>{v}</p>
+                <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>{l}</p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+
+      {/* ── PANNEAU DROIT (formulaire) ── */}
+      <div style={{ flex: 1, background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.5rem', overflowY: 'auto' }}>
+        <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+          style={{ width: '100%', maxWidth: '460px' }}
+        >
 
         {/* Carte */}
-        <div style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', padding: '2.2rem 2rem', boxShadow: '0 8px 40px rgba(0,0,0,0.08)', backdropFilter: 'blur(8px)' }}>
+        <div style={{ background: 'white', borderRadius: '24px', padding: '2.4rem 2.2rem', boxShadow: '0 4px 32px rgba(0,0,0,0.09)', border: '1px solid #e5e7eb' }}>
 
-          {/* Logo centré */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.4rem' }}>
-            <img src={logo} alt="AgroSaaNuu" style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', marginBottom: '0.6rem', boxShadow: '0 2px 12px rgba(0,0,0,0.1)' }} />
-            <span style={{ fontSize: '1.5rem', fontWeight: '900', color: '#1a2e10' }}>AgroSaaNuu</span>
+          {/* Logo (mobile uniquement — masqué si panneau gauche visible) */}
+          <div className="d-flex d-lg-none flex-column align-items-center" style={{ marginBottom: '1.4rem' }}>
+            <img src={logo} alt="AgroSaaNuu" style={{ width: '52px', height: '52px', borderRadius: '50%', objectFit: 'cover', marginBottom: '0.5rem' }} />
+            <span style={{ fontSize: '1.3rem', fontWeight: '900', color: '#1a2e10' }}>Agro<span style={{ color: '#1a5c2a' }}>SaaNuu</span></span>
           </div>
 
           {/* Erreur */}
@@ -575,7 +621,8 @@ export default function Auth() {
 
           </AnimatePresence>
         </div>
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 }
