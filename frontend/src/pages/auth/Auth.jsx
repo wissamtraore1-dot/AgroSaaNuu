@@ -280,9 +280,9 @@ export default function Auth() {
       {mode === 'register' && regStep !== 'otp' && (
         <>
           {/* ── Panneau gauche : sélecteur de rôle ── */}
-          <div style={{ flex: '0 0 42%', background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.5rem', borderRight: '1px solid #e5e7eb', overflowY: 'auto' }}>
+          <div style={{ flex: '0 0 36%', background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 2rem', borderRight: '1px solid #e5e7eb', overflowY: 'auto' }}>
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}
-              style={{ width: '100%', maxWidth: '380px' }}>
+              style={{ width: '100%', maxWidth: '340px' }}>
 
               {/* Logo mobile */}
               <div className="d-flex d-md-none flex-column align-items-center" style={{ marginBottom: '1.2rem' }}>
@@ -339,8 +339,8 @@ export default function Auth() {
           </div>
 
           {/* ── Panneau droit : formulaire ── */}
-          <div style={{ flex: 1, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.5rem', overflowY: 'auto' }}>
-            <div style={{ width: '100%', maxWidth: '440px' }}>
+          <div style={{ flex: 1, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 4rem', overflowY: 'auto' }}>
+            <div style={{ width: '100%', maxWidth: '680px' }}>
 
               <AnimatePresence mode="wait">
                 {!role ? (
