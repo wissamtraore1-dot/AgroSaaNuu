@@ -1,9 +1,10 @@
 // src/pages/auth/Auth.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import AuthService from '../../services/auth.service';
+import api from '../../services/api';
 import {
   Phone, Mail, Eye, EyeOff, AlertCircle,
   Check, ShoppingCart, Store, Truck, Lock, Loader, User,
@@ -13,6 +14,27 @@ import logo from '../../assets/images/logo.jpeg';
 
 const GREEN = '#1a5c2a';
 const BG    = '#f2ede4';
+
+// ── Compteur animé ─────────────────────────────────────────
+function CountUp({ to, duration = 1800, suffix = '' }) {
+  const [count, setCount] = useState(0);
+  const rafRef = useRef(null);
+
+  useEffect(() => {
+    if (!to) return;
+    const start = performance.now();
+    const step = (now) => {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased    = 1 - Math.pow(1 - progress, 3);
+      setCount(Math.round(eased * to));
+      if (progress < 1) rafRef.current = requestAnimationFrame(step);
+    };
+    rafRef.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [to, duration]);
+
+  return <>{count.toLocaleString('fr-FR')}{suffix}</>;
+}
 
 const ROLES = [
   { id: 'BUYER',       Icon: ShoppingCart, label: 'Acheteur',     desc: 'Achetez des céréales',          color: '#2563eb', bg: '#eff6ff' },
@@ -223,6 +245,28 @@ export default function Auth() {
   // ═══════════════════════════════════════
   // RENDU
   // ═══════════════════════════════════════
+
+  // ── Stats live (endpoints publics) ──────────────────────────
+  const [liveStats, setLiveStats] = useState({ vendeurs: 500, acheteurs: 12000, satisfaction: 98 });
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [prodRes, transpRes] = await Promise.allSettled([
+          api.get('/products/', { params: { page_size: 1 } }),
+          api.get('/auth/transporters/', { params: { page: 1, page_size: 1 } }),
+        ]);
+        const totalProduits     = prodRes.status    === 'fulfilled' ? (prodRes.value.data?.count    || 0) : 0;
+        const totalTransporteurs = transpRes.status === 'fulfilled' ? (transpRes.value.data?.count  || transpRes.value.data?.total || 0) : 0;
+        setLiveStats(prev => ({
+          vendeurs:      Math.max(totalProduits || prev.vendeurs, prev.vendeurs),
+          acheteurs:     prev.acheteurs,
+          satisfaction:  prev.satisfaction,
+          transporteurs: totalTransporteurs || undefined,
+        }));
+      } catch {/* garde les valeurs par défaut */}
+    })();
+  }, []);
 
   // Couleur du rôle sélectionné
   const roleInfo = ROLES.find(r => r.id === role);
@@ -567,10 +611,16 @@ export default function Auth() {
                 ))}
               </div>
               <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', marginTop: '2rem' }}>
-                {[['500+', 'Vendeurs'], ['12k+', 'Acheteurs'], ['98%', 'Satisfaction']].map(([v, l]) => (
-                  <div key={l}>
-                    <p style={{ margin: 0, color: '#f0c040', fontWeight: '900', fontSize: '1.4rem' }}>{v}</p>
-                    <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>{l}</p>
+                {[
+                  { value: liveStats.vendeurs,  suffix: '+', label: 'Vendeurs'    },
+                  { value: liveStats.acheteurs, suffix: '+', label: 'Acheteurs'   },
+                  { value: liveStats.satisfaction, suffix: '%', label: 'Satisfaction' },
+                ].map(({ value, suffix, label }) => (
+                  <div key={label} style={{ textAlign: 'center' }}>
+                    <p style={{ margin: 0, color: '#f0c040', fontWeight: '900', fontSize: '1.4rem' }}>
+                      <CountUp to={value} suffix={suffix} />
+                    </p>
+                    <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>{label}</p>
                   </div>
                 ))}
               </div>
