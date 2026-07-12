@@ -24,20 +24,47 @@ KEYWORDS_REQUIS = [
     'fertilisant', 'engrais', 'irrigation', 'agroalimentaire',
     'sécurité alimentaire', 'food security', 'alimentation',
     'élevage', 'pêche', 'pastoral', 'sylviculture',
-    'fao', 'maep', 'ministère de l\'agriculture',
-    'bénin', 'benin',  # articles sur le Bénin en général (agriculture implicite)
+    'fao', 'maep', 'onasa', 'ministère de l\'agriculture',
+    'filière agricole', 'marché agricole', 'campagne agricole',
+    'intrant', 'pesticide', 'herbicide', 'stockage céréales',
 ]
 
 # Mots qui EXCLUENT l'article même s'il contient un keyword
 KEYWORDS_EXCLUS = [
-    'militaire', 'armée', 'guerre', 'combat', 'soldat',
-    'cuba', 'russie', 'ukraine', 'chine', 'états-unis',
+    # Transport & aviation
+    'aviation', 'aérien', 'aéroport', 'compagnie aérienne', 'airline',
+    'air algérie', 'air france', 'royal air maroc', 'ethiopian airlines',
+    'ligne aérienne', 'vol direct', 'cargo aérien',
+    # Militaire & conflits
+    'militaire', 'armée', 'guerre', 'combat', 'soldat', 'terroriste',
+    'jihadiste', 'djihadiste', 'attentat', 'coup d\'état',
+    # Géopolitique hors-sujet
+    'cuba', 'russie', 'ukraine', 'chine', 'états-unis', 'corée',
+    # Sport
     'sport', 'football', 'basketball', 'tennis', 'jeux olympiques',
+    'can 2025', 'coupe du monde', 'ligue des champions',
+    # Culture & divertissement
     'cinéma', 'musique', 'chanson', 'célébrité', 'acteur', 'actrice',
-    'procès', 'tribunal', 'prison', 'assassinat', 'meurtre',
-    'covid', 'vaccin', 'épidémie', 'pandémie',
-    'cep 2026', 'examen', 'baccalauréat', 'bac',
-    'élection', 'vote', 'candidat politique',
+    'festival', 'concert', 'album',
+    # Justice & faits divers
+    'procès', 'tribunal', 'prison', 'assassinat', 'meurtre', 'viol',
+    'braquage', 'kidnapping',
+    # Santé non-alimentaire
+    'covid', 'vaccin', 'épidémie', 'pandémie', 'paludisme', 'cholera',
+    # Éducation hors-sujet
+    'cep 2026', 'examen', 'baccalauréat', 'bac', 'concours scolaire',
+    # Politique pure
+    'élection', 'vote', 'candidat politique', 'parti politique',
+    'campagne électorale', 'assemblée nationale', 'parlement',
+    # Finance & économie générale
+    'bourse', 'crypto', 'bitcoin', 'action en bourse',
+    'banque centrale', 'taux d\'intérêt',
+    # Immobilier & construction
+    'immobilier', 'logement social', 'construction d\'immeuble',
+    # Télécoms
+    'téléphonie', 'opérateur mobile', '5g', 'internet haut débit',
+    # Tourisme
+    'tourisme', 'hôtellerie', 'resort',
 ]
 
 # ── Sources RSS ────────────────────────────────────────────────
