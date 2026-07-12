@@ -46,7 +46,7 @@ def initier_paiement_mobile(commande, numero_telephone):
         'description':   f'Commande AgroSaaNuu {commande.reference}',
         'amount':        int(commande.montant_total),
         'currency':      {'iso': 'XOF'},
-        'callback_url':  f'{settings.SITE_URL}/api/v1/orders/payment/callback/',
+        'callback_url':  f'{settings.SITE_URL}/api/v1/orders/payment/webhook/',
         'customer': {
             'firstname': commande.acheteur.prenom or 'Client',
             'lastname':  commande.acheteur.nom    or 'Inconnu',

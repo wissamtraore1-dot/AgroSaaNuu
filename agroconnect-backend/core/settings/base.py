@@ -179,12 +179,12 @@ AFRICASTALKING_API_KEY  = env('AFRICASTALKING_API_KEY',  default='')
 AFRICASTALKING_SANDBOX  = env.bool('AFRICASTALKING_SANDBOX', default=True)
 
 # ── FedaPay (Mobile Money Bénin — MTN, Moov, Celtis) ─────────────────────────
-# Créer un compte sur https://fedapay.com/ → Sandbox gratuit
-# Dashboard → API Keys → Copier la clé sandbox
+# Dashboard : https://app.fedapay.com → API Keys
+FEDAPAY_PUBLIC_KEY = env('FEDAPAY_PUBLIC_KEY', default='')
 FEDAPAY_SECRET_KEY = env('FEDAPAY_SECRET_KEY', default='')
-FEDAPAY_SANDBOX    = env.bool('FEDAPAY_SANDBOX', default=True)
+FEDAPAY_SANDBOX    = env.bool('FEDAPAY_SANDBOX', default=False)
 
-# URL publique du site (pour les callbacks FedaPay et webhooks)
+# URL publique du backend (mettre l'URL Render en production)
 SITE_URL = env('SITE_URL', default='http://localhost:8000')
 
 # ── Twilio (SMS fallback — si Africa's Talking indisponible) ──────────────────
