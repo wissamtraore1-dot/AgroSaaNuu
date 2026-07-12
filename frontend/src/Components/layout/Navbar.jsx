@@ -297,25 +297,35 @@ export default function Navbar() {
 
   return (
     <header style={{ backgroundColor: '#d6d1c4', borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
-      <div className="container-fluid px-4 px-lg-5 py-3">
+      <div
+        className="px-4 px-lg-5 py-3"
+        style={{
+          display:             'grid',
+          gridTemplateColumns: 'auto 1fr auto',
+          gridTemplateRows:    'auto auto',
+          columnGap:           '12px',
+          rowGap:              '10px',
+          alignItems:          'center',
+        }}
+      >
 
-        {/* ── TOP ROW ── */}
-        <div className="d-flex align-items-center gap-3">
+        {/* ── Col 1 ligne 1 : Logo ── */}
+        <Link to="/" className="d-flex align-items-center text-decoration-none" style={{ gridColumn: 1, gridRow: 1 }}>
+          <img src={logo} alt="logo" style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '11px' }} />
+          <span className="ms-2 d-none d-md-block text-nowrap" style={{ fontSize: '1.18rem', fontWeight: '800', color: '#1a2e10' }}>
+            Agro<span style={{ color: '#1a5c2a' }}>SaaNuu</span>
+          </span>
+        </Link>
 
-          {/* Logo */}
-          <Link to="/" className="d-flex align-items-center text-decoration-none flex-shrink-0">
-            <img src={logo} alt="logo" style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '11px' }} />
-            <span className="ms-2 d-none d-md-block text-nowrap" style={{ fontSize: '1.18rem', fontWeight: '800', color: '#1a2e10' }}>
-              Agro<span style={{ color: '#1a5c2a' }}>SaaNuu</span>
-            </span>
-          </Link>
-
-          {/* Barre de recherche */}
+        {/* ── Col 2 ligne 1 : Barre de recherche ── */}
+        <div style={{ gridColumn: 2, gridRow: 1 }}>
           <SearchBar onSearch={handleSearch} />
+        </div>
 
-          {/* Zone utilisateur */}
+        {/* ── Col 3 ligne 1 : Zone utilisateur ── */}
+        <div style={{ gridColumn: 3, gridRow: 1 }}>
           {isAuthenticated && user ? (
-            <div style={{ position: 'relative', flexShrink: 0 }} ref={menuRef}>
+            <div style={{ position: 'relative' }} ref={menuRef}>
               <button style={S.avatarBtn} onClick={() => setMenuOpen(!menuOpen)}>
                 <div style={S.avatar}>{getInitials(user)}</div>
                 <div className="d-none d-lg-flex flex-column text-start" style={{ lineHeight: 1.3 }}>
@@ -347,7 +357,7 @@ export default function Navbar() {
               )}
             </div>
           ) : (
-            <div className="d-flex gap-2 flex-shrink-0">
+            <div className="d-flex gap-2">
               <Link to="/auth/login" style={S.btnLogin}>
                 <User size={15} />
                 <span className="d-none d-sm-inline">Connexion</span>
@@ -357,11 +367,23 @@ export default function Navbar() {
               </Link>
             </div>
           )}
-
         </div>
 
-        {/* ── NAV LINKS ── */}
-        <nav className="d-flex align-items-center justify-content-center mt-3 flex-wrap" style={{ gap: '2rem' }}>
+        {/* ── Col 1 ligne 2 : spacer invisible (même largeur que logo) ── */}
+        <div style={{ gridColumn: 1, gridRow: 2 }} />
+
+        {/* ── Col 2 ligne 2 : liens de navigation ── */}
+        <nav
+          style={{
+            gridColumn:     2,
+            gridRow:        2,
+            display:        'flex',
+            alignItems:     'center',
+            justifyContent: 'center',
+            flexWrap:       'wrap',
+            gap:            '2rem',
+          }}
+        >
           {NAV_LINKS.map(({ to, icon: Icon, label }) => {
             const active = location.pathname === to;
             return (
@@ -394,6 +416,9 @@ export default function Navbar() {
             </Link>
           )}
         </nav>
+
+        {/* ── Col 3 ligne 2 : spacer invisible (même largeur que user zone) ── */}
+        <div style={{ gridColumn: 3, gridRow: 2 }} />
 
       </div>
     </header>
