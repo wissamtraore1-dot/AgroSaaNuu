@@ -173,6 +173,16 @@ const OrderService = {
     return response.data;
   },
 
+  async initierPaiementGroupeVendeur(groupeVendeurId, { telephone, reseau }) {
+    const response = await api.post(`/orders/groupe/${groupeVendeurId}/initier-paiement/`, { telephone, reseau });
+    return response.data;
+  },
+
+  async initierPaiementPanier(panierId, { telephone, reseau }) {
+    const response = await api.post(`/orders/panier/${panierId}/initier-paiement/`, { telephone, reseau });
+    return response.data;
+  },
+
   async renommerCommande(commandeId, nomCommande) {
     const response = await api.patch(`/orders/${commandeId}/renommer/`, { nom_commande: nomCommande });
     return response.data;

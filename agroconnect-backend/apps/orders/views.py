@@ -1122,3 +1122,132 @@ class NoterVendeurView(APIView):
         return Response({'success': True, 'message': 'Vendeur noté. Merci pour votre évaluation !'})
 
 
+class GroupeVendeurInitierPaiementView(APIView):
+    """
+    POST /api/v1/orders/groupe/<groupe_vendeur_id>/initier-paiement/
+    Crée UNE transaction FedaPay pour toutes les commandes du groupe.
+    Body: { telephone, reseau }
+    """
+    permission_classes = [IsBuyer]
+
+    def post(self, request, groupe_vendeur_id):
+        commandes = list(
+            Commande.objects.filter(
+                groupe_vendeur_id=groupe_vendeur_id,
+                acheteur=request.user,
+                statut=Commande.Statut.PAIEMENT_EN_ATTENTE,
+            ).select_related('produit', 'acheteur')
+        )
+
+        if not commandes:
+            return Response({'success': False, 'message': 'Aucune commande en attente pour ce groupe.'}, status=400)
+
+        telephone = request.data.get('telephone', '').strip()
+        reseau    = request.data.get('reseau', 'MTN').strip()
+
+        if not telephone:
+            return Response({'success': False, 'message': 'Numéro de téléphone requis.'}, status=400)
+
+        reseaux_valides = ['MTN', 'MOOV', 'CELTIS']
+        if reseau not in reseaux_valides:
+            return Response({'success': False, 'message': f'Réseau invalide. Choisir parmi {reseaux_valides}.'}, status=400)
+
+        # Créer un objet Commande virtuel pour le montant total
+        montant_total = sum(c.montant_total for c in commandes)
+        principale    = commandes[0]
+        principale.montant_total  = montant_total
+        principale.mode_paiement  = reseau
+
+        from .fedapay_service import initier_paiement_mobile
+        result = initier_paiement_mobile(principale, telephone)
+
+        if not result.get('success'):
+            return Response({'success': False, 'message': result.get('message', 'Erreur FedaPay.')}, status=400)
+
+        transaction_id = result.get('reference')
+
+        for commande in commandes:
+            paiement, _ = Paiement.objects.get_or_create(
+                commande=commande,
+                defaults={
+                    'montant':       commande.montant_total,
+                    'mode_paiement': reseau,
+                    'statut':        Paiement.Statut.EN_ATTENTE,
+                }
+            )
+            paiement.mode_paiement         = reseau
+            paiement.reference_transaction = transaction_id
+            paiement.save(update_fields=['mode_paiement', 'reference_transaction'])
+
+        return Response({
+            'success':        True,
+            'message':        'Paiement initié. Approuvez sur votre téléphone.',
+            'transaction_id': transaction_id,
+            'payment_url':    result.get('payment_url', ''),
+            'montant_total':  float(montant_total),
+        }, status=201)
+
+
+class PanierInitierPaiementView(APIView):
+    """
+    POST /api/v1/orders/panier/<panier_id>/initier-paiement/
+    Crée UNE transaction FedaPay pour toutes les commandes du panier.
+    Body: { telephone, reseau }
+    """
+    permission_classes = [IsBuyer]
+
+    def post(self, request, panier_id):
+        commandes = list(
+            Commande.objects.filter(
+                panier_id=panier_id,
+                acheteur=request.user,
+                statut=Commande.Statut.PAIEMENT_EN_ATTENTE,
+            ).select_related('produit', 'acheteur')
+        )
+
+        if not commandes:
+            return Response({'success': False, 'message': 'Aucune commande en attente pour ce panier.'}, status=400)
+
+        telephone = request.data.get('telephone', '').strip()
+        reseau    = request.data.get('reseau', 'MTN').strip()
+
+        if not telephone:
+            return Response({'success': False, 'message': 'Numéro de téléphone requis.'}, status=400)
+
+        reseaux_valides = ['MTN', 'MOOV', 'CELTIS']
+        if reseau not in reseaux_valides:
+            return Response({'success': False, 'message': f'Réseau invalide. Choisir parmi {reseaux_valides}.'}, status=400)
+
+        montant_total = sum(c.montant_total for c in commandes)
+        principale    = commandes[0]
+        principale.montant_total = montant_total
+        principale.mode_paiement = reseau
+
+        from .fedapay_service import initier_paiement_mobile
+        result = initier_paiement_mobile(principale, telephone)
+
+        if not result.get('success'):
+            return Response({'success': False, 'message': result.get('message', 'Erreur FedaPay.')}, status=400)
+
+        transaction_id = result.get('reference')
+
+        for commande in commandes:
+            paiement, _ = Paiement.objects.get_or_create(
+                commande=commande,
+                defaults={
+                    'montant':       commande.montant_total,
+                    'mode_paiement': reseau,
+                    'statut':        Paiement.Statut.EN_ATTENTE,
+                }
+            )
+            paiement.mode_paiement         = reseau
+            paiement.reference_transaction = transaction_id
+            paiement.save(update_fields=['mode_paiement', 'reference_transaction'])
+
+        return Response({
+            'success':        True,
+            'message':        'Paiement initié. Approuvez sur votre téléphone.',
+            'transaction_id': transaction_id,
+            'payment_url':    result.get('payment_url', ''),
+            'montant_total':  float(montant_total),
+        }, status=201)

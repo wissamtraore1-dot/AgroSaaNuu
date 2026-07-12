@@ -162,11 +162,11 @@ export default function BuyerOrders() {
     setPayError('');
     try {
       if (modalCmd.groupe_vendeur_id) {
-        await OrderService.simulerPaiementGroupeVendeur(modalCmd.groupe_vendeur_id, { telephone: telFormate, reseau });
+        await OrderService.initierPaiementGroupeVendeur(modalCmd.groupe_vendeur_id, { telephone: telFormate, reseau });
       } else if (modalCmd.panier_id) {
-        await OrderService.simulerPaiementPanier(modalCmd.panier_id, { telephone: telFormate, reseau });
+        await OrderService.initierPaiementPanier(modalCmd.panier_id, { telephone: telFormate, reseau });
       } else {
-        await OrderService.simulerPaiement(modalCmd.id, { telephone: telFormate, reseau, montant: modalCmd.montant_total });
+        await OrderService.initierPaiementFedaPay({ commande_id: modalCmd.id, mode_paiement: reseau, telephone: telFormate });
       }
       setPaySuccess(true);
     } catch (err) {
@@ -500,21 +500,19 @@ export default function BuyerOrders() {
                   <motion.div
                     initial={{ scale: 0 }} animate={{ scale: 1 }}
                     transition={{ type: 'spring', damping: 12, stiffness: 200 }}
-                    style={{ width: '72px', height: '72px', background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.2rem' }}
+                    style={{ width: '72px', height: '72px', background: '#fef3c7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.2rem' }}
                   >
-                    <CheckCircle size={38} color="#16a34a" />
+                    <Smartphone size={38} color="#d97706" />
                   </motion.div>
-                  <h2 style={{ fontWeight: '900', color: '#1a2e10', marginBottom: '0.5rem', fontSize: '1.2rem' }}>Paiement réussi !</h2>
+                  <h2 style={{ fontWeight: '900', color: '#1a2e10', marginBottom: '0.5rem', fontSize: '1.2rem' }}>Demande envoyée !</h2>
                   <p style={{ color: '#6b7280', fontSize: '0.88rem', marginBottom: '0.4rem' }}>
-                    Votre paiement de <strong>{Number(modalCmd.montant_total || 0).toLocaleString('fr-FR')} FCFA</strong> a été sécurisé en séquestre.
+                    Une demande de paiement de <strong>{Number(modalCmd.montant_total || 0).toLocaleString('fr-FR')} FCFA</strong> a été envoyée sur votre téléphone.
                   </p>
-                  {(modalCmd.nb_articles || 1) > 1 && (
-                    <p style={{ color: '#9ca3af', fontSize: '0.78rem', marginBottom: '0.4rem' }}>
-                      {modalCmd.nb_articles} commandes payées en même temps.
-                    </p>
-                  )}
+                  <p style={{ color: '#d97706', fontWeight: '700', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
+                    Approuvez la transaction sur votre téléphone pour confirmer.
+                  </p>
                   <p style={{ color: '#9ca3af', fontSize: '0.78rem', marginBottom: '1.5rem' }}>
-                    Les fonds seront libérés au vendeur après confirmation de réception.
+                    Votre commande passera en "Paiement sécurisé" après confirmation.
                   </p>
                   <motion.button
                     onClick={fermerModal}

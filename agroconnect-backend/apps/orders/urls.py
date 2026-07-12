@@ -29,9 +29,12 @@ urlpatterns = [
     path('<uuid:pk>/noter-vendeur/',         views.NoterVendeurView.as_view()),
     path('<uuid:pk>/renommer/',              views.RenommerCommandeView.as_view()),
     path('<uuid:pk>/confirmer-tripartite/',  views.ConfirmerReceptionTripartiteView.as_view()),
-    path('<uuid:pk>/simuler-paiement/',                   views.SimulerPaiementView.as_view()),
-    path('panier/<uuid:panier_id>/simuler-paiement/',         views.PanierSimulerPaiementView.as_view()),
-    path('groupe/<uuid:groupe_vendeur_id>/simuler-paiement/', views.GroupeVendeurSimulerPaiementView.as_view()),
+    path('<uuid:pk>/simuler-paiement/',                        views.SimulerPaiementView.as_view()),
+    path('panier/<uuid:panier_id>/simuler-paiement/',          views.PanierSimulerPaiementView.as_view()),
+    path('groupe/<uuid:groupe_vendeur_id>/simuler-paiement/',  views.GroupeVendeurSimulerPaiementView.as_view()),
+    # Paiement réel FedaPay pour groupe/panier
+    path('groupe/<uuid:groupe_vendeur_id>/initier-paiement/',  views.GroupeVendeurInitierPaiementView.as_view()),
+    path('panier/<uuid:panier_id>/initier-paiement/',          views.PanierInitierPaiementView.as_view()),
 
     # ===== PROBLÈMES =====
     path('mes-problemes/',                      views.MesLitigesView.as_view()),

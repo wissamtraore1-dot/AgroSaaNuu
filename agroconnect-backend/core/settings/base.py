@@ -183,7 +183,9 @@ AFRICASTALKING_SANDBOX  = env.bool('AFRICASTALKING_SANDBOX', default=True)
 # Dashboard → API Keys → Copier la clé sandbox
 FEDAPAY_SECRET_KEY = env('FEDAPAY_SECRET_KEY', default='')
 FEDAPAY_SANDBOX    = env.bool('FEDAPAY_SANDBOX', default=True)
-FEDAPAY_BASE_URL   = 'https://sandbox-api.fedapay.com' if env.bool('FEDAPAY_SANDBOX', default=True) else 'https://api.fedapay.com'
+
+# URL publique du site (pour les callbacks FedaPay et webhooks)
+SITE_URL = env('SITE_URL', default='http://localhost:8000')
 
 # ── Twilio (SMS fallback — si Africa's Talking indisponible) ──────────────────
 TWILIO_ACCOUNT_SID  = env('TWILIO_ACCOUNT_SID',  default='')
@@ -229,3 +231,18 @@ EMAIL_USE_TLS       = env.bool('EMAIL_USE_TLS', default=True)
 EMAIL_HOST_USER     = env('EMAIL_HOST_USER',     default='')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL  = env('DEFAULT_FROM_EMAIL',  default='AgroSaaNuu <noreply@agrosaanuu.com>')
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SQLITE — ACTIVER CONTRAINTES DE CLÉS ÉTRANGÈRES
+# ═══════════════════════════════════════════════════════════════════════════════
+# SQLite désactive les contraintes FK par défaut. Ce signal les réactive.
+# En production (PostgreSQL), c'est activé nativement.
+from django.db.backends.signals import connection_created
+from django.dispatch import receiver
+
+@receiver(connection_created)
+def activate_foreign_keys(sender, connection, **kwargs):
+    """Active les contraintes de clés étrangères pour SQLite."""
+    if connection.settings_dict['ENGINE'] == 'django.db.backends.sqlite3':
+        cursor = connection.cursor()
+        cursor.execute('PRAGMA foreign_keys=ON;')
