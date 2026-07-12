@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '../context/AuthContext';
 import { NotificationProvider } from '../context/NotificationContext';
 import { WalletProvider } from '../context/WalletContext';
-import { CartProvider } from '../context/CartContext';
 import Notification from '../Components/common/Notification';
 import ProtectedRoute from '../Components/common/ProtectedRoute';
 
@@ -27,6 +26,8 @@ import Contact       from '../pages/public/Contact';
 
 // Auth
 import Auth           from '../pages/auth/Auth';
+import Login          from '../pages/auth/Login';
+import Register       from '../pages/auth/Register';
 import ForgotPassword from '../pages/auth/ForgotPassword';
 
 // Onboarding
@@ -102,7 +103,6 @@ export default function AppRouter() {
       <AuthProvider>
         <NotificationProvider>
           <WalletProvider>
-          <CartProvider>
           <Notification />
           <Routes>
 
@@ -122,8 +122,8 @@ export default function AppRouter() {
           {/* ===== AUTH ===== */}
           <Route element={<AuthLayout />}>
             <Route path="/auth"                 element={<Auth />}           />
-            <Route path="/auth/login"           element={<Auth />}           />
-            <Route path="/auth/register"        element={<Auth />}           />
+            <Route path="/auth/login"           element={<Login />}          />
+            <Route path="/auth/register"        element={<Register />}       />
             <Route path="/auth/forgot-password" element={<ForgotPassword />} />
           </Route>
 
@@ -269,7 +269,6 @@ export default function AppRouter() {
           <Route path="*"             element={<NotFound />}     />
 
           </Routes>
-          </CartProvider>
           </WalletProvider>
         </NotificationProvider>
       </AuthProvider>

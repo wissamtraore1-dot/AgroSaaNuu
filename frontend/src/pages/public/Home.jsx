@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
@@ -32,7 +32,7 @@ const FALLBACK_SLIDES = [
     title: 'Réseau de transporteurs vérifiés dans tout le Bénin',
     description: 'Livraison sécurisée de vos céréales — pick-up, camion 5t, 10t et plus.',
     image: 'https://images.unsplash.com/photo-1592838064575-70ed626d3a0e?w=1400&q=80',
-    bg: 'linear-gradient(135deg, rgba(5,20,40,0.88) 0%, rgba(10,60,100,0.72) 100%)',
+    bg: 'linear-gradient(135deg, rgba(8,30,14,0.90) 0%, rgba(20,75,35,0.75) 100%)',
     cta: 'Trouver un transporteur', ctaLink: '/transporters', external: false,
   },
 ];
@@ -44,15 +44,14 @@ function fallbackImg(seed = '') {
 }
 
 const features = [
-  { icon: Truck,      label: 'Livraison',    to: '/transporters',          desc: "Transport adapté à vos marchandises",      color: '#1a5c2a' },
-  { icon: User,       label: 'Mon espace',   to: '/auth/login',            desc: "Gérez vos offres et commandes",            color: '#2563eb' },
-  { icon: Users,      label: 'Coopératives', to: '/auth/register?role=SELLER', desc: "Rejoignez ou créez une coopérative",  color: '#7c3aed' },
-  { icon: Shield,     label: 'Paiements',    to: '/finance/wallet',        desc: "MTN, Moov, Celtis — paiement sécurisé",   color: '#d97706' },
-  { icon: TrendingUp, label: 'Prix marché',  to: '/market-prices',         desc: "Consultez les prix en temps réel",        color: '#dc2626' },
-  { icon: Newspaper,  label: 'Actualités',   to: '/news',                  desc: "Tendances du secteur agricole",           color: '#0891b2' },
+  { icon: Truck,      label: 'Livraison',    to: '/transporters',              desc: 'Transport adapté à vos marchandises',     color: '#1a5c2a' },
+  { icon: User,       label: 'Mon espace',   to: '/auth/login',                desc: 'Gérez vos offres et commandes',           color: '#2d7a3a' },
+  { icon: Users,      label: 'Coopératives', to: '/auth/register?role=SELLER', desc: 'Rejoignez ou créez une coopérative',      color: '#b8860b' },
+  { icon: Shield,     label: 'Paiements',    to: '/finance/wallet',            desc: 'MTN, Moov, Celtis — paiement sécurisé',  color: '#d97706' },
+  { icon: TrendingUp, label: 'Prix marché',  to: '/market-prices',             desc: 'Consultez les prix en temps réel',       color: '#dc2626' },
+  { icon: Newspaper,  label: 'Actualités',   to: '/news',                      desc: 'Tendances du secteur agricole',          color: '#4a9e5c' },
 ];
 
-// ===== VARIANTS =====
 const slideVariants = {
   enter:  (dir) => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0 }),
   center: { x: 0, opacity: 1 },
@@ -65,14 +64,8 @@ const fadeUp = {
 };
 
 const getInitials = (name = '') =>
-  name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('') || 'TR';
+  name.split(' ').filter(Boolean).slice(0, 2).map(p => p[0]?.toUpperCase()).join('') || 'TR';
 
-// ===== COMPOSANT PRINCIPAL =====
 export default function Home() {
   const [current,   setCurrent]   = useState(0);
   const [direction, setDirection] = useState(1);
@@ -83,7 +76,6 @@ export default function Home() {
   const [transporteurs, setTransporteurs] = useState([]);
   const [loadingData,   setLoadingData]   = useState(true);
 
-  // Chargement des données
   useEffect(() => {
     let active = true;
     (async () => {
@@ -98,26 +90,25 @@ export default function Home() {
 
         if (prodRes.status === 'fulfilled') {
           const items = prodRes.value.results || prodRes.value || [];
-          setProducts(items.slice(0, 3).map((p) => ({
+          setProducts(items.slice(0, 3).map(p => ({
             id:           p.id,
             nom:          p.nom,
             localisation: p.ville || p.localisation || 'Bénin',
             prix:         Number(p.prix || 0),
-            image:        p.images?.find((i) => i.est_principale)?.image
+            image:        p.images?.find(i => i.est_principale)?.image
                           || p.images?.[0]?.image
                           || 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=400&q=80',
-            dispo:        p.est_disponible,
+            dispo: p.est_disponible,
           })));
         }
 
         if (transpRes.status === 'fulfilled') {
           const items = transpRes.value.transporteurs || transpRes.value.results || transpRes.value || [];
-          setTransporteurs(items.slice(0, 3).map((u) => ({
+          setTransporteurs(items.slice(0, 3).map(u => ({
             id:           u.id,
             nom:          u.nom_complet || `${u.prenom} ${u.nom}`,
             localisation: u.ville || 'Bénin',
             statut:       u.transporter_profile?.est_disponible ? 'Disponible' : 'En mission',
-            vehicule:     u.transporter_profile?.zones?.[0] || '',
             verifie:      u.transporter_profile?.est_certifie || false,
           })));
         }
@@ -132,7 +123,7 @@ export default function Home() {
             bg:          'linear-gradient(135deg, rgba(8,30,12,0.85) 0%, rgba(20,70,30,0.70) 100%)',
             source:      a.source || '',
             date:        a.date || '',
-            cta:         'Lire l\'article',
+            cta:         "Lire l'article",
             ctaLink:     a.url || '/news',
             external:    !!a.url,
           }));
@@ -149,12 +140,12 @@ export default function Home() {
     if (paused) return;
     const t = setInterval(() => {
       setDirection(1);
-      setCurrent((p) => (p + 1) % slides.length);
+      setCurrent(p => (p + 1) % slides.length);
     }, 5000);
     return () => clearInterval(t);
   }, [paused, current, slides.length]);
 
-  const goTo = (i) => {
+  const goTo = i => {
     setDirection(i > current ? 1 : -1);
     setCurrent(i);
     setPaused(true);
@@ -164,35 +155,26 @@ export default function Home() {
   const slide = slides[Math.min(current, slides.length - 1)];
 
   return (
-    <div style={{ background: '#f8f9f4' }}>
+    <div style={{ background: '#f8f9f4', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
-      {/* ============================
-          1. HERO SLIDER
-      ============================ */}
+      {/* ── 1. HERO SLIDER ───────────────────────────────────── */}
       <div
-        style={styles.heroWrap}
+        style={s.heroWrap}
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
       >
-        {/* FOND */}
         <AnimatePresence custom={direction} mode="wait">
           <motion.div
             key={slide.id}
             custom={direction}
             variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
+            initial="enter" animate="center" exit="exit"
             transition={{ duration: 0.75, ease: [0.4, 0, 0.2, 1] }}
-            style={{
-              ...styles.slideBg,
-              backgroundImage: `${slide.bg}, url(${slide.image})`,
-            }}
+            style={{ ...s.slideBg, backgroundImage: `${slide.bg}, url(${slide.image})` }}
           />
         </AnimatePresence>
 
-        {/* CONTENU */}
-        <div style={styles.heroContent}>
+        <div style={s.heroContent}>
           <div className="container-fluid px-4 px-lg-5 h-100 d-flex align-items-center">
             <AnimatePresence mode="wait">
               <motion.div
@@ -201,37 +183,40 @@ export default function Home() {
                 animate={{ y: 0,  opacity: 1 }}
                 exit={{   y: -30, opacity: 0 }}
                 transition={{ duration: 0.5, delay: 0.15 }}
-                style={{ maxWidth: '620px' }}
+                style={{ maxWidth: '640px' }}
               >
-
                 {slide.source && (
-                  <div style={styles.newsTag}>
-                    <Newspaper size={12} />
+                  <div style={s.newsTag}>
+                    <Newspaper size={13} />
                     {slide.source}
-                    {slide.date && <span style={{ opacity: 0.7 }}> · {new Date(slide.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>}
+                    {slide.date && (
+                      <span style={{ opacity: 0.7 }}>
+                        {' '}· {new Date(slide.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                      </span>
+                    )}
                   </div>
                 )}
-                <h1 style={styles.heroTitle}>{slide.title}</h1>
+
+                <h1 style={s.heroTitle}>{slide.title}</h1>
+
                 {slide.description && (
-                  <p style={styles.heroDesc}>{slide.description}</p>
+                  <p style={s.heroDesc}>{slide.description}</p>
                 )}
 
                 <div className="d-flex gap-3 flex-wrap">
                   <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
                     {slide.external ? (
-                      <a href={slide.ctaLink} target="_blank" rel="noopener noreferrer" style={styles.btnGold}>
-                        {slide.cta} <ExternalLink size={15} />
+                      <a href={slide.ctaLink} target="_blank" rel="noopener noreferrer" style={s.btnGold}>
+                        {slide.cta} <ExternalLink size={16} />
                       </a>
                     ) : (
-                      <Link to={slide.ctaLink} style={styles.btnGold}>
-                        {slide.cta} <ArrowRight size={16} />
+                      <Link to={slide.ctaLink} style={s.btnGold}>
+                        {slide.cta} <ArrowRight size={17} />
                       </Link>
                     )}
                   </motion.div>
                   <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
-                    <Link to="/news" style={styles.btnGhost}>
-                      Toutes les actualités
-                    </Link>
+                    <Link to="/news" style={s.btnGhost}>Toutes les actualités</Link>
                   </motion.div>
                 </div>
               </motion.div>
@@ -239,46 +224,38 @@ export default function Home() {
           </div>
         </div>
 
-        {/* FLÈCHES */}
-        {[-1, 1].map((dir) => (
+        {/* Flèches */}
+        {[-1, 1].map(dir => (
           <motion.button
             key={dir}
-            style={{
-              ...styles.arrow,
-              [dir === -1 ? 'left' : 'right']: '1.2rem',
-            }}
+            style={{ ...s.arrow, [dir === -1 ? 'left' : 'right']: '1.4rem' }}
             onClick={dir === -1
               ? () => goTo(current === 0 ? slides.length - 1 : current - 1)
               : () => goTo(current === slides.length - 1 ? 0 : current + 1)
             }
-            whileHover={{ scale: 1.1, background: 'rgba(255,255,255,0.3)' }}
+            whileHover={{ scale: 1.1, background: 'rgba(255,255,255,0.28)' }}
             whileTap={{ scale: 0.92 }}
           >
-            {dir === -1 ? <ChevronLeft size={22} /> : <ChevronRight size={22} />}
+            {dir === -1 ? <ChevronLeft size={24} /> : <ChevronRight size={24} />}
           </motion.button>
         ))}
 
-        {/* DOTS */}
-        <div style={styles.dotsWrap}>
+        {/* Dots */}
+        <div style={s.dotsWrap}>
           {slides.map((_, i) => (
             <motion.button
-              key={i}
-              onClick={() => goTo(i)}
-              animate={{
-                width:      i === current ? '30px' : '10px',
-                background: i === current ? '#f0c040' : 'rgba(255,255,255,0.4)',
-              }}
+              key={i} onClick={() => goTo(i)}
+              animate={{ width: i === current ? '32px' : '10px', background: i === current ? '#f0c040' : 'rgba(255,255,255,0.4)' }}
               transition={{ duration: 0.3 }}
-              style={styles.dot}
+              style={s.dot}
             />
           ))}
         </div>
 
-        {/* PROGRESS */}
-        <div style={styles.progressTrack}>
+        {/* Barre de progression */}
+        <div style={s.progressTrack}>
           <motion.div
-            key={current + '-bar'}
-            style={styles.progressFill}
+            key={current + '-bar'} style={s.progressFill}
             initial={{ width: '0%' }}
             animate={{ width: paused ? undefined : '100%' }}
             transition={{ duration: 5, ease: 'linear' }}
@@ -286,35 +263,30 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ============================
-          2. SECTION FONCTIONNALITÉS
-      ============================ */}
-      <div style={styles.featSection}>
+      {/* ── 2. FONCTIONNALITÉS ──────────────────────────────── */}
+      <div style={s.featSection}>
         <div className="container-fluid px-4 px-lg-5">
           <div className="row g-3 justify-content-center">
             {features.map((f, i) => {
               const Icon = f.icon;
               return (
                 <motion.div
-                  key={i}
-                  className="col-6 col-md-4 col-lg-2"
-                  variants={fadeUp}
-                  initial="hidden"
-                  animate="show"
+                  key={i} className="col-6 col-md-4 col-lg-2"
+                  variants={fadeUp} initial="hidden" animate="show"
                   transition={{ delay: i * 0.08, duration: 0.45 }}
                 >
-                 <Link to={f.to} style={{ textDecoration: 'none' }}>
+                  <Link to={f.to} style={{ textDecoration: 'none' }}>
                     <motion.div
-                     style={styles.featCard}
-                     whileHover={{ y: -6, boxShadow: `0 0 0 2px ${f.color}, 0 0 18px ${f.color}30, 0 12px 32px rgba(0,0,0,0.10)` }}
-                     >
-                       <div style={{ ...styles.featIcon, background: f.color + '18' }}>
-                       <Icon size={26} color={f.color} strokeWidth={1.8} />
-                       </div>
-                     <p style={styles.featLabel}>{f.label}</p>
-                     <p style={styles.featDesc}>{f.desc}</p>
-                     </motion.div>
-                 </Link>
+                      style={s.featCard}
+                      whileHover={{ y: -6, boxShadow: `0 0 0 2px ${f.color}, 0 12px 32px ${f.color}22` }}
+                    >
+                      <div style={{ ...s.featIcon, background: f.color + '15' }}>
+                        <Icon size={28} color={f.color} strokeWidth={1.7} />
+                      </div>
+                      <p style={s.featLabel}>{f.label}</p>
+                      <p style={s.featDesc}>{f.desc}</p>
+                    </motion.div>
+                  </Link>
                 </motion.div>
               );
             })}
@@ -322,73 +294,74 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ============================
-          3. PRODUITS + TRANSPORTEURS
-      ============================ */}
+      {/* ── 3. PRODUITS + TRANSPORTEURS ─────────────────────── */}
       <div className="container-fluid px-4 px-lg-5 py-5">
-        <div className="row g-4">
+        <div className="row g-5">
 
-          {/* ---- PRODUITS ---- */}
+          {/* PRODUITS */}
           <div className="col-lg-8">
-            <div style={styles.sectionHeader}>
-              <h2 style={styles.sectionTitle}>Produits disponibles</h2>
-              <Link to="/products" style={styles.voirTout}>
-                Voir tout <ArrowUpRight size={14} />
+            <div style={s.sectionHeader}>
+              <div>
+                <h2 style={s.sectionTitle}>Produits disponibles</h2>
+                <p style={s.sectionSubtitle}>Céréales fraîches directement des producteurs</p>
+              </div>
+              <Link to="/products" style={s.voirTout}>
+                Voir tout <ArrowUpRight size={15} />
               </Link>
             </div>
 
             {loadingData ? (
               <div className="row g-3">
-                {[1,2,3].map((n) => (
+                {[1, 2, 3].map(n => (
                   <div key={n} className="col-12 col-sm-6 col-md-4">
-                    <div style={{ ...styles.productCard, height: '240px', background: '#f3f4f6', animation: 'pulse 1.5s infinite' }} />
+                    <div style={{ ...s.productCard, height: '260px', background: '#f3f4f6' }} />
                   </div>
                 ))}
               </div>
             ) : products.length === 0 ? (
-              <div style={styles.emptyState}>
-                <Wheat size={40} color="#d1d5db" />
-                <p style={{ color: '#9ca3af', marginTop: '0.8rem', fontWeight: '600' }}>Aucun produit pour le moment</p>
-                <p style={{ color: '#d1d5db', fontSize: '0.85rem' }}>Les vendeurs publient leurs céréales ici</p>
-                <Link to="/auth/register?role=SELLER" style={styles.btnEmptyAction}>Devenir vendeur</Link>
+              <div style={s.emptyState}>
+                <Wheat size={44} color="#d1d5db" />
+                <p style={s.emptyTitle}>Aucun produit pour le moment</p>
+                <p style={s.emptyDesc}>Les vendeurs publient leurs céréales ici</p>
+                <Link to="/auth/register?role=SELLER" style={s.btnEmptyAction}>
+                  Devenir vendeur
+                </Link>
               </div>
             ) : (
               <div className="row g-3">
                 {products.map((p, i) => (
                   <motion.div
-                    key={p.id}
-                    className="col-12 col-sm-6 col-md-4"
-                    variants={fadeUp}
-                    initial="hidden"
-                    animate="show"
+                    key={p.id} className="col-12 col-sm-6 col-md-4"
+                    variants={fadeUp} initial="hidden" animate="show"
                     transition={{ delay: i * 0.1 }}
                   >
                     <motion.div
-                      style={styles.productCard}
-                      whileHover={{ y: -6, boxShadow: '0 0 0 2px #1a5c2a, 0 0 20px rgba(26,92,42,0.20), 0 16px 40px rgba(0,0,0,0.12)' }}
+                      style={s.productCard}
+                      whileHover={{ y: -6, boxShadow: '0 0 0 2px #1a5c2a, 0 16px 40px rgba(26,92,42,0.16)' }}
                     >
-                      <div style={styles.productImgWrap}>
+                      <div style={s.productImgWrap}>
                         <img
-                          src={p.image}
-                          alt={p.nom}
-                          style={styles.productImg}
-                          onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=400&q=80'; }}
+                          src={p.image} alt={p.nom} style={s.productImg}
+                          onError={e => { e.target.src = 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=400&q=80'; }}
                         />
-                        {p.dispo && <span style={styles.productBadge}>Disponible</span>}
+                        {p.dispo && <span style={s.productBadge}>Disponible</span>}
                       </div>
-                      <div style={{ padding: '1rem' }}>
-                        <h3 style={styles.productName}>{p.nom}</h3>
-                        <div style={styles.productLoc}>
+                      <div style={{ padding: '1.1rem 1.2rem 1.2rem' }}>
+                        <h3 style={s.productName}>{p.nom}</h3>
+                        <div style={s.productLoc}>
                           <MapPin size={13} color="#6b7280" />
                           <span>{p.localisation}</span>
                         </div>
-                        <div style={styles.productFooter}>
-                          <span style={styles.productPrice}>
-                            {p.prix.toLocaleString('fr-FR')} FCFA
-                          </span>
+                        <div style={s.productFooter}>
+                          <div>
+                            <span style={s.productPrice}>
+                              {p.prix.toLocaleString('fr-FR')} FCFA
+                            </span>
+                            <span style={s.productUnit}> / unité</span>
+                          </div>
                           <Link to={`/products/${p.id}`} style={{ textDecoration: 'none' }}>
-                            <motion.button style={styles.btnAcheter} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                              Voir
+                            <motion.button style={s.btnAcheter} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                              Voir l'offre
                             </motion.button>
                           </Link>
                         </div>
@@ -400,64 +373,69 @@ export default function Home() {
             )}
           </div>
 
-          {/* ---- TRANSPORTEURS ---- */}
+          {/* TRANSPORTEURS */}
           <div className="col-lg-4">
-            <div style={styles.sectionHeader}>
-              <h2 style={styles.sectionTitle}>Transporteurs disponibles</h2>
-              <Link to="/transporters" style={styles.voirTout}>
-                Voir tout <ArrowUpRight size={14} />
+            <div style={s.sectionHeader}>
+              <div>
+                <h2 style={s.sectionTitle}>Transporteurs</h2>
+                <p style={s.sectionSubtitle}>Vérifiés et disponibles dans tout le Bénin</p>
+              </div>
+              <Link to="/transporters" style={s.voirTout}>
+                Voir tout <ArrowUpRight size={15} />
               </Link>
             </div>
 
             {loadingData ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {[1,2,3].map((n) => (
-                  <div key={n} style={{ ...styles.transportCard, height: '80px', background: '#f3f4f6', animation: 'pulse 1.5s infinite' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {[1, 2, 3].map(n => (
+                  <div key={n} style={{ ...s.transportCard, height: '90px', background: '#f3f4f6' }} />
                 ))}
               </div>
             ) : transporteurs.length === 0 ? (
-              <div style={styles.emptyState}>
-                <Truck size={36} color="#d1d5db" />
-                <p style={{ color: '#9ca3af', marginTop: '0.8rem', fontWeight: '600' }}>Aucun transporteur inscrit</p>
-                <p style={{ color: '#d1d5db', fontSize: '0.85rem' }}>Les transporteurs rejoignent la plateforme ici</p>
-                <Link to="/auth/register?role=TRANSPORTER" style={styles.btnEmptyAction}>Devenir transporteur</Link>
+              <div style={s.emptyState}>
+                <Truck size={40} color="#d1d5db" />
+                <p style={s.emptyTitle}>Aucun transporteur inscrit</p>
+                <p style={s.emptyDesc}>Les transporteurs rejoignent la plateforme ici</p>
+                <Link to="/auth/register?role=TRANSPORTER" style={s.btnEmptyAction}>
+                  Devenir transporteur
+                </Link>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {transporteurs.map((t, i) => (
                   <motion.div
                     key={t.id}
-                    variants={fadeUp}
-                    initial="hidden"
-                    animate="show"
+                    variants={fadeUp} initial="hidden" animate="show"
                     transition={{ delay: i * 0.1 }}
                   >
                     <motion.div
-                      style={styles.transportCard}
-                      whileHover={{ x: 4, boxShadow: '0 0 0 2px #1a5c2a, 0 0 18px rgba(26,92,42,0.18), 0 8px 24px rgba(0,0,0,0.08)' }}
+                      style={s.transportCard}
+                      whileHover={{ x: 4, boxShadow: '0 0 0 2px #1a5c2a, 0 8px 24px rgba(26,92,42,0.14)' }}
                     >
-                      <div style={styles.initialsAvatar}>{getInitials(t.nom)}</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={styles.transportName}>
+                      <div style={s.initialsAvatar}>{getInitials(t.nom)}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={s.transportName}>
                           {t.nom}
-                          {t.verifie && <span style={{ marginLeft: '6px', color: '#16a34a', fontSize: '0.72rem' }}>âœ“ Vérifié</span>}
+                          {t.verifie && (
+                            <span style={s.verifiBadge}>✓ Vérifié</span>
+                          )}
                         </div>
-                        <div style={styles.transportLoc}>
-                          <MapPin size={11} color="#6b7280" />
+                        <div style={s.transportLoc}>
+                          <MapPin size={12} color="#6b7280" />
                           <span>{t.localisation}</span>
                         </div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
                         <span style={{
-                          ...styles.statutBadge,
+                          ...s.statutBadge,
                           background: t.statut === 'Disponible' ? '#dcfce7' : '#fef9c3',
                           color:      t.statut === 'Disponible' ? '#166534' : '#854d0e',
                         }}>
-                          <span style={{ ...styles.statutDot, background: t.statut === 'Disponible' ? '#16a34a' : '#ca8a04' }} />
+                          <span style={{ ...s.statutDot, background: t.statut === 'Disponible' ? '#16a34a' : '#ca8a04' }} />
                           {t.statut}
                         </span>
-                        <Link to="/transporters" style={{ textDecoration: 'none', display: 'block' }}>
-                          <motion.button style={styles.btnContacter} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Link to="/transporters" style={{ textDecoration: 'none', display: 'block', marginTop: '6px' }}>
+                          <motion.button style={s.btnContacter} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                             Contacter
                           </motion.button>
                         </Link>
@@ -467,7 +445,6 @@ export default function Home() {
                 ))}
               </div>
             )}
-
           </div>
         </div>
       </div>
@@ -476,366 +453,196 @@ export default function Home() {
   );
 }
 
-// ===== STYLES =====
-const styles = {
+// ── STYLES ───────────────────────────────────────────────────
+const s = {
   // HERO
   heroWrap: {
-    position: 'relative',
-    height: '500px',
-    overflow: 'hidden',
-    background: '#0e2010',
+    position: 'relative', height: '540px',
+    overflow: 'hidden', background: '#0e2010',
   },
   slideBg: {
-    position: 'absolute',
-    inset: 0,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
+    position: 'absolute', inset: 0,
+    backgroundSize: 'cover', backgroundPosition: 'center',
   },
-  heroContent: {
-    position: 'absolute',
-    inset: 0,
-    zIndex: 2,
-  },
-  tag: {
-    display: 'inline-block',
-    background: 'rgba(240,192,64,0.18)',
-    border: '1px solid #f0c040',
-    color: '#f0c040',
-    padding: '0.28rem 1rem',
-    borderRadius: '30px',
-    fontSize: '0.8rem',
-    fontWeight: '600',
-    marginBottom: '1rem',
-  },
+  heroContent: { position: 'absolute', inset: 0, zIndex: 2 },
   newsTag: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '6px',
-    background: 'rgba(240,192,64,0.18)',
-    border: '1px solid #f0c040',
-    color: '#f0c040',
-    padding: '0.28rem 1rem',
-    borderRadius: '30px',
-    fontSize: '0.78rem',
-    fontWeight: '600',
-    marginBottom: '1rem',
+    display: 'inline-flex', alignItems: 'center', gap: '7px',
+    background: 'rgba(240,192,64,0.18)', border: '1px solid #f0c040',
+    color: '#f0c040', padding: '0.35rem 1.1rem', borderRadius: '30px',
+    fontSize: '0.82rem', fontWeight: '600', marginBottom: '1.1rem',
   },
   heroTitle: {
-    color: 'white',
-    fontSize: 'clamp(1.5rem, 3vw, 2.4rem)',
-    fontWeight: '800',
-    lineHeight: 1.2,
-    marginBottom: '1rem',
-    textShadow: '0 2px 16px rgba(0,0,0,0.5)',
+    color: 'white', fontSize: 'clamp(1.6rem, 3.2vw, 2.6rem)',
+    fontWeight: '800', lineHeight: 1.22, marginBottom: '1.1rem',
+    textShadow: '0 2px 20px rgba(0,0,0,0.5)',
   },
   heroDesc: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: '0.98rem',
-    marginBottom: '1.8rem',
-    lineHeight: 1.6,
-    maxWidth: '480px',
+    color: 'rgba(255,255,255,0.87)', fontSize: '1.05rem',
+    marginBottom: '2rem', lineHeight: 1.7, maxWidth: '500px',
   },
   btnGold: {
-    background: '#f0c040',
-    color: '#1a2e10',
-    padding: '0.7rem 1.7rem',
-    borderRadius: '30px',
-    textDecoration: 'none',
-    fontWeight: '700',
-    fontSize: '0.9rem',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    boxShadow: '0 4px 18px rgba(240,192,64,0.4)',
+    background: '#f0c040', color: '#1a2e10',
+    padding: '0.78rem 1.8rem', borderRadius: '30px',
+    textDecoration: 'none', fontWeight: '700', fontSize: '0.97rem',
+    display: 'flex', alignItems: 'center', gap: '8px',
+    boxShadow: '0 4px 20px rgba(240,192,64,0.4)',
   },
   btnGhost: {
-    background: 'rgba(255,255,255,0.12)',
-    color: 'white',
-    padding: '0.7rem 1.7rem',
-    borderRadius: '30px',
-    textDecoration: 'none',
-    fontWeight: '600',
-    fontSize: '0.9rem',
+    background: 'rgba(255,255,255,0.12)', color: 'white',
+    padding: '0.78rem 1.8rem', borderRadius: '30px',
+    textDecoration: 'none', fontWeight: '600', fontSize: '0.97rem',
     border: '1.5px solid rgba(255,255,255,0.45)',
-    display: 'flex',
-    alignItems: 'center',
+    display: 'flex', alignItems: 'center',
   },
   arrow: {
-    position: 'absolute',
-    top: '50%',
-    transform: 'translateY(-50%)',
-    background: 'rgba(255,255,255,0.15)',
-    border: '1.5px solid rgba(255,255,255,0.4)',
-    color: 'white',
-    borderRadius: '50%',
-    width: '46px',
-    height: '46px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    zIndex: 3,
-    backdropFilter: 'blur(6px)',
+    position: 'absolute', top: '50%', transform: 'translateY(-50%)',
+    background: 'rgba(255,255,255,0.13)', border: '1.5px solid rgba(255,255,255,0.35)',
+    color: 'white', borderRadius: '50%', width: '50px', height: '50px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    cursor: 'pointer', zIndex: 3, backdropFilter: 'blur(6px)',
   },
   dotsWrap: {
-    position: 'absolute',
-    bottom: '1.8rem',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    display: 'flex',
-    gap: '8px',
-    zIndex: 3,
+    position: 'absolute', bottom: '2rem', left: '50%',
+    transform: 'translateX(-50%)', display: 'flex', gap: '8px', zIndex: 3,
   },
-  dot: {
-    height: '10px',
-    borderRadius: '10px',
-    border: 'none',
-    cursor: 'pointer',
-    padding: 0,
-  },
+  dot: { height: '10px', borderRadius: '10px', border: 'none', cursor: 'pointer', padding: 0 },
   progressTrack: {
-    position: 'absolute',
-    bottom: 0, left: 0, right: 0,
-    height: '4px',
-    background: 'rgba(255,255,255,0.2)',
-    zIndex: 3,
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    height: '4px', background: 'rgba(255,255,255,0.18)', zIndex: 3,
   },
-  progressFill: {
-    height: '100%',
-    background: '#f0c040',
-  },
+  progressFill: { height: '100%', background: '#f0c040' },
 
-  // FEATURES
+  // FONCTIONNALITÉS
   featSection: {
-    background: 'white',
-    padding: '2rem 0',
-    borderBottom: '1px solid #e5e7eb',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+    background: 'white', padding: '2.4rem 0',
+    borderBottom: '1px solid #e5e7eb', boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
   },
   featCard: {
-    background: 'white',
-    borderRadius: '16px',
-    padding: '1.2rem 1rem',
-    textAlign: 'center',
-    border: '1px solid #f0f0f0',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    height: '100%',
+    background: 'white', borderRadius: '18px', padding: '1.4rem 1.1rem',
+    textAlign: 'center', border: '1px solid #efefef',
+    cursor: 'pointer', transition: 'all 0.2s', height: '100%',
   },
   featIcon: {
-    width: '56px',
-    height: '56px',
-    borderRadius: '14px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    margin: '0 auto 0.8rem',
+    width: '62px', height: '62px', borderRadius: '16px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    margin: '0 auto 1rem',
   },
   featLabel: {
-    fontWeight: '700',
-    fontSize: '0.82rem',
-    color: '#1a2e10',
-    marginBottom: '0.4rem',
-    lineHeight: 1.3,
+    fontWeight: '700', fontSize: '0.9rem',
+    color: '#1a2e10', marginBottom: '0.45rem', lineHeight: 1.3,
   },
   featDesc: {
-    fontSize: '0.75rem',
-    color: '#6b7280',
-    lineHeight: 1.4,
-    margin: 0,
+    fontSize: '0.82rem', color: '#6b7280', lineHeight: 1.5, margin: 0,
   },
 
-  // SECTIONS
+  // EN-TÊTES DE SECTION
   sectionHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: '1.2rem',
+    display: 'flex', alignItems: 'flex-start',
+    justifyContent: 'space-between', marginBottom: '1.6rem',
   },
   sectionTitle: {
-    fontSize: '1.2rem',
-    fontWeight: '800',
-    color: '#1a2e10',
-    margin: 0,
+    fontSize: '1.45rem', fontWeight: '800',
+    color: '#1a2e10', margin: '0 0 4px',
+  },
+  sectionSubtitle: {
+    fontSize: '0.88rem', color: '#6b7280', margin: 0, fontWeight: '400',
   },
   voirTout: {
-    fontSize: '0.85rem',
-    color: '#1a5c2a',
-    textDecoration: 'none',
-    fontWeight: '600',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
+    fontSize: '0.9rem', color: '#1a5c2a', textDecoration: 'none',
+    fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px',
+    whiteSpace: 'nowrap', marginTop: '4px',
   },
 
   // ÉTATS VIDES
   emptyState: {
-    textAlign: 'center',
-    padding: '2.5rem 1rem',
-    background: 'white',
-    borderRadius: '16px',
+    textAlign: 'center', padding: '3rem 1.5rem',
+    background: 'white', borderRadius: '18px',
     border: '1.5px dashed #e5e7eb',
   },
+  emptyTitle: { color: '#6b7280', fontWeight: '700', fontSize: '1rem', marginTop: '1rem', marginBottom: '0.3rem' },
+  emptyDesc:  { color: '#d1d5db', fontSize: '0.88rem', margin: 0 },
   btnEmptyAction: {
-    display: 'inline-block',
-    marginTop: '1rem',
-    background: '#1a5c2a',
-    color: 'white',
-    padding: '0.5rem 1.4rem',
-    borderRadius: '20px',
-    textDecoration: 'none',
-    fontSize: '0.85rem',
-    fontWeight: '600',
+    display: 'inline-block', marginTop: '1.2rem',
+    background: '#1a5c2a', color: 'white',
+    padding: '0.6rem 1.6rem', borderRadius: '22px',
+    textDecoration: 'none', fontSize: '0.9rem', fontWeight: '600',
   },
 
-  // PRODUITS
+  // CARTES PRODUITS
   productCard: {
-    background: 'white',
-    borderRadius: '16px',
-    overflow: 'hidden',
-    border: '1px solid #e5e7eb',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
+    background: 'white', borderRadius: '18px',
+    overflow: 'hidden', border: '1px solid #e5e7eb',
+    cursor: 'pointer', transition: 'all 0.22s',
   },
-  productImgWrap: {
-    position: 'relative',
-    height: '160px',
-    overflow: 'hidden',
-  },
-  productImg: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    transition: 'transform 0.3s',
-  },
+  productImgWrap: { position: 'relative', height: '170px', overflow: 'hidden' },
+  productImg: { width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s' },
   productBadge: {
-    position: 'absolute',
-    top: '10px',
-    left: '10px',
-    background: '#dcfce7',
-    color: '#166534',
-    fontSize: '0.72rem',
-    fontWeight: '700',
-    padding: '3px 10px',
-    borderRadius: '20px',
+    position: 'absolute', top: '10px', left: '10px',
+    background: '#dcfce7', color: '#166534',
+    fontSize: '0.76rem', fontWeight: '700',
+    padding: '4px 11px', borderRadius: '20px',
   },
   productName: {
-    fontSize: '1rem',
-    fontWeight: '700',
-    color: '#1a2e10',
-    marginBottom: '0.4rem',
+    fontSize: '1.05rem', fontWeight: '700',
+    color: '#1a2e10', marginBottom: '0.5rem',
   },
   productLoc: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    fontSize: '0.8rem',
-    color: '#6b7280',
-    marginBottom: '0.8rem',
+    display: 'flex', alignItems: 'center', gap: '4px',
+    fontSize: '0.84rem', color: '#6b7280', marginBottom: '1rem',
   },
   productFooter: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   },
   productPrice: {
-    fontSize: '0.92rem',
-    fontWeight: '800',
-    color: '#1a5c2a',
+    fontSize: '1.05rem', fontWeight: '800', color: '#1a5c2a',
+  },
+  productUnit: {
+    fontSize: '0.78rem', color: '#9ca3af', fontWeight: '400',
   },
   btnAcheter: {
-    background: '#1a5c2a',
-    color: 'white',
-    border: 'none',
-    borderRadius: '20px',
-    padding: '0.35rem 1rem',
-    fontSize: '0.8rem',
-    fontWeight: '600',
-    cursor: 'pointer',
+    background: '#1a5c2a', color: 'white', border: 'none',
+    borderRadius: '22px', padding: '0.45rem 1.1rem',
+    fontSize: '0.88rem', fontWeight: '600', cursor: 'pointer',
   },
 
-  // TRANSPORTEURS
+  // CARTES TRANSPORTEURS
   transportCard: {
-    background: 'white',
-    borderRadius: '14px',
-    padding: '1rem',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    border: '1px solid #e5e7eb',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-  },
-  avatar: {
-    width: '52px',
-    height: '52px',
-    borderRadius: '50%',
-    objectFit: 'cover',
-    border: '2px solid #f0c040',
-    flexShrink: 0,
+    background: 'white', borderRadius: '16px', padding: '1.1rem 1.2rem',
+    display: 'flex', alignItems: 'center', gap: '14px',
+    border: '1px solid #e5e7eb', cursor: 'pointer', transition: 'all 0.2s',
   },
   initialsAvatar: {
-    width: '52px',
-    height: '52px',
-    borderRadius: '50%',
-    background: '#eef7ef',
-    color: '#1a5c2a',
-    border: '2px solid #f0c040',
-    flexShrink: 0,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontWeight: '800',
-    fontSize: '0.9rem',
+    width: '52px', height: '52px', borderRadius: '50%',
+    background: '#eef7ef', color: '#1a5c2a',
+    border: '2px solid #f0c040', flexShrink: 0,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontWeight: '800', fontSize: '0.95rem',
   },
   transportName: {
-    fontWeight: '700',
-    fontSize: '0.92rem',
-    color: '#1a2e10',
+    fontWeight: '700', fontSize: '0.97rem',
+    color: '#1a2e10', display: 'flex', alignItems: 'center', gap: '6px',
   },
-  transportInfo: {
-    fontSize: '0.8rem',
-    color: '#6b7280',
+  verifiBadge: {
+    fontSize: '0.72rem', color: '#16a34a',
+    background: '#dcfce7', padding: '2px 7px', borderRadius: '10px',
+    fontWeight: '600',
   },
   transportLoc: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '3px',
-    fontSize: '0.75rem',
-    color: '#6b7280',
-    marginTop: '2px',
+    display: 'flex', alignItems: 'center', gap: '4px',
+    fontSize: '0.82rem', color: '#6b7280', marginTop: '3px',
   },
   statutBadge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '5px',
-    background: '#dcfce7',
-    color: '#166534',
-    fontSize: '0.72rem',
-    fontWeight: '700',
-    padding: '3px 10px',
-    borderRadius: '20px',
-    marginBottom: '6px',
-    whiteSpace: 'nowrap',
+    display: 'inline-flex', alignItems: 'center', gap: '5px',
+    fontSize: '0.76rem', fontWeight: '700',
+    padding: '4px 10px', borderRadius: '20px', whiteSpace: 'nowrap',
   },
   statutDot: {
-    width: '6px',
-    height: '6px',
-    borderRadius: '50%',
-    background: '#16a34a',
-    display: 'inline-block',
+    width: '6px', height: '6px', borderRadius: '50%', display: 'inline-block',
   },
   btnContacter: {
-    background: 'transparent',
-    color: '#1a5c2a',
-    border: '1.5px solid #1a5c2a',
-    borderRadius: '20px',
-    padding: '0.28rem 0.8rem',
-    fontSize: '0.75rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    display: 'block',
-    width: '100%',
+    background: 'transparent', color: '#1a5c2a',
+    border: '1.5px solid #1a5c2a', borderRadius: '20px',
+    padding: '0.35rem 0.9rem', fontSize: '0.84rem',
+    fontWeight: '600', cursor: 'pointer', width: '100%',
   },
 };
-

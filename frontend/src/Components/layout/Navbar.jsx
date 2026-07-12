@@ -3,10 +3,10 @@ import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-do
 import {
   Search, Truck, Newspaper, TrendingUp,
   HelpCircle, Leaf, User, LogOut,
-  LayoutDashboard, ChevronDown, X, Mic, SlidersHorizontal
+  LayoutDashboard, ChevronDown, X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import LanguageSwitcher from '../common/LanguageSwitcher';
+
 import logo from '../../assets/images/logo.jpeg';
 
 const DASHBOARD = {
@@ -17,7 +17,7 @@ const DASHBOARD = {
 };
 
 const NAV_LINKS = [
-  { to: '/products',      icon: Leaf,       label: 'Céréales'       },
+  { to: '/products',      icon: Leaf,       label: 'Produits'       },
   { to: '/transporters',  icon: Truck,       label: 'Transport'      },
   { to: '/news',          icon: Newspaper,   label: 'Actualités'     },
   { to: '/market-prices', icon: TrendingUp,  label: 'Prix du marché' },
@@ -38,7 +38,7 @@ function getInitials(user) {
   return `${user.prenom?.[0] || ''}${user.nom?.[0] || ''}`.toUpperCase() || user.email?.[0]?.toUpperCase() || '?';
 }
 
-// ── Barre de recherche moderne ──────────────────────────────
+// ── Barre de recherche ──────────────────────────────────────
 function SearchBar({ onSearch }) {
   const location              = useLocation();
   const [searchParams]        = useSearchParams();
@@ -50,13 +50,11 @@ function SearchBar({ onSearch }) {
   const inputRef = useRef(null);
   const wrapRef  = useRef(null);
 
-  // Sync avec l'URL
   useEffect(() => {
     if (location.pathname === '/products') setQuery(searchParams.get('search') || '');
     else setQuery('');
   }, [location.pathname, searchParams]);
 
-  // Ferme suggestions au clic extérieur
   useEffect(() => {
     const h = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) { setShowSug(false); setCatOpen(false); } };
     document.addEventListener('mousedown', h);
@@ -72,9 +70,8 @@ function SearchBar({ onSearch }) {
   };
 
   return (
-    <div ref={wrapRef} style={{ position: 'relative', flex: 1, maxWidth: '640px' }}>
+    <div ref={wrapRef} style={{ position: 'relative', flex: 1 }}>
 
-      {/* Conteneur principal */}
       <div style={{
         display:      'flex',
         alignItems:   'center',
@@ -92,39 +89,39 @@ function SearchBar({ onSearch }) {
             type="button"
             onClick={() => setCatOpen(!catOpen)}
             style={{
-              display:    'flex',
-              alignItems: 'center',
-              gap:        '5px',
-              background: '#f4f6f4',
-              border:     'none',
-              borderRight:'1px solid #e5e7eb',
-              padding:    '0 14px',
-              height:     '46px',
-              cursor:     'pointer',
-              fontSize:   '0.80rem',
-              fontWeight: '600',
-              color:      '#374151',
-              whiteSpace: 'nowrap',
-              borderRadius:'50px 0 0 50px',
+              display:      'flex',
+              alignItems:   'center',
+              gap:          '6px',
+              background:   '#f4f6f4',
+              border:       'none',
+              borderRight:  '1px solid #e5e7eb',
+              padding:      '0 16px',
+              height:       '48px',
+              cursor:       'pointer',
+              fontSize:     '0.88rem',
+              fontWeight:   '600',
+              color:        '#374151',
+              whiteSpace:   'nowrap',
+              borderRadius: '50px 0 0 50px',
             }}
           >
             <span>{categorie === 'Toutes catégories' ? 'Toutes' : categorie}</span>
-            <ChevronDown size={13} color="#9ca3af" style={{ transform: catOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
+            <ChevronDown size={14} color="#9ca3af" style={{ transform: catOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
           </button>
 
           {catOpen && (
             <div style={{
-              position:  'absolute',
-              top:       'calc(100% + 8px)',
-              left:      0,
-              background:'white',
-              borderRadius:'14px',
-              boxShadow: '0 8px 30px rgba(0,0,0,0.14)',
-              border:    '1px solid #e5e7eb',
-              zIndex:    1000,
-              minWidth:  '180px',
-              overflow:  'hidden',
-              padding:   '6px',
+              position:     'absolute',
+              top:          'calc(100% + 8px)',
+              left:         0,
+              background:   'white',
+              borderRadius: '14px',
+              boxShadow:    '0 8px 30px rgba(0,0,0,0.14)',
+              border:       '1px solid #e5e7eb',
+              zIndex:       1000,
+              minWidth:     '190px',
+              overflow:     'hidden',
+              padding:      '6px',
             }}>
               {CATEGORIES.map((c) => (
                 <button
@@ -132,17 +129,17 @@ function SearchBar({ onSearch }) {
                   type="button"
                   onClick={() => { setCat(c); setCatOpen(false); inputRef.current?.focus(); }}
                   style={{
-                    display:     'block',
-                    width:       '100%',
-                    textAlign:   'left',
-                    background:  c === categorie ? '#f0fdf4' : 'transparent',
-                    color:       c === categorie ? '#1a5c2a' : '#374151',
-                    fontWeight:  c === categorie ? '700' : '500',
-                    border:      'none',
-                    borderRadius:'10px',
-                    padding:     '9px 12px',
-                    cursor:      'pointer',
-                    fontSize:    '0.85rem',
+                    display:      'block',
+                    width:        '100%',
+                    textAlign:    'left',
+                    background:   c === categorie ? '#f0fdf4' : 'transparent',
+                    color:        c === categorie ? '#1a5c2a' : '#374151',
+                    fontWeight:   c === categorie ? '700' : '500',
+                    border:       'none',
+                    borderRadius: '10px',
+                    padding:      '10px 14px',
+                    cursor:       'pointer',
+                    fontSize:     '0.90rem',
                   }}
                 >
                   {c}
@@ -152,7 +149,7 @@ function SearchBar({ onSearch }) {
           )}
         </div>
 
-        {/* Icône loupe */}
+        {/* Loupe */}
         <div style={{ padding: '0 10px 0 14px', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
           <Search size={18} color={focused ? '#1a5c2a' : '#9ca3af'} />
         </div>
@@ -171,15 +168,14 @@ function SearchBar({ onSearch }) {
             flex:       1,
             border:     'none',
             outline:    'none',
-            fontSize:   '0.92rem',
+            fontSize:   '0.95rem',
             color:      '#1a2e10',
             background: 'transparent',
             padding:    '0 4px',
-            height:     '46px',
+            height:     '48px',
           }}
         />
 
-        {/* Effacer */}
         {query && (
           <button
             type="button"
@@ -195,26 +191,26 @@ function SearchBar({ onSearch }) {
           type="button"
           onClick={() => submit()}
           style={{
-            flexShrink:  0,
-            height:      '46px',
-            padding:     '0 22px',
-            background:  'linear-gradient(135deg, #1a5c2a 0%, #2d8c47 100%)',
-            border:      'none',
-            borderRadius:'0 50px 50px 0',
-            color:       'white',
-            fontWeight:  '700',
-            fontSize:    '0.88rem',
-            cursor:      'pointer',
-            display:     'flex',
-            alignItems:  'center',
-            gap:         '6px',
-            letterSpacing:'0.02em',
-            transition:  'filter 0.2s',
+            flexShrink:    0,
+            height:        '48px',
+            padding:       '0 24px',
+            background:    'linear-gradient(135deg, #1a5c2a 0%, #2d8c47 100%)',
+            border:        'none',
+            borderRadius:  '0 50px 50px 0',
+            color:         'white',
+            fontWeight:    '700',
+            fontSize:      '0.94rem',
+            cursor:        'pointer',
+            display:       'flex',
+            alignItems:    'center',
+            gap:           '7px',
+            letterSpacing: '0.02em',
+            transition:    'filter 0.2s',
           }}
           onMouseEnter={(e) => e.currentTarget.style.filter = 'brightness(1.1)'}
           onMouseLeave={(e) => e.currentTarget.style.filter = 'brightness(1)'}
         >
-          <Search size={15} />
+          <Search size={16} />
           Chercher
         </button>
       </div>
@@ -234,7 +230,7 @@ function SearchBar({ onSearch }) {
           overflow:     'hidden',
           padding:      '6px',
         }}>
-          <p style={{ fontSize: '0.72rem', fontWeight: '700', color: '#9ca3af', padding: '6px 12px 4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <p style={{ fontSize: '0.75rem', fontWeight: '700', color: '#9ca3af', padding: '7px 14px 5px', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
             Recherches populaires
           </p>
           {filteredSug.map((s) => (
@@ -243,19 +239,19 @@ function SearchBar({ onSearch }) {
               type="button"
               onMouseDown={() => { setQuery(s); submit(s); }}
               style={{
-                display:     'flex',
-                alignItems:  'center',
-                gap:         '10px',
-                width:       '100%',
-                textAlign:   'left',
-                background:  'transparent',
-                border:      'none',
-                borderRadius:'10px',
-                padding:     '9px 12px',
-                cursor:      'pointer',
-                fontSize:    '0.87rem',
-                color:       '#374151',
-                fontWeight:  '500',
+                display:      'flex',
+                alignItems:   'center',
+                gap:          '10px',
+                width:        '100%',
+                textAlign:    'left',
+                background:   'transparent',
+                border:       'none',
+                borderRadius: '10px',
+                padding:      '10px 14px',
+                cursor:       'pointer',
+                fontSize:     '0.90rem',
+                color:        '#374151',
+                fontWeight:   '500',
               }}
               onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
@@ -266,15 +262,14 @@ function SearchBar({ onSearch }) {
           ))}
         </div>
       )}
-
     </div>
   );
 }
 
 // ── Composant principal ──────────────────────────────────────
 export default function Navbar() {
-  const navigate              = useNavigate();
-  const location              = useLocation();
+  const navigate   = useNavigate();
+  const location   = useLocation();
   const { user, logout, isAuthenticated } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -302,20 +297,20 @@ export default function Navbar() {
 
   return (
     <header style={{ backgroundColor: '#d6d1c4', borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
-      <div className="container py-3">
+      <div className="container-fluid px-4 px-lg-5 py-3">
 
         {/* ── TOP ROW ── */}
         <div className="d-flex align-items-center gap-3">
 
           {/* Logo */}
           <Link to="/" className="d-flex align-items-center text-decoration-none flex-shrink-0">
-            <img src={logo} alt="logo" style={{ width: '42px', height: '42px', objectFit: 'cover', borderRadius: '10px' }} />
-            <h4 className="ms-2 mb-0 fw-bold d-none d-md-block text-nowrap" style={{ fontSize: '1.1rem' }}>
+            <img src={logo} alt="logo" style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '11px' }} />
+            <span className="ms-2 d-none d-md-block text-nowrap" style={{ fontSize: '1.18rem', fontWeight: '800', color: '#1a2e10' }}>
               Agro<span style={{ color: '#1a5c2a' }}>SaaNuu</span>
-            </h4>
+            </span>
           </Link>
 
-          {/* Barre de recherche moderne */}
+          {/* Barre de recherche */}
           <SearchBar onSearch={handleSearch} />
 
           {/* Zone utilisateur */}
@@ -323,29 +318,29 @@ export default function Navbar() {
             <div style={{ position: 'relative', flexShrink: 0 }} ref={menuRef}>
               <button style={S.avatarBtn} onClick={() => setMenuOpen(!menuOpen)}>
                 <div style={S.avatar}>{getInitials(user)}</div>
-                <div className="d-none d-lg-flex flex-column text-start" style={{ lineHeight: 1.2 }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#1a2e10' }}>{user.prenom || user.email?.split('@')[0]}</span>
-                  <span style={{ fontSize: '0.70rem', color: '#6b7280' }}>{user.role}</span>
+                <div className="d-none d-lg-flex flex-column text-start" style={{ lineHeight: 1.3 }}>
+                  <span style={{ fontSize: '0.88rem', fontWeight: '700', color: '#1a2e10' }}>{user.prenom || user.email?.split('@')[0]}</span>
+                  <span style={{ fontSize: '0.76rem', color: '#6b7280' }}>{user.role}</span>
                 </div>
                 <ChevronDown size={14} color="#6b7280" style={{ transform: menuOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
               </button>
 
               {menuOpen && (
                 <div style={S.dropdown}>
-                  <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid #f0f0f0' }}>
-                    <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: '700', color: '#1a2e10' }}>{user.prenom} {user.nom}</p>
-                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#6b7280' }}>{user.email}</p>
+                  <div style={{ padding: '12px 16px 10px', borderBottom: '1px solid #f0f0f0' }}>
+                    <p style={{ margin: 0, fontSize: '0.92rem', fontWeight: '700', color: '#1a2e10' }}>{user.prenom} {user.nom}</p>
+                    <p style={{ margin: 0, fontSize: '0.80rem', color: '#6b7280', marginTop: '2px' }}>{user.email}</p>
                   </div>
                   <div style={{ padding: '6px' }}>
                     <Link to={dashboardLink} style={S.dropItem} onClick={() => setMenuOpen(false)}>
-                      <LayoutDashboard size={15} color="#1a5c2a" /> Mon espace
+                      <LayoutDashboard size={16} color="#1a5c2a" /> Mon espace
                     </Link>
                     <Link to="/auth/login" style={S.dropItem} onClick={() => setMenuOpen(false)}>
-                      <User size={15} color="#374151" /> Mon profil
+                      <User size={16} color="#374151" /> Mon profil
                     </Link>
                     <div style={S.dropDivider} />
                     <button style={{ ...S.dropItem, color: '#dc2626', border: 'none', background: 'none', width: '100%', textAlign: 'left' }} onClick={handleLogout}>
-                      <LogOut size={15} color="#dc2626" /> Déconnexion
+                      <LogOut size={16} color="#dc2626" /> Déconnexion
                     </button>
                   </div>
                 </div>
@@ -363,12 +358,10 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* Switcher FR / EN */}
-          <LanguageSwitcher />
         </div>
 
         {/* ── NAV LINKS ── */}
-        <nav className="d-flex align-items-center justify-content-center mt-3 gap-4 flex-wrap">
+        <nav className="d-flex align-items-center justify-content-center mt-3 flex-wrap" style={{ gap: '2rem' }}>
           {NAV_LINKS.map(({ to, icon: Icon, label }) => {
             const active = location.pathname === to;
             return (
@@ -377,15 +370,15 @@ export default function Navbar() {
                 to={to}
                 className="d-flex align-items-center gap-1 text-decoration-none"
                 style={{
-                  fontSize:      '0.87rem',
+                  fontSize:      '0.93rem',
                   fontWeight:    active ? '700' : '500',
                   color:         active ? '#1a5c2a' : '#374151',
                   borderBottom:  active ? '2px solid #1a5c2a' : '2px solid transparent',
-                  paddingBottom: '2px',
+                  paddingBottom: '3px',
                   transition:    'all 0.15s',
                 }}
               >
-                <Icon size={14} />
+                <Icon size={15} />
                 <span>{label}</span>
               </Link>
             );
@@ -394,9 +387,9 @@ export default function Navbar() {
             <Link
               to={dashboardLink}
               className="d-flex align-items-center gap-1 text-decoration-none"
-              style={{ fontSize: '0.87rem', fontWeight: '700', color: '#1a5c2a', background: '#f0fdf4', borderRadius: '20px', padding: '3px 12px' }}
+              style={{ fontSize: '0.93rem', fontWeight: '700', color: '#1a5c2a', background: '#f0fdf4', borderRadius: '20px', padding: '5px 14px' }}
             >
-              <LayoutDashboard size={14} />
+              <LayoutDashboard size={15} />
               <span>Tableau de bord</span>
             </Link>
           )}
@@ -408,11 +401,11 @@ export default function Navbar() {
 }
 
 const S = {
-  avatarBtn:   { display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: '1px solid #e5e7eb', borderRadius: '50px', padding: '5px 12px 5px 5px', cursor: 'pointer', transition: 'all 0.2s' },
-  avatar:      { width: '34px', height: '34px', borderRadius: '50%', background: 'linear-gradient(135deg, #1a5c2a, #4db86a)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.82rem', flexShrink: 0 },
-  dropdown:    { position: 'absolute', top: 'calc(100% + 8px)', right: 0, background: 'white', borderRadius: '16px', boxShadow: '0 8px 30px rgba(0,0,0,0.14)', border: '1px solid #e5e7eb', minWidth: '200px', zIndex: 999, overflow: 'hidden' },
-  dropItem:    { display: 'flex', alignItems: 'center', gap: '9px', padding: '9px 12px', borderRadius: '10px', fontSize: '0.87rem', fontWeight: '600', color: '#374151', textDecoration: 'none', cursor: 'pointer', transition: 'background 0.15s' },
+  avatarBtn:   { display: 'flex', alignItems: 'center', gap: '9px', background: 'white', border: '1px solid #e5e7eb', borderRadius: '50px', padding: '6px 13px 6px 6px', cursor: 'pointer', transition: 'all 0.2s' },
+  avatar:      { width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #1a5c2a, #4db86a)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.88rem', flexShrink: 0 },
+  dropdown:    { position: 'absolute', top: 'calc(100% + 8px)', right: 0, background: 'white', borderRadius: '16px', boxShadow: '0 8px 30px rgba(0,0,0,0.14)', border: '1px solid #e5e7eb', minWidth: '210px', zIndex: 999, overflow: 'hidden' },
+  dropItem:    { display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', fontSize: '0.92rem', fontWeight: '600', color: '#374151', textDecoration: 'none', cursor: 'pointer', transition: 'background 0.15s' },
   dropDivider: { height: '1px', background: '#f0f0f0', margin: '4px 0' },
-  btnLogin:    { display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #d1d5db', borderRadius: '50px', padding: '7px 16px', textDecoration: 'none', fontWeight: '600', fontSize: '0.84rem', color: '#374151', whiteSpace: 'nowrap' },
-  btnRegister: { alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #1a5c2a, #2d8c47)', border: 'none', borderRadius: '50px', padding: '7px 18px', textDecoration: 'none', fontWeight: '700', fontSize: '0.84rem', color: 'white', whiteSpace: 'nowrap' },
+  btnLogin:    { display: 'flex', alignItems: 'center', gap: '7px', background: 'white', border: '1px solid #d1d5db', borderRadius: '50px', padding: '8px 18px', textDecoration: 'none', fontWeight: '600', fontSize: '0.92rem', color: '#374151', whiteSpace: 'nowrap' },
+  btnRegister: { alignItems: 'center', gap: '7px', background: 'linear-gradient(135deg, #1a5c2a, #2d8c47)', border: 'none', borderRadius: '50px', padding: '8px 20px', textDecoration: 'none', fontWeight: '700', fontSize: '0.92rem', color: 'white', whiteSpace: 'nowrap' },
 };

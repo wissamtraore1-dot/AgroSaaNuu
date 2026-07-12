@@ -1,226 +1,249 @@
-import { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+// src/pages/auth/Login.jsx
+import { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
-import {
-  Eye, EyeOff, AlertCircle, Loader,
-  Shield, TrendingUp, Users, ArrowRight, ArrowLeft
-} from 'lucide-react';
+import AuthService from '../../services/auth.service';
+import api from '../../services/api';
+import { Eye, EyeOff, AlertCircle, Lock, Loader, User } from 'lucide-react';
 import logo from '../../assets/images/logo.jpeg';
 
-const FEATURES = [
-  { icon: Shield,     text: 'Paiements sécurisés via escrow — votre argent protégé à chaque transaction' },
-  { icon: TrendingUp, text: 'Prix du marché en temps réel pour maïs, riz, mil, soja et plus' },
-  { icon: Users,      text: 'Des centaines de vendeurs vérifiés au Bénin prêts à vous livrer' },
-];
+const GREEN = '#1a5c2a';
+const BG    = '#f2ede4';
 
-const STATS = [
-  { value: '500+', label: 'Vendeurs' },
-  { value: '12k+', label: 'Acheteurs' },
-  { value: '98%',  label: 'Satisfaction' },
-];
+function CountUp({ to, duration = 1800, suffix = '' }) {
+  const [count, setCount] = useState(0);
+  const rafRef = useRef(null);
+
+  useEffect(() => {
+    if (!to) return;
+    const start = performance.now();
+    const step = (now) => {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased    = 1 - Math.pow(1 - progress, 3);
+      setCount(Math.round(eased * to));
+      if (progress < 1) rafRef.current = requestAnimationFrame(step);
+    };
+    rafRef.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [to, duration]);
+
+  return <>{count.toLocaleString('fr-FR')}{suffix}</>;
+}
 
 export default function Login() {
-  const navigate   = useNavigate();
-  const { login, isBuyer, isSeller, isTransporter } = useAuth();
-  const location   = useLocation();
+  const navigate = useNavigate();
+  const { updateUser } = useAuth();
 
-  const [form, setForm]         = useState({ identifiant: '', password: '', remember: true });
-  const [showPwd, setShowPwd]   = useState(false);
-  const [error, setError]       = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [focused, setFocused]   = useState('');
+  const [loginId,      setLoginId]      = useState('');
+  const [loginPwd,     setLoginPwd]     = useState('');
+  const [showLoginPwd, setShowLoginPwd] = useState(false);
+  const [loading,      setLoading]      = useState(false);
+  const [error,        setError]        = useState('');
+  const [focused,      setFocused]      = useState('');
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setForm({ ...form, [name]: type === 'checkbox' ? checked : value });
-    setError('');
-  };
+  const [liveStats, setLiveStats] = useState({ vendeurs: 500, acheteurs: 12000, satisfaction: 98 });
 
-  const handleSubmit = async (e) => {
+  useEffect(() => {
+    (async () => {
+      try {
+        const [prodRes, transpRes] = await Promise.allSettled([
+          api.get('/products/', { params: { page_size: 1 } }),
+          api.get('/auth/transporters/', { params: { page: 1, page_size: 1 } }),
+        ]);
+        const totalProduits      = prodRes.status    === 'fulfilled' ? (prodRes.value.data?.count    || 0) : 0;
+        const totalTransporteurs = transpRes.status  === 'fulfilled' ? (transpRes.value.data?.count  || transpRes.value.data?.total || 0) : 0;
+        setLiveStats(prev => ({
+          vendeurs:      Math.max(totalProduits || prev.vendeurs, prev.vendeurs),
+          acheteurs:     prev.acheteurs,
+          satisfaction:  prev.satisfaction,
+          transporteurs: totalTransporteurs || undefined,
+        }));
+      } catch { /* garde les valeurs par défaut */ }
+    })();
+  }, []);
+
+  const clearError = () => setError('');
+
+  const handleLogin = async e => {
     e.preventDefault();
-    if (!form.identifiant || !form.password) { setError('Veuillez remplir tous les champs.'); return; }
-    setSubmitting(true);
-    setError('');
+    if (!loginId.trim())  { setError('Renseignez votre email ou numéro de téléphone'); return; }
+    if (!loginPwd.trim()) { setError('Renseignez votre mot de passe'); return; }
+    setLoading(true); clearError();
     try {
-      const data = await login(form.identifiant, form.password);
-      const role = data.user?.role;
-      const from = location.state?.from?.pathname;
-      if (from)                              navigate(from, { replace: true });
-      else if (role === 'ADMIN')                         navigate('/admin/dashboard',        { replace: true });
-      else if (role === 'BUYER'        || isBuyer)       navigate('/buyer/dashboard',        { replace: true });
-      else if (role === 'SELLER'       || isSeller)      navigate('/seller/dashboard',       { replace: true });
-      else if (role === 'TRANSPORTER'  || isTransporter) navigate('/transporter/dashboard',  { replace: true });
-      else                                               navigate('/', { replace: true });
+      const data = await AuthService.loginUnifie(loginId.trim(), loginPwd);
+      const u = data.user;
+      if (!u?.role) throw new Error('Données utilisateur invalides. Réessayez.');
+      updateUser(u);
+      navigate(`/${u.role.toLowerCase()}/dashboard`, { replace: true });
     } catch (err) {
-      setError(err.message || 'Email ou mot de passe incorrect.');
-    } finally {
-      setSubmitting(false);
-    }
+      setError(err.response?.data?.message || err.message || 'Identifiant ou mot de passe incorrect');
+    } finally { setLoading(false); }
   };
 
-  const inputStyle = (name) => ({
-    width: '100%', padding: '0.85rem 1rem',
-    border: `1.5px solid ${focused === name ? '#1a5c2a' : '#e5e7eb'}`,
-    borderRadius: '12px', fontSize: '0.93rem',
-    outline: 'none', color: '#1a2e10', background: focused === name ? '#fafff9' : '#fafafa',
+  const inp = name => ({
+    width: '100%', padding: '0.82rem 1rem 0.82rem 2.5rem',
+    border: `2px solid ${focused === name ? GREEN : '#c4b9a8'}`,
+    borderRadius: '12px', fontSize: '0.92rem', outline: 'none',
+    color: '#1a2e10', background: focused === name ? '#fafff9' : '#fafafa',
     transition: 'all 0.2s', boxShadow: focused === name ? '0 0 0 3px rgba(26,92,42,0.08)' : 'none',
+    boxSizing: 'border-box',
   });
 
+  const btnPrimary = {
+    width: '100%', padding: '0.95rem', marginTop: '0.4rem',
+    background: `linear-gradient(135deg, ${GREEN}, #2d8c47)`,
+    color: 'white', border: 'none', borderRadius: '50px',
+    fontSize: '1rem', fontWeight: '700', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+    boxShadow: '0 4px 20px rgba(26,92,42,0.28)',
+  };
+
+  const IL = { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' };
+  const LB = { display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#374151', marginBottom: '6px' };
+  const FW = { marginBottom: '0.9rem' };
+
   return (
-    <div style={{ minHeight: '100vh', background: '#d6d1c4', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
+    <div style={{ minHeight: '100vh', display: 'flex' }}>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          style={{ width: '100%', maxWidth: '420px' }}
-        >
+      {/* Panneau gauche branding */}
+      <div style={{
+        flex: '0 0 45%', background: 'linear-gradient(160deg, #0d2b14 0%, #1a5c2a 55%, #2d8c47 100%)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: '3rem', position: 'relative', overflow: 'hidden',
+      }} className="d-none d-lg-flex">
+        <div style={{ position: 'absolute', top: '-60px', right: '-60px', width: '260px', height: '260px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+        <div style={{ position: 'absolute', bottom: '-80px', left: '-40px', width: '320px', height: '320px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+        <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}
+          style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+          <img src={logo} alt="AgroSaaNuu" style={{ width: '80px', height: '80px', borderRadius: '20px', objectFit: 'cover', marginBottom: '1.4rem', boxShadow: '0 8px 30px rgba(0,0,0,0.25)', border: '3px solid rgba(240,192,64,0.4)' }} />
+          <h2 style={{ color: 'white', fontWeight: '900', fontSize: '2rem', marginBottom: '0.5rem' }}>
+            Agro<span style={{ color: '#f0c040' }}>SaaNuu</span>
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.95rem', marginBottom: '2.5rem', lineHeight: 1.6 }}>
+            La marketplace agricole du Bénin
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
+            {[
+              { icon: '🛡️', title: 'Paiements sécurisés',           desc: "Escrow — argent bloqué jusqu'à livraison"  },
+              { icon: '📊', title: 'Prix du marché en temps réel',   desc: 'Maïs, riz, mil, soja — au juste prix'      },
+              { icon: '🚚', title: 'Transporteurs vérifiés',         desc: 'Livraison fiable dans tout le Bénin'       },
+            ].map((f, i) => (
+              <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + i * 0.1 }}
+                style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: 'rgba(255,255,255,0.07)', borderRadius: '14px', padding: '0.9rem 1.1rem' }}>
+                <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>{f.icon}</span>
+                <div>
+                  <p style={{ margin: 0, color: 'white', fontWeight: '700', fontSize: '0.88rem' }}>{f.title}</p>
+                  <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', marginTop: '2px' }}>{f.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', marginTop: '2rem' }}>
+            {[
+              { value: liveStats.vendeurs,     suffix: '+',  label: 'Vendeurs'     },
+              { value: liveStats.acheteurs,    suffix: '+',  label: 'Acheteurs'    },
+              { value: liveStats.satisfaction, suffix: '%',  label: 'Satisfaction' },
+            ].map(({ value, suffix, label }) => (
+              <div key={label} style={{ textAlign: 'center' }}>
+                <p style={{ margin: 0, color: '#f0c040', fontWeight: '900', fontSize: '1.4rem' }}>
+                  <CountUp to={value} suffix={suffix} />
+                </p>
+                <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>{label}</p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
 
-          {/* Bouton retour */}
-          <div style={{ marginBottom: '1.2rem' }}>
-            <motion.button
-              onClick={() => navigate(-1)}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '7px 14px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', color: '#374151' }}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-            >
-              <ArrowLeft size={16} color="#374151" />
-              Retour
-            </motion.button>
+      {/* Panneau droit — formulaire */}
+      <div style={{ flex: 1, background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.5rem', overflowY: 'auto' }}>
+        <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+          style={{ width: '100%', maxWidth: '420px' }}>
+
+          {/* Logo mobile */}
+          <div className="d-flex d-lg-none flex-column align-items-center" style={{ marginBottom: '1.4rem' }}>
+            <img src={logo} alt="AgroSaaNuu" style={{ width: '44px', height: '44px', borderRadius: '10px', objectFit: 'cover' }} />
+            <span style={{ fontWeight: '900', color: '#1a2e10', marginTop: '6px' }}>Agro<span style={{ color: '#1a5c2a' }}>SaaNuu</span></span>
           </div>
 
-          {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '2rem' }}>
-            <img src={logo} alt="AgroSaaNuu" style={{ width: '42px', height: '42px', objectFit: 'cover', borderRadius: '10px' }} />
-            <span style={{ fontSize: '1.5rem', fontWeight: '900', color: '#1a2e10' }}>
-              Agro<span style={{ color: '#1a5c2a' }}>SaaNuu</span>
-            </span>
-          </div>
+          <div style={{ background: 'white', borderRadius: '24px', padding: '2.4rem 2.2rem', boxShadow: '0 4px 32px rgba(0,0,0,0.09)', border: '1px solid #e5e7eb' }}>
 
-          {/* Carte formulaire */}
-          <div style={{ background: 'white', borderRadius: '20px', padding: '2.2rem 2rem', boxShadow: '0 2px 24px rgba(0,0,0,0.07)', border: '1px solid #e5e7eb' }}>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: '900', color: '#1a2e10', marginBottom: '0.3rem' }}>Bon retour</h2>
+            <p style={{ fontSize: '0.87rem', color: '#6b7280', marginBottom: '1.6rem' }}>Connectez-vous à votre compte</p>
 
-            <h2 style={{ fontSize: '1.6rem', fontWeight: '800', color: '#1a2e10', marginBottom: '0.3rem' }}>
-              Bon retour
-            </h2>
-            <p style={{ color: '#6b7280', fontSize: '0.88rem', marginBottom: '1.5rem' }}>
-              Connectez-vous à votre compte AgroSaaNuu
-            </p>
-
-            {/* Erreur */}
             <AnimatePresence>
               {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '0.7rem 1rem', marginBottom: '1.2rem', fontSize: '0.85rem', color: '#dc2626' }}
-                >
-                  <AlertCircle size={15} /> <span>{error}</span>
+                <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '0.7rem 1rem', marginBottom: '1rem', fontSize: '0.84rem', color: '#dc2626' }}>
+                  <AlertCircle size={15} /> {error}
                 </motion.div>
               )}
             </AnimatePresence>
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.86rem', fontWeight: '600', color: '#374151' }}>Email</label>
-                <input
-                  type="text" name="identifiant" value={form.identifiant} onChange={handleChange}
-                  onFocus={() => setFocused('identifiant')} onBlur={() => setFocused('')}
-                  placeholder="votre@email.com"
-                  style={inputStyle('identifiant')}
-                />
+            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+              <div style={FW}>
+                <label style={LB}>Email ou numéro de téléphone</label>
+                <div style={{ position: 'relative' }}>
+                  <User size={15} color="#9ca3af" style={IL} />
+                  <input type="text" value={loginId}
+                    onChange={e => { setLoginId(e.target.value); clearError(); }}
+                    onFocus={() => setFocused('loginId')} onBlur={() => setFocused('')}
+                    placeholder="votre@email.com ou 0700000000"
+                    style={inp('loginId')} autoComplete="username" autoFocus />
+                </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.86rem', fontWeight: '600', color: '#374151' }}>Mot de passe</label>
+              <div style={FW}>
+                <label style={LB}>Mot de passe</label>
                 <div style={{ position: 'relative' }}>
-                  <input
-                    type={showPwd ? 'text' : 'password'} name="password" value={form.password} onChange={handleChange}
-                    onFocus={() => setFocused('password')} onBlur={() => setFocused('')}
+                  <Lock size={15} color="#9ca3af" style={IL} />
+                  <input type={showLoginPwd ? 'text' : 'password'} value={loginPwd}
+                    onChange={e => { setLoginPwd(e.target.value); clearError(); }}
+                    onFocus={() => setFocused('loginPwd')} onBlur={() => setFocused('')}
                     placeholder="Votre mot de passe"
-                    style={{ ...inputStyle('password'), paddingRight: '3rem' }}
-                  />
-                  <button type="button" onClick={() => setShowPwd(!showPwd)}
-                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: '4px' }}>
-                    {showPwd ? <EyeOff size={18} color="#9ca3af" /> : <Eye size={18} color="#9ca3af" />}
+                    style={{ ...inp('loginPwd'), paddingRight: '3rem' }} autoComplete="current-password" />
+                  <button type="button" onClick={() => setShowLoginPwd(v => !v)}
+                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}>
+                    {showLoginPwd ? <EyeOff size={17} color="#9ca3af" /> : <Eye size={17} color="#9ca3af" />}
                   </button>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', color: '#374151', cursor: 'pointer' }}>
-                  <input type="checkbox" name="remember" checked={form.remember} onChange={handleChange} style={{ accentColor: '#1a5c2a', width: '15px', height: '15px' }} />
-                  Se souvenir de moi
-                </label>
-                <Link to="/auth/forgot-password" style={{ fontSize: '0.86rem', color: '#1a5c2a', textDecoration: 'none', fontWeight: '600' }}>
+              <div style={{ textAlign: 'right', marginTop: '-0.4rem' }}>
+                <Link to="/auth/forgot-password" style={{ fontSize: '0.83rem', color: GREEN, textDecoration: 'none', fontWeight: '600' }}>
                   Mot de passe oublié ?
                 </Link>
               </div>
 
-              <motion.button
-                type="submit"
-                style={{
-                  background: submitting ? '#4db86a' : 'linear-gradient(135deg, #1a5c2a 0%, #2d8c47 100%)',
-                  color: 'white', border: 'none', borderRadius: '12px', padding: '0.9rem',
-                  fontSize: '0.97rem', fontWeight: '700', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  boxShadow: '0 4px 20px rgba(26,92,42,0.35)', marginTop: '0.2rem',
-                  transition: 'all 0.2s',
-                }}
-                whileHover={{ scale: submitting ? 1 : 1.02 }}
-                whileTap={{ scale: submitting ? 1 : 0.98 }}
-                disabled={submitting}
-              >
+              <motion.button type="submit"
+                style={{ ...btnPrimary, opacity: loading ? 0.75 : 1 }}
+                disabled={loading} whileHover={{ scale: loading ? 1 : 1.02 }} whileTap={{ scale: loading ? 1 : 0.98 }}>
                 <AnimatePresence mode="wait" initial={false}>
-                  {submitting ? (
-                    <motion.span key="loading" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                  {loading ? (
+                    <motion.span key="l" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-                      <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={18} /></motion.div>
+                      <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div>
                       Connexion…
                     </motion.span>
                   ) : (
-                    <motion.span key="idle" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-                      Se connecter <ArrowRight size={16} />
+                    <motion.span key="i" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                      Se connecter
                     </motion.span>
                   )}
                 </AnimatePresence>
               </motion.button>
 
+              <p style={{ textAlign: 'center', fontSize: '0.84rem', color: '#6b7280', margin: '0.4rem 0 0' }}>
+                Pas encore de compte ?{' '}
+                <Link to="/auth/register" style={{ color: GREEN, fontWeight: '700', textDecoration: 'none' }}>
+                  S'inscrire gratuitement
+                </Link>
+              </p>
             </form>
-
-            {/* Séparateur */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '1.3rem 0' }}>
-              <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
-              <span style={{ fontSize: '0.78rem', color: '#9ca3af', fontWeight: '500' }}>ou</span>
-              <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
-            </div>
-
-            {/* Google */}
-            <motion.button
-              whileHover={{ scale: 1.02, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}
-              whileTap={{ scale: 0.98 }}
-              style={{ width: '100%', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: '12px', padding: '0.8rem', fontSize: '0.91rem', fontWeight: '600', color: '#374151', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '1.2rem', transition: 'all 0.2s' }}
-            >
-              <svg width="18" height="18" viewBox="0 0 48 48">
-                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-              </svg>
-              Continuer avec Google
-            </motion.button>
-
-            <p style={{ textAlign: 'center', fontSize: '0.87rem', color: '#6b7280', margin: 0 }}>
-              Pas encore de compte ?{' '}
-              <Link to="/auth/register" style={{ color: '#1a5c2a', fontWeight: '700', textDecoration: 'none' }}>
-                S'inscrire gratuitement
-              </Link>
-            </p>
-
           </div>
         </motion.div>
+      </div>
 
     </div>
   );

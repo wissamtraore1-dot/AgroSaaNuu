@@ -19,5 +19,3 @@ def calculer_frais(montant, mode):
 def calculer_commission(montant):
     return round(montant * settings.COMMISSION_RATE)
 
-def calculer_points(montant_fcfa):
-    return int(montant_fcfa // 1000) * settings.POINTS_PER_1000_FCFA

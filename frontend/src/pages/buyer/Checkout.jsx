@@ -436,24 +436,6 @@ export default function Checkout() {
                 <label style={lbl}>Note aux vendeurs (optionnel)</label>
                 <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} placeholder="Instructions utiles pour la préparation..." style={inp} />
               </div>
-
-              {/* Mode de paiement */}
-              <div style={{ background: 'white', borderRadius: '16px', border: '1.5px solid #e5e7eb', padding: '1.2rem' }}>
-                <p style={{ margin: '0 0 1rem', fontWeight: '800', fontSize: '0.95rem', color: '#1a2e10', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Smartphone size={16} color={GREEN} /> Mode de paiement
-                </p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  {MODES_PAIEMENT.map(m => (
-                    <button key={m.id} onClick={() => setMode(m.id)}
-                      style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', borderRadius: '12px', cursor: 'pointer', border: `2px solid ${mode === m.id ? GREEN : '#e5e7eb'}`, background: mode === m.id ? '#f0fdf4' : 'white', fontWeight: '700', fontSize: '0.82rem', color: mode === m.id ? GREEN : '#374151', transition: 'all 0.15s' }}
-                    >
-                      <Smartphone size={15} />
-                      <span>{m.label}</span>
-                      {m.frais > 0 && <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#9ca3af' }}>+{m.frais}%</span>}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
 
             {/* Récapitulatif droite */}
