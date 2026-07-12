@@ -182,7 +182,7 @@ AFRICASTALKING_SANDBOX  = env.bool('AFRICASTALKING_SANDBOX', default=True)
 # Dashboard : https://app.fedapay.com → API Keys
 FEDAPAY_PUBLIC_KEY = env('FEDAPAY_PUBLIC_KEY', default='')
 FEDAPAY_SECRET_KEY = env('FEDAPAY_SECRET_KEY', default='')
-FEDAPAY_SANDBOX    = env.bool('FEDAPAY_SANDBOX', default=False)
+FEDAPAY_SANDBOX    = env.bool('FEDAPAY_SANDBOX', default=True)
 
 # URL publique du backend (mettre l'URL Render en production)
 SITE_URL = env('SITE_URL', default='http://localhost:8000')
