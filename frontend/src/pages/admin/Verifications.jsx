@@ -149,7 +149,7 @@ function VerifCard({ item, type, onDecision }) {
             style={{ overflow: 'hidden', marginTop: '1rem', borderTop: '1px solid #f0f0f0', paddingTop: '1rem' }}
           >
             <p style={{ margin: '0 0 0.6rem', fontWeight: '700', fontSize: '0.85rem', color: '#1a2e10' }}>
-              {action === 'approuver' ? '✅ Confirmer l\'approbation' : '❌ Confirmer le rejet'}
+              {action === 'approuver' ? 'Confirmer l\'approbation' : 'Confirmer le rejet'}
               {' '}— {item.prenom} {item.nom}
             </p>
             <textarea

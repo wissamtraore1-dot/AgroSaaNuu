@@ -22,7 +22,7 @@ const STATUT_LABEL = {
 
 const GREEN = '#1a5c2a';
 
-const PLACEHOLDER = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 46 46"><rect width="46" height="46" fill="%23f3f4f6"/><text x="23" y="28" text-anchor="middle" font-size="18" fill="%239ca3af">📦</text></svg>';
+const PLACEHOLDER = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 46 46"><rect width="46" height="46" fill="%23f3f4f6" rx="8"/></svg>';
 
 export default function BuyerOrderDetail() {
   const { id }   = useParams();

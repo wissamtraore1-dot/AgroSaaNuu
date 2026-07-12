@@ -25,7 +25,7 @@ class ErrorBoundary extends React.Component {
             boxShadow: '0 4px 24px rgba(0,0,0,0.08)', maxWidth: '420px',
             width: '100%', textAlign: 'center', border: '1px solid #e5e7eb',
           }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem', color: '#d97706' }}>!</div>
             <h2 style={{ color: '#1a2e10', fontWeight: '800', marginBottom: '0.5rem' }}>
               Une erreur est survenue
             </h2>

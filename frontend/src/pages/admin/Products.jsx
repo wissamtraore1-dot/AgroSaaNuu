@@ -38,7 +38,7 @@ export default function AdminProducts() {
   const moderer = async (id, action) => {
     try {
       await AdminService.modererProduit(id, action);
-      const labels = { approuver: 'approuvé ✓', suspendre: 'suspendu', en_attente: 'remis en attente' };
+      const labels = { approuver: 'approuvé', suspendre: 'suspendu', en_attente: 'remis en attente' };
       setMsg({ text: `Produit ${labels[action]}`, ok: action === 'approuver' });
       setTimeout(() => setMsg({ text: '', ok: true }), 3000);
       charger(search, filtre);

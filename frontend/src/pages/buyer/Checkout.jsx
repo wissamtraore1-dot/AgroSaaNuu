@@ -77,7 +77,7 @@ function TransporteurCard({ t, choisi, onSelect, isFallback = false, onVoirProfi
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: '700', fontSize: '0.9rem', color: '#1a2e10' }}>{t.transporteur_nom}</div>
           <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-            {Number(t.note_transporteur || 0).toFixed(1)} ★ · {t.total_missions || 0} missions
+            {Number(t.note_transporteur || 0).toFixed(1)}/5 · {t.total_missions || 0} missions
           </div>
           {t.en_mission && (
             <div style={{ fontSize: '0.72rem', color: '#c2410c', fontWeight: '600', marginTop: '3px' }}>
@@ -611,7 +611,7 @@ export default function Checkout() {
                         color: transporteurChoisi === null ? GREEN : '#6b7280', cursor: 'pointer',
                       }}
                     >
-                      {transporteurChoisi === null ? '✓ Sans transporteur pour ce vendeur' : 'Commander sans transporteur'}
+                      {transporteurChoisi === null ? 'Sans transporteur pour ce vendeur' : 'Commander sans transporteur'}
                     </button>
                   </div>
                 </div>
@@ -732,7 +732,7 @@ export default function Checkout() {
                     </div>
                     {lignesGroupe.map((c, i) => (
                       <div key={i} style={{ fontSize: '0.78rem', color: c.ok ? '#6b7280' : '#dc2626', marginLeft: '24px', marginTop: '2px' }}>
-                        {c.ok ? `✓ ${c.produit_nom} — réf. ${c.reference}` : `✗ ${c.produit_nom} : ${c.erreur}`}
+                        {c.ok ? `${c.produit_nom} — réf. ${c.reference}` : `${c.produit_nom} : ${c.erreur}`}
                       </div>
                     ))}
                   </div>

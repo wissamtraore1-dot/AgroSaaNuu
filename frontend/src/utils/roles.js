@@ -28,10 +28,10 @@ export const ROLES = {
   
   // Role icons
   export const ROLE_ICONS = {
-    [ROLES.BUYER]:       '🛒',
-    [ROLES.SELLER]:      '🌾',
-    [ROLES.TRANSPORTER]: '🚚',
-    [ROLES.ADMIN]:       '⚙️',
+    [ROLES.BUYER]:       'acheteur',
+    [ROLES.SELLER]:      'vendeur',
+    [ROLES.TRANSPORTER]: 'transporteur',
+    [ROLES.ADMIN]:       'admin',
   };
   
   // Check if user has a given role

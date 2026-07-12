@@ -479,7 +479,7 @@ const SMSAuth = () => {
           >
             {import.meta.env.DEV && devCode && (
               <div style={{ background: '#fef3c7', border: '1px dashed #f59e0b', borderRadius: '6px', padding: '8px 12px', marginBottom: '12px', fontSize: '12px', color: '#92400e' }}>
-                ⚡ DEV MODE — auto-submit avec code: <strong>{devCode}</strong>
+                DEV MODE — auto-submit avec code: <strong>{devCode}</strong>
               </div>
             )}
             <button

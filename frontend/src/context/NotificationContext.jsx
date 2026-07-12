@@ -42,16 +42,16 @@ export const NotificationProvider = ({ children }) => {
 
   // ── Domain-specific notifications ─────────────────────────
   const notifyPaymentSuccess = (amount) =>
-    success(`Payment of ${amount.toLocaleString('fr-BJ')} FCFA confirmed. Funds are secured.`, '✅ Payment Secured');
+    success(`Payment of ${amount.toLocaleString('fr-BJ')} FCFA confirmed. Funds are secured.`, 'Paiement sécurisé');
 
   const notifyPaymentFailed = () =>
-    error('Payment failed. Please try again or use a different method.', '❌ Payment Failed');
+    error('Payment failed. Please try again or use a different method.', 'Paiement échoué');
 
   const notifyDeliveryConfirmed = () =>
-    success('Delivery confirmed! Funds have been released to the seller.', '📦 Delivered');
+    success('Delivery confirmed! Funds have been released to the seller.', 'Livraison confirmée');
 
   const notifyFundsReleased = (amount) =>
-    success(`${amount.toLocaleString('fr-BJ')} FCFA released to your wallet.`, '💳 Funds Released');
+    success(`${amount.toLocaleString('fr-BJ')} FCFA released to your wallet.`, 'Fonds libérés');
 
   return (
     <NotificationContext.Provider value={{

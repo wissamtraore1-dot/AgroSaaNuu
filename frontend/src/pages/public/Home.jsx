@@ -417,7 +417,7 @@ export default function Home() {
                         <div style={s.transportName}>
                           {t.nom}
                           {t.verifie && (
-                            <span style={s.verifiBadge}>✓ Vérifié</span>
+                            <span style={s.verifiBadge}>Vérifié</span>
                           )}
                         </div>
                         <div style={s.transportLoc}>

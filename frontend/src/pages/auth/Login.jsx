@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import AuthService from '../../services/auth.service';
 import api from '../../services/api';
-import { Eye, EyeOff, AlertCircle, Lock, Loader, User } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, Lock, Loader, User, Shield, TrendingUp, Truck } from 'lucide-react';
 import logo from '../../assets/images/logo.jpeg';
 
 const GREEN = '#1a5c2a';
@@ -125,13 +125,13 @@ export default function Login() {
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
             {[
-              { icon: '🛡️', title: 'Paiements sécurisés',           desc: "Escrow — argent bloqué jusqu'à livraison"  },
-              { icon: '📊', title: 'Prix du marché en temps réel',   desc: 'Maïs, riz, mil, soja — au juste prix'      },
-              { icon: '🚚', title: 'Transporteurs vérifiés',         desc: 'Livraison fiable dans tout le Bénin'       },
+              { icon: Shield,     title: 'Paiements sécurisés',           desc: "Escrow — argent bloqué jusqu'à livraison"  },
+              { icon: TrendingUp, title: 'Prix du marché en temps réel',   desc: 'Maïs, riz, mil, soja — au juste prix'      },
+              { icon: Truck,      title: 'Transporteurs vérifiés',         desc: 'Livraison fiable dans tout le Bénin'       },
             ].map((f, i) => (
               <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + i * 0.1 }}
                 style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: 'rgba(255,255,255,0.07)', borderRadius: '14px', padding: '0.9rem 1.1rem' }}>
-                <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>{f.icon}</span>
+                <div style={{ flexShrink: 0, marginTop: '2px' }}><f.icon size={18} color="#f0c040" /></div>
                 <div>
                   <p style={{ margin: 0, color: 'white', fontWeight: '700', fontSize: '0.88rem' }}>{f.title}</p>
                   <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', marginTop: '2px' }}>{f.desc}</p>

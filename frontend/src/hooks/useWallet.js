@@ -33,7 +33,7 @@ const useWallet = () => {
       setDepositLoading(true);
       setFormErrors({});
       const data = await deposit({ methodId, phone, amount: Number(amount) });
-      success(`${Number(amount).toLocaleString('fr-BJ')} FCFA added to your wallet.`, '✅ Deposit Successful');
+      success(`${Number(amount).toLocaleString('fr-BJ')} FCFA added to your wallet.`, 'Dépôt effectué');
       return { success: true, data };
     } catch (err) {
       const msg = err.response?.data?.message || 'Deposit failed. Please try again.';
@@ -61,7 +61,7 @@ const useWallet = () => {
       setWithdrawLoading(true);
       setFormErrors({});
       const data = await withdraw({ methodId, phone, amount: Number(amount) });
-      success(`${Number(amount).toLocaleString('fr-BJ')} FCFA sent to ${phone}.`, '✅ Withdrawal Initiated');
+      success(`${Number(amount).toLocaleString('fr-BJ')} FCFA sent to ${phone}.`, 'Retrait initié');
       return { success: true, data };
     } catch (err) {
       const msg = err.response?.data?.message || 'Withdrawal failed. Please try again.';

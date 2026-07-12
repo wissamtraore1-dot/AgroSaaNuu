@@ -115,12 +115,12 @@ export const ORDER_STATUS = {
   };
     // ─── Transaction Icons ───────────────────────────────────────
 export const TRANSACTION_TYPE_ICONS = {
-  [TRANSACTION_TYPE.DEPOSIT]:        '⬇️',
-  [TRANSACTION_TYPE.WITHDRAWAL]:     '⬆️',
-  [TRANSACTION_TYPE.PURCHASE]:       '🛒',
-  [TRANSACTION_TYPE.ESCROW_LOCK]:    '🔒',
-  [TRANSACTION_TYPE.ESCROW_RELEASE]: '🔓',
-  [TRANSACTION_TYPE.REFUND]:         '💰',
+  [TRANSACTION_TYPE.DEPOSIT]:        'depot',
+  [TRANSACTION_TYPE.WITHDRAWAL]:     'retrait',
+  [TRANSACTION_TYPE.PURCHASE]:       'achat',
+  [TRANSACTION_TYPE.ESCROW_LOCK]:    'escrow',
+  [TRANSACTION_TYPE.ESCROW_RELEASE]: 'liberation',
+  [TRANSACTION_TYPE.REFUND]:         'remboursement',
 };
   
   export const TRANSACTION_TYPE_COLORS = {
