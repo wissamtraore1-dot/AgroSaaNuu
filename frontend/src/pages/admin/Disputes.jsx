@@ -17,6 +17,7 @@ export default function AdminDisputes() {
   const [selected,   setSelected]   = useState(null);
   const [decision,   setDecision]   = useState('');
   const [commentaire,setCommentaire]= useState('');
+  const [montantAcheteur, setMontantAcheteur] = useState('');
   const [saving,     setSaving]     = useState(false);
   const [msg,        setMsg]        = useState('');
 
@@ -32,11 +33,16 @@ export default function AdminDisputes() {
 
   const resoudre = async () => {
     if (!selected || !decision) return;
+    if (decision === 'PARTAGER' && (!montantAcheteur || Number(montantAcheteur) <= 0)) return;
     setSaving(true);
     try {
-      await AdminService.resoudreLitige(selected.id, decision, commentaire);
+      await AdminService.resoudreLitige(
+        selected.id, decision, commentaire,
+        decision === 'PARTAGER' ? montantAcheteur : null
+      );
       setMsg('Litige résolu avec succès');
       setSelected(null);
+      setMontantAcheteur('');
       charger();
     } catch {
       setMsg('Erreur lors de la résolution');
@@ -108,7 +114,7 @@ export default function AdminDisputes() {
                     </div>
                     {(l.statut === 'OUVERT' || l.statut === 'EN_COURS' || !l.statut) && (
                       <button
-                        onClick={() => { setSelected(l); setDecision(''); setCommentaire(''); }}
+                        onClick={() => { setSelected(l); setDecision(''); setCommentaire(''); setMontantAcheteur(''); }}
                         style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 14px', background: '#1a5c2a', color: 'white', border: 'none', borderRadius: '10px', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 }}
                       >
                         <Eye size={14} /> Décider
@@ -162,6 +168,27 @@ export default function AdminDisputes() {
                 </div>
               </div>
 
+              {decision === 'PARTAGER' && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>
+                    Montant à rembourser à l'acheteur (FCFA) *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={selected.commande_montant || undefined}
+                    step="1"
+                    placeholder={selected.commande_montant ? `Max ${selected.commande_montant} FCFA` : ''}
+                    value={montantAcheteur}
+                    onChange={e => setMontantAcheteur(e.target.value)}
+                    style={{ width: '100%', padding: '0.6rem 0.8rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '0.85rem', outline: 'none' }}
+                  />
+                  <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: '4px 0 0' }}>
+                    Le reste ({selected.commande_montant ? `${selected.commande_montant - (Number(montantAcheteur) || 0)} FCFA` : '—'}) sera versé au vendeur.
+                  </p>
+                </div>
+              )}
+
               <textarea
                 placeholder="Commentaire / justification (obligatoire)..."
                 value={commentaire}
@@ -175,7 +202,7 @@ export default function AdminDisputes() {
                 </button>
                 <button
                   onClick={resoudre}
-                  disabled={saving || !decision || !commentaire.trim()}
+                  disabled={saving || !decision || !commentaire.trim() || (decision === 'PARTAGER' && !(Number(montantAcheteur) > 0))}
                   style={{ padding: '0.6rem 1.4rem', background: '#1a5c2a', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', opacity: saving ? 0.7 : 1 }}
                 >
                   {saving ? 'En cours...' : 'Confirmer la décision'}

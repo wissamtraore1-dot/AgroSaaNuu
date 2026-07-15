@@ -38,6 +38,7 @@ urlpatterns = [
 
     # ===== PROBLÈMES =====
     path('mes-problemes/',                      views.MesLitigesView.as_view()),
+    path('problemes/',                          views.ListeLitigesView.as_view()),
     path('problemes/<uuid:pk>/',                views.DetailLitigeView.as_view()),
     path('problemes/<uuid:pk>/resoudre/',       views.ResoudreLitigeView.as_view()),
 ]

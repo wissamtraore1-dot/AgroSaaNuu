@@ -82,8 +82,8 @@ const AdminService = {
   getLitigeDetail: (id) =>
     api.get(`/orders/problemes/${id}/`).then(r => r.data),
 
-  resoudreLitige: (id, decision, commentaire) =>
-    api.post(`/orders/problemes/${id}/resoudre/`, { decision, commentaire }).then(r => r.data),
+  resoudreLitige: (id, decision, commentaire, montant_acheteur = null) =>
+    api.post(`/orders/problemes/${id}/resoudre/`, { decision, commentaire, montant_acheteur }).then(r => r.data),
 
   // ── Notifications ─────────────────────────────────────────
   getNotifications: (params = {}) =>

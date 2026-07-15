@@ -1,3 +1,4 @@
+from decimal import Decimal, InvalidOperation
 from rest_framework import status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -392,6 +393,22 @@ class MesLitigesView(generics.ListAPIView):
         ).select_related('commande', 'commande__produit', 'commande__vendeur', 'plaignant')
 
 
+class ListeLitigesView(APIView):
+    """GET /api/v1/orders/problemes/ — admin uniquement, liste tous les litiges signalés"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not request.user.is_staff:
+            return Response({'success': False, 'message': 'Accès refusé'}, status=403)
+        litiges = LitigeCommande.objects.select_related(
+            'commande', 'commande__produit', 'commande__vendeur', 'plaignant'
+        ).all()
+        statut = request.query_params.get('statut', '')
+        if statut:
+            litiges = litiges.filter(statut=statut.upper())
+        return Response(LitigeDetailSerializer(litiges, many=True).data)
+
+
 class DetailLitigeView(APIView):
     """GET /api/v1/orders/litiges/<id>/"""
     permission_classes = [IsAuthenticated]
@@ -405,27 +422,75 @@ class DetailLitigeView(APIView):
 
 
 class ResoudreLitigeView(APIView):
-    """PATCH /api/v1/orders/litiges/<id>/resoudre/ — admin uniquement"""
+    """POST /api/v1/orders/litiges/<id>/resoudre/ — admin uniquement"""
     permission_classes = [IsAuthenticated]
 
-    def patch(self, request, pk):
+    DECISIONS_VALIDES = ['REMBOURSER_ACHETEUR', 'LIBERER_VENDEUR', 'PARTAGER', 'FERMER']
+
+    @staticmethod
+    def _maj_paiement(commande, statut):
+        Paiement.objects.filter(commande=commande).update(statut=statut)
+
+    def post(self, request, pk):
         if not request.user.is_staff:
             return Response({'success': False, 'message': 'Réservé aux administrateurs.'}, status=403)
 
-        litige     = get_object_or_404(LitigeCommande, pk=pk)
-        resolution = request.data.get('resolution', '').strip()
-        statut     = request.data.get('statut', LitigeCommande.Statut.RESOLU)
+        litige      = get_object_or_404(LitigeCommande, pk=pk)
+        commande    = litige.commande
+        decision    = request.data.get('decision', '')
+        commentaire = request.data.get('commentaire', '').strip()
 
-        if not resolution:
-            return Response({'success': False, 'message': 'La réponse au problème est requise.'}, status=400)
+        if decision not in self.DECISIONS_VALIDES:
+            return Response({'success': False, 'message': 'Décision invalide.'}, status=400)
+        if not commentaire:
+            return Response({'success': False, 'message': 'Un commentaire justificatif est requis.'}, status=400)
+        if litige.statut in [LitigeCommande.Statut.RESOLU, LitigeCommande.Statut.FERME]:
+            return Response({'success': False, 'message': 'Ce litige a déjà été traité.'}, status=400)
 
-        if statut not in [LitigeCommande.Statut.RESOLU, LitigeCommande.Statut.FERME, LitigeCommande.Statut.EN_COURS]:
-            return Response({'success': False, 'message': 'Statut invalide.'}, status=400)
+        try:
+            with db_transaction.atomic():
+                if decision == 'REMBOURSER_ACHETEUR':
+                    from apps.wallet.services import rembourser_acheteur
+                    rembourser_acheteur(commande)
+                    commande.statut = Commande.Statut.ANNULEE
+                    commande.save(update_fields=['statut'])
+                    _restaurer_stock(commande)
+                    self._maj_paiement(commande, Paiement.Statut.REMBOURSÉ)
 
-        litige.resolution      = resolution
-        litige.statut          = statut
-        litige.date_resolution = timezone.now()
-        litige.save(update_fields=['resolution', 'statut', 'date_resolution'])
+                elif decision == 'LIBERER_VENDEUR':
+                    from apps.wallet.services import liberer_paiement_vendeur
+                    liberer_paiement_vendeur(commande)
+                    commande.statut             = Commande.Statut.PAIEMENT_LIBERE
+                    commande.paiement_en_escrow = False
+                    commande.paiement_libere_le = timezone.now()
+                    commande.save(update_fields=['statut', 'paiement_en_escrow', 'paiement_libere_le'])
+                    self._maj_paiement(commande, Paiement.Statut.PRET_VENDEUR)
+
+                elif decision == 'PARTAGER':
+                    from apps.wallet.services import partager_paiement
+                    montant_acheteur = request.data.get('montant_acheteur')
+                    if montant_acheteur in (None, ''):
+                        return Response({'success': False, 'message': 'Montant à rembourser à l\'acheteur requis.'}, status=400)
+                    try:
+                        montant_acheteur = Decimal(str(montant_acheteur))
+                    except InvalidOperation:
+                        return Response({'success': False, 'message': 'Montant invalide.'}, status=400)
+                    partager_paiement(commande, montant_acheteur)
+                    commande.statut             = Commande.Statut.PAIEMENT_LIBERE
+                    commande.paiement_en_escrow = False
+                    commande.paiement_libere_le = timezone.now()
+                    commande.save(update_fields=['statut', 'paiement_en_escrow', 'paiement_libere_le'])
+                    self._maj_paiement(commande, Paiement.Statut.PRET_VENDEUR)
+
+                # FERMER : aucune action sur les fonds — le séquestre reste bloqué,
+                # une action manuelle séparée sera nécessaire plus tard.
+
+                litige.resolution      = commentaire
+                litige.statut          = LitigeCommande.Statut.FERME if decision == 'FERMER' else LitigeCommande.Statut.RESOLU
+                litige.date_resolution = timezone.now()
+                litige.save(update_fields=['resolution', 'statut', 'date_resolution'])
+        except ValueError as e:
+            return Response({'success': False, 'message': str(e)}, status=400)
 
         try:
             from apps.notifications.services import notifier_litige_resolu
@@ -435,7 +500,7 @@ class ResoudreLitigeView(APIView):
 
         return Response({
             'success': True,
-            'message': 'Problème mis à jour.',
+            'message': 'Problème résolu.',
             'litige':  LitigeDetailSerializer(litige).data,
         })
 

@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from apps.common.models import TimeStampedModel
@@ -9,9 +10,9 @@ class PlatformWallet(TimeStampedModel):
     """Wallet singleton de l'entreprise AgroSaaNuu — capte toutes les commissions."""
 
     nom               = models.CharField(max_length=50, unique=True, default='AGROSAANUU')
-    solde             = models.DecimalField(max_digits=16, decimal_places=2, default=0.00)
-    total_commissions = models.DecimalField(max_digits=16, decimal_places=2, default=0.00)
-    total_retire      = models.DecimalField(max_digits=16, decimal_places=2, default=0.00)
+    solde             = models.DecimalField(max_digits=16, decimal_places=2, default=Decimal('0.00'))
+    total_commissions = models.DecimalField(max_digits=16, decimal_places=2, default=Decimal('0.00'))
+    total_retire      = models.DecimalField(max_digits=16, decimal_places=2, default=Decimal('0.00'))
 
     class Meta:
         db_table = 'platform_wallet'
@@ -55,10 +56,10 @@ class PlatformTransaction(TimeStampedModel):
 
 class Wallet(TimeStampedModel):
     user            = models.OneToOneField(User, on_delete=models.CASCADE, related_name='wallet')
-    solde           = models.DecimalField(max_digits=14, decimal_places=2, default=0.00)
-    solde_bloque    = models.DecimalField(max_digits=14, decimal_places=2, default=0.00)
-    total_recu      = models.DecimalField(max_digits=14, decimal_places=2, default=0.00)
-    total_retire    = models.DecimalField(max_digits=14, decimal_places=2, default=0.00)
+    solde           = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0.00'))
+    solde_bloque    = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0.00'))
+    total_recu      = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0.00'))
+    total_retire    = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0.00'))
     est_actif       = models.BooleanField(default=True)
 
     class Meta:
@@ -79,7 +80,7 @@ class Transaction(TimeStampedModel):
         RETRAIT     = 'RETRAIT',     _('Retrait')
         PAIEMENT    = 'PAIEMENT',    _('Paiement commande')
         RECEPTION   = 'RECEPTION',   _('Réception paiement')
-        COMMISSION  = 'COMMISSION',  _('Commission AgroConnect')
+        COMMISSION  = 'COMMISSION',  _('Commission AgroSaaNuu')
         REMBOURSEMENT = 'REMBOURSEMENT', _('Remboursement')
         BLOCAGE     = 'BLOCAGE',     _('Blocage séquestre')
         LIBERATION  = 'LIBERATION',  _('Libération séquestre')

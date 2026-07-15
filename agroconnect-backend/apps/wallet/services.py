@@ -134,6 +134,89 @@ def liberer_paiement_vendeur(commande):
 
 
 @transaction.atomic
+def rembourser_acheteur(commande, montant=None):
+    """
+    Résolution de litige en faveur de l'acheteur : débloque tout ou partie du
+    séquestre. L'argent n'a jamais quitté le wallet acheteur (solde_bloque en
+    fait déjà partie), donc on se contente de lever le blocage.
+    """
+    if montant is None:
+        montant = commande.montant_total
+    montant = Decimal(str(montant))
+    wallet_acheteur = obtenir_ou_creer_wallet(commande.acheteur)
+
+    if montant <= 0 or montant > wallet_acheteur.solde_bloque:
+        raise ValueError('Montant de remboursement invalide.')
+
+    wallet_acheteur.solde_bloque -= montant
+    wallet_acheteur.save(update_fields=['solde_bloque'])
+
+    Transaction.objects.create(
+        wallet=wallet_acheteur, type=Transaction.Type.REMBOURSEMENT,
+        mode=Transaction.Mode.INTERNE,
+        montant=montant, frais=0, montant_net=montant,
+        statut=Transaction.Statut.SUCCES,
+        description=f'Remboursement litige — commande {commande.reference}',
+        commande_id=commande.id,
+    )
+
+
+@transaction.atomic
+def partager_paiement(commande, montant_acheteur):
+    """
+    Résolution de litige avec partage : `montant_acheteur` est débloqué/remboursé
+    à l'acheteur, le reste (montant_total - montant_acheteur) est versé
+    intégralement au vendeur — sans déduction de commission sur cette portion,
+    par décision de règlement de litige (l'admin fixe le montant remboursé).
+    """
+    montant_acheteur = Decimal(str(montant_acheteur))
+    if montant_acheteur <= 0 or montant_acheteur >= commande.montant_total:
+        raise ValueError('Le montant partagé doit être strictement compris entre 0 et le montant total.')
+
+    montant_vendeur = commande.montant_total - montant_acheteur
+
+    wallet_acheteur = obtenir_ou_creer_wallet(commande.acheteur)
+    wallet_vendeur  = obtenir_ou_creer_wallet(commande.vendeur)
+
+    # Part remboursée à l'acheteur (débloquée, reste dans son solde)
+    wallet_acheteur.solde_bloque -= montant_acheteur
+    wallet_acheteur.save(update_fields=['solde_bloque'])
+    Transaction.objects.create(
+        wallet=wallet_acheteur, type=Transaction.Type.REMBOURSEMENT,
+        mode=Transaction.Mode.INTERNE,
+        montant=montant_acheteur, frais=0, montant_net=montant_acheteur,
+        statut=Transaction.Statut.SUCCES,
+        description=f'Remboursement partiel litige — commande {commande.reference}',
+        commande_id=commande.id,
+    )
+
+    # Part versée au vendeur (quitte définitivement le wallet acheteur)
+    wallet_acheteur.solde        -= montant_vendeur
+    wallet_acheteur.solde_bloque -= montant_vendeur
+    wallet_acheteur.save(update_fields=['solde', 'solde_bloque'])
+    Transaction.objects.create(
+        wallet=wallet_acheteur, type=Transaction.Type.PAIEMENT,
+        mode=commande.mode_paiement,
+        montant=montant_vendeur, frais=0, montant_net=montant_vendeur,
+        statut=Transaction.Statut.SUCCES,
+        description=f'Paiement partiel litige — commande {commande.reference}',
+        commande_id=commande.id,
+    )
+
+    wallet_vendeur.solde      += montant_vendeur
+    wallet_vendeur.total_recu += montant_vendeur
+    wallet_vendeur.save(update_fields=['solde', 'total_recu'])
+    Transaction.objects.create(
+        wallet=wallet_vendeur, type=Transaction.Type.RECEPTION,
+        mode=Transaction.Mode.INTERNE,
+        montant=montant_vendeur, frais=0, montant_net=montant_vendeur,
+        statut=Transaction.Statut.SUCCES,
+        description=f'Réception partielle litige — commande {commande.reference}',
+        commande_id=commande.id,
+    )
+
+
+@transaction.atomic
 def crediter_transporteur(commande):
     """Crédite le wallet du transporteur avec les frais de livraison."""
     if not commande.transporteur:
