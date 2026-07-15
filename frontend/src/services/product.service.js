@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Product Service
+// AgroSaaNuu — Product Service
 // src/services/product.service.js
 // ============================================================
 import api from './api';

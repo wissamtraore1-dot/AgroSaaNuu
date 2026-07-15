@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Payment Methods Utilities
+// AgroSaaNuu — Payment Methods Utilities
 // src/utils/paymentMethods.js
 // ============================================================
 

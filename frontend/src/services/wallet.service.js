@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Wallet Service
+// AgroSaaNuu — Wallet Service
 // src/services/wallet.service.js
 // ============================================================
 import api from './api';

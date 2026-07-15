@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — 403 Access Denied
+// AgroSaaNuu — 403 Access Denied
 // src/pages/errors/AccessDenied.jsx
 // ============================================================
 import { motion } from 'framer-motion';

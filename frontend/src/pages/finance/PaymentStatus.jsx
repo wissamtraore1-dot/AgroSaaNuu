@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Payment Status Page
+// AgroSaaNuu — Payment Status Page
 // src/pages/finance/PaymentStatus.jsx
 // ============================================================
 import React, { useEffect, useState } from 'react';

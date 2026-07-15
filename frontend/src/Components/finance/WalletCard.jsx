@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Wallet Card
+// AgroSaaNuu — Wallet Card
 // src/components/finance/WalletCard.jsx
 // ============================================================
 import React from 'react';

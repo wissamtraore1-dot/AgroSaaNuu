@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — useWallet Hook
+// AgroSaaNuu — useWallet Hook
 // src/hooks/useWallet.js
 // ============================================================
 import { useState } from 'react';

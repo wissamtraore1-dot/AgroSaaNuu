@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Transaction Item
+// AgroSaaNuu — Transaction Item
 // src/components/finance/TransactionItem.jsx
 // ============================================================
 import React from 'react';

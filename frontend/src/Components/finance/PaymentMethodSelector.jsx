@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Payment Method Selector
+// AgroSaaNuu — Payment Method Selector
 // src/components/finance/PaymentMethodSelector.jsx
 // ============================================================
 import React, { useState, useEffect } from 'react';

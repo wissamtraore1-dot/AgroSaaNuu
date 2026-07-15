@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Verify Identity (OTP)
+// AgroSaaNuu — Verify Identity (OTP)
 // src/pages/auth/VerifyIdentity.jsx
 // ============================================================
 import React, { useState, useRef, useEffect } from 'react';

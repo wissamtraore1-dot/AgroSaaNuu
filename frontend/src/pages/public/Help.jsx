@@ -22,7 +22,7 @@ const categories = [
 
 const faqs = [
   // COMPTE
-  { id: 1, cat: 'compte', question: 'Comment créer un compte sur AgroConnect ?', reponse: 'Cliquez sur "S\'inscrire", choisissez votre rôle (Vendeur, Acheteur ou Transporteur), remplissez le formulaire avec vos informations personnelles et votre numéro CIP, puis validez votre inscription.', utile: 42 },
+  { id: 1, cat: 'compte', question: 'Comment créer un compte sur AgroSaaNuu ?', reponse: 'Cliquez sur "S\'inscrire", choisissez votre rôle (Vendeur, Acheteur ou Transporteur), remplissez le formulaire avec vos informations personnelles et votre numéro CIP, puis validez votre inscription.', utile: 42 },
   { id: 2, cat: 'compte', question: 'Comment modifier mes informations personnelles ?', reponse: 'Connectez-vous, allez dans "Mon Profil" depuis votre tableau de bord, cliquez sur "Modifier" et mettez à jour vos informations. N\'oubliez pas de sauvegarder.', utile: 28 },
   { id: 3, cat: 'compte', question: 'J\'ai oublié mon mot de passe, que faire ?', reponse: 'Sur la page de connexion, cliquez sur "Mot de passe oublié", entrez votre email ou numéro de téléphone, et vous recevrez un lien de réinitialisation dans les minutes qui suivent.', utile: 65 },
   { id: 4, cat: 'compte', question: 'Comment supprimer mon compte ?', reponse: 'Pour supprimer votre compte, allez dans Paramètres > Sécurité > Supprimer le compte. Notez que cette action est irréversible et toutes vos données seront effacées.', utile: 15 },
@@ -35,11 +35,11 @@ const faqs = [
 
   // TRANSPORT
   { id: 9,  cat: 'transport', question: 'Comment trouver un transporteur ?', reponse: 'Dans la section "Transports & logistiques", filtrez par ville et disponibilité. Vous pouvez voir les notes, véhicules disponibles et contacter directement le transporteur de votre choix.', utile: 61 },
-  { id: 10, cat: 'transport', question: 'Comment devenir transporteur sur AgroConnect ?', reponse: 'Inscrivez-vous avec le rôle "Transporteur", ajoutez vos véhicules avec les documents requis (carte grise, assurance), définissez vos zones d\'intervention et activez votre disponibilité.', utile: 38 },
+  { id: 10, cat: 'transport', question: 'Comment devenir transporteur sur AgroSaaNuu ?', reponse: 'Inscrivez-vous avec le rôle "Transporteur", ajoutez vos véhicules avec les documents requis (carte grise, assurance), définissez vos zones d\'intervention et activez votre disponibilité.', utile: 38 },
   { id: 11, cat: 'transport', question: 'Les transporteurs sont-ils vérifiés ?', reponse: 'Oui. Chaque transporteur passe par une vérification de ses documents (permis, assurance, carte grise) avant d\'être activé sur la plateforme. Ils ont aussi un système de notation.', utile: 45 },
 
   // PAIEMENT
-  { id: 12, cat: 'paiement', question: 'Quels modes de paiement sont acceptés ?', reponse: 'AgroConnect accepte MTN Mobile Money, Moov Money, Celtis Cash, et les virements bancaires. D\'autres modes seront bientôt disponibles.', utile: 102 },
+  { id: 12, cat: 'paiement', question: 'Quels modes de paiement sont acceptés ?', reponse: 'AgroSaaNuu accepte MTN Mobile Money, Moov Money, Celtis Cash, et les virements bancaires. D\'autres modes seront bientôt disponibles.', utile: 102 },
   { id: 13, cat: 'paiement', question: 'Mon paiement a échoué, que faire ?', reponse: 'Vérifiez que votre solde est suffisant et que votre numéro est correct. Si le problème persiste, attendez quelques minutes et réessayez. Contactez le support si l\'échec se répète.', utile: 47 },
   { id: 14, cat: 'paiement', question: 'Comment demander un remboursement ?', reponse: 'Les remboursements sont traités sous 3 à 5 jours ouvrés après validation du litige. Allez dans "Mes commandes" > "Litige" pour initier la demande.', utile: 58 },
 
@@ -48,8 +48,8 @@ const faqs = [
   { id: 16, cat: 'securite', question: 'Comment signaler un utilisateur suspect ?', reponse: 'Sur le profil de l\'utilisateur, cliquez sur les trois points (...) puis "Signaler". Notre équipe examinera le signalement sous 24h et prendra les mesures nécessaires.', utile: 22 },
 
   // GÉNÉRAL
-  { id: 17, cat: 'general', question: 'AgroConnect est-il gratuit ?', reponse: 'L\'inscription et la navigation sont gratuites. AgroConnect prélève une commission sur les transactions réussies. Les détails sont disponibles dans nos conditions générales.', utile: 93 },
-  { id: 18, cat: 'general', question: 'Dans quelles villes AgroConnect est-il disponible ?', reponse: 'AgroConnect est disponible dans tout le Bénin : Cotonou, Porto-Novo, Parakou, Natitingou, Kandi, Nikki, Djougou, Abomey et plus encore.', utile: 71 },
+  { id: 17, cat: 'general', question: 'AgroSaaNuu est-il gratuit ?', reponse: 'L\'inscription et la navigation sont gratuites. AgroSaaNuu prélève une commission sur les transactions réussies. Les détails sont disponibles dans nos conditions générales.', utile: 93 },
+  { id: 18, cat: 'general', question: 'Dans quelles villes AgroSaaNuu est-il disponible ?', reponse: 'AgroSaaNuu est disponible dans tout le Bénin : Cotonou, Porto-Novo, Parakou, Natitingou, Kandi, Nikki, Djougou, Abomey et plus encore.', utile: 71 },
 ];
 
 const guides = [
@@ -408,7 +408,7 @@ export default function Help() {
 
                 <div style={styles.supportContactItem}>
                   <Mail size={15} color="#1a5c2a" />
-                  <span>support@agroconnect.bj</span>
+                  <span>support@agrosaanuu.com</span>
                 </div>
               </div>
             </motion.div>

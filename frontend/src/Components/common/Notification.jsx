@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Notification Toast System
+// AgroSaaNuu — Notification Toast System
 // src/components/common/Notification.jsx
 // ============================================================
 import React, { useEffect, useState } from 'react';

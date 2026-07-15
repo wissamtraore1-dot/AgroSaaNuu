@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — 404 Not Found
+// AgroSaaNuu — 404 Not Found
 // src/pages/errors/NotFound.jsx
 // ============================================================
 import { motion } from 'framer-motion';

@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Badge Component
+// AgroSaaNuu — Badge Component
 // src/components/ui/Badge.jsx
 // ============================================================
 import React from 'react';

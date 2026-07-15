@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Escrow Banner
+// AgroSaaNuu — Escrow Banner
 // src/components/finance/EscrowBanner.jsx
 // ============================================================
 import React from 'react';

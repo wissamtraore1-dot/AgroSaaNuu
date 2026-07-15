@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Notification Context
+// AgroSaaNuu — Notification Context
 // src/context/NotificationContext.jsx
 // ============================================================
 import { createContext, useContext, useState, useCallback } from 'react';

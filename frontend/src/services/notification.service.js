@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Notification Service
+// AgroSaaNuu — Notification Service
 // src/services/notification.service.js
 // ============================================================
 import api from './api';

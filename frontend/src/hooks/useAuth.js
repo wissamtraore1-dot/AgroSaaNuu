@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — useAuth Hook
+// AgroSaaNuu — useAuth Hook
 // src/hooks/useAuth.js
 // ============================================================
 import { useState } from 'react';
@@ -44,7 +44,7 @@ const useAuth = () => {
       setSubmitting(true);
       setFormErrors({});
       const me = await register(payload);
-      success(`Bienvenue sur AgroConnect, ${me.prenom || me.nom_complet || me.email}!`, 'Compte cree');
+      success(`Bienvenue sur AgroSaaNuu, ${me.prenom || me.nom_complet || me.email}!`, 'Compte cree');
       navigate(getDashboard(me), { replace: true });
       return { success: true };
     } catch (err) {

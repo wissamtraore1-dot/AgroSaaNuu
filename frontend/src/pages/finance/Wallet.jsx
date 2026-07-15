@@ -26,7 +26,7 @@ const TYPE_LABELS = {
   RETRAIT:       'Retrait',
   PAIEMENT:      'Paiement commande',
   RECEPTION:     'Réception paiement',
-  COMMISSION:    'Commission AgroConnect',
+  COMMISSION:    'Commission AgroSaaNuu',
   REMBOURSEMENT: 'Remboursement',
   BLOCAGE:       'Blocage séquestre',
   LIBERATION:    'Libération séquestre',
@@ -342,7 +342,7 @@ export default function WalletPage() {
                 <Shield size={20} color={GREEN} />
                 <div>
                   <div style={styles.secuTitle}>Vos fonds sont protégés</div>
-                  <div style={styles.secuDesc}>AgroConnect utilise un cryptage de niveau bancaire pour sécuriser toutes vos transactions.</div>
+                  <div style={styles.secuDesc}>AgroSaaNuu utilise un cryptage de niveau bancaire pour sécuriser toutes vos transactions.</div>
                 </div>
                 <Lock size={18} color={GREEN} style={{ flexShrink: 0 }} />
               </div>

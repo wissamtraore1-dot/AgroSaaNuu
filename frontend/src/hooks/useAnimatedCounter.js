@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — useAnimatedCounter Hook
+// AgroSaaNuu — useAnimatedCounter Hook
 // src/hooks/useAnimatedCounter.js
 // ============================================================
 import { useState, useEffect, useRef } from 'react';

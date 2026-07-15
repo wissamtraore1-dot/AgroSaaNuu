@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — useNotification Hook
+// AgroSaaNuu — useNotification Hook
 // src/hooks/useNotification.js
 // ============================================================
 import { useNotificationContext } from '../context/NotificationContext';

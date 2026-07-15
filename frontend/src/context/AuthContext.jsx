@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Auth Context
+// AgroSaaNuu — Auth Context
 // src/context/AuthContext.jsx
 // ============================================================
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';

@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Payment Configuration
+// AgroSaaNuu — Payment Configuration
 // src/config/paymentConfig.js
 // ============================================================
 
@@ -55,7 +55,7 @@ export const PAYMENT_METHODS = {
   
     WALLET: {
       id:          'wallet',
-      name:        'AgroConnect Wallet',
+      name:        'AgroSaaNuu Wallet',
       shortName:   'My Wallet',
       logo:        '/assets/logos/wallet.png',
       color:       '#16A34A',

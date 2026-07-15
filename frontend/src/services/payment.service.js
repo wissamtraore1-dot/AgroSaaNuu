@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Payment Service (Escrow + Mobile Money)
+// AgroSaaNuu — Payment Service (Escrow + Mobile Money)
 // src/services/payment.service.js
 // ============================================================
 import api from './api';

@@ -146,7 +146,7 @@ export default function Footer() {
         <div className="container-fluid px-4 px-lg-5">
           <div className="d-flex flex-column align-items-center text-center gap-2">
             <p style={styles.copyright} className="mb-0">
-              © 2026 AgroConnect — Tous droits réservés. Développé pour le Bénin.
+              © 2026 AgroSaaNuu — Tous droits réservés. Développé pour le Bénin.
             </p>
             <div className="d-flex gap-3">
               <Link to="/help"    style={styles.bottomLink}>Confidentialité</Link>

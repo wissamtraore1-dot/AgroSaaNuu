@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Avatar Upload Component
+// AgroSaaNuu — Avatar Upload Component
 // src/components/AvatarUpload.jsx
 // ============================================================
 import { useState, useRef } from 'react';

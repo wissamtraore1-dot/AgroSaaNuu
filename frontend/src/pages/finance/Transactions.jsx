@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Transactions Page
+// AgroSaaNuu — Transactions Page
 // src/pages/finance/Transactions.jsx
 // ============================================================
 import React, { useEffect, useState } from 'react';

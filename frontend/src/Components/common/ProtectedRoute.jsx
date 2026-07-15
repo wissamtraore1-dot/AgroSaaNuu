@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Protected Route
+// AgroSaaNuu — Protected Route
 // src/components/common/ProtectedRoute.jsx
 // ============================================================
 import { Navigate, useLocation } from 'react-router-dom';

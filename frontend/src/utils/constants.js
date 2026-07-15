@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Global Constants
+// AgroSaaNuu — Global Constants
 // src/utils/constants.js
 // ============================================================
 

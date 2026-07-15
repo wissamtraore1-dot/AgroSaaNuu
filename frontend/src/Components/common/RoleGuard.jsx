@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Role Guard
+// AgroSaaNuu — Role Guard
 // src/components/common/RoleGuard.jsx
 // ============================================================
 import { Navigate } from 'react-router-dom';

@@ -5,10 +5,10 @@ from django.utils import timezone
 from datetime import timedelta
 
 
-class AgroConnectAdminSite(AdminSite):
-    site_header = 'AgroConnect Administration'
-    site_title  = 'AgroConnect Admin'
-    index_title = 'Tableau de bord AgroConnect'
+class AgroSaaNuuAdminSite(AdminSite):
+    site_header = 'AgroSaaNuu Administration'
+    site_title  = 'AgroSaaNuu Admin'
+    index_title = 'Tableau de bord AgroSaaNuu'
 
     def index(self, request, extra_context=None):
         from apps.authentication.models import User
@@ -54,4 +54,4 @@ class AgroConnectAdminSite(AdminSite):
         return super().index(request, extra_context)
 
 
-agroconnect_admin = AgroConnectAdminSite(name='agroconnect_admin')
+agroconnect_admin = AgroSaaNuuAdminSite(name='agroconnect_admin')

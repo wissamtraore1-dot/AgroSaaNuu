@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Buyer Routes
+// AgroSaaNuu — Buyer Routes
 // src/routes/BuyerRoutes.jsx
 // ============================================================
 import React from 'react';

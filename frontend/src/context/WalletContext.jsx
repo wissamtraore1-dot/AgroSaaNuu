@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Wallet Context
+// AgroSaaNuu — Wallet Context
 // src/context/WalletContext.jsx
 // ============================================================
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';

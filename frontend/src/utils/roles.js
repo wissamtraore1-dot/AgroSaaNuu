@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Roles & Permissions
+// AgroSaaNuu — Roles & Permissions
 // src/utils/roles.js
 // ============================================================
 

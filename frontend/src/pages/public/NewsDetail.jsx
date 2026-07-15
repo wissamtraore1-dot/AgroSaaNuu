@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — News Detail (Public)
+// AgroSaaNuu — News Detail (Public)
 // src/pages/public/NewsDetail.jsx
 // ============================================================
 import React, { useEffect, useState } from 'react';

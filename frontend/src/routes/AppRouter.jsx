@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Main Router (all routes in one file)
+// AgroSaaNuu — Main Router (all routes in one file)
 // src/routes/AppRouter.jsx
 // ============================================================
 import { BrowserRouter, Routes, Route } from 'react-router-dom';

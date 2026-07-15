@@ -1,5 +1,5 @@
 // ============================================================
-// AgroConnect — Deposit Page
+// AgroSaaNuu — Deposit Page
 // src/pages/finance/Deposit.jsx
 // ============================================================
 import React, { useState } from 'react';
@@ -38,7 +38,7 @@ const Deposit = () => {
       {/* Header */}
       <button style={styles.backBtn} onClick={() => navigate(-1)}>← Back</button>
       <h5 style={styles.title}>Deposit Funds</h5>
-      <p style={styles.subtitle}>Add money to your AgroConnect wallet</p>
+      <p style={styles.subtitle}>Add money to your AgroSaaNuu wallet</p>
 
       <div style={styles.card}>
         {/* Current balance */}

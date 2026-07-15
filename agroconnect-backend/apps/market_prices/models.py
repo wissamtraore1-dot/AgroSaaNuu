@@ -20,7 +20,7 @@ class PrixMarche(TimeStampedModel):
     unite        = models.CharField(max_length=15, choices=Unite.choices, default=Unite.TONNE)
     variation    = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     date_marche  = models.DateField()
-    source       = models.CharField(max_length=200, blank=True, default='AgroConnect')
+    source       = models.CharField(max_length=200, blank=True, default='AgroSaaNuu')
     est_valide   = models.BooleanField(default=True)
 
     class Meta:

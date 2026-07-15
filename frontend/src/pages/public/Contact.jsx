@@ -21,7 +21,7 @@ const infosContact = [
   {
     icon:    Mail,
     titre:   'Email',
-    valeur:  'contact@agroconnect.bj',
+    valeur:  'contact@agrosaanuu.com',
     sous:    'Réponse sous 24h',
     color:   '#2563eb',
     bg:      '#eff6ff',
@@ -61,7 +61,7 @@ const faq = [
   },
   {
     question: 'Quels modes de paiement sont acceptés ?',
-    reponse:  'AgroConnect accepte MTN Mobile Money, Moov Money, Celtis et les virements bancaires classiques.',
+    reponse:  'AgroSaaNuu accepte MTN Mobile Money, Moov Money, Celtis et les virements bancaires classiques.',
   },
   {
     question: 'Comment suivre ma commande ?',
@@ -408,10 +408,10 @@ export default function Contact() {
 
               <div style={styles.sociauxGrid}>
                 {[
-                   { icon: Share2,        label: 'Facebook',  handle: '@AgroConnectBJ',       color: '#1877f2', bg: '#e7f0fe' },
-                   { icon: MessageCircle, label: 'Twitter',   handle: '@AgroConnect_BJ',      color: '#1da1f2', bg: '#e8f5fe' },
-                   { icon: Radio,         label: 'Instagram', handle: '@agroconnect.bj',      color: '#e1306c', bg: '#fde8f0' },
-                  { icon: Mail,          label: 'Email',     handle: 'contact@agroconnect.bj', color: '#1a5c2a', bg: '#f0fdf4' },
+                   { icon: Share2,        label: 'Facebook',  handle: '@AgroSaaNuuBJ',       color: '#1877f2', bg: '#e7f0fe' },
+                   { icon: MessageCircle, label: 'Twitter',   handle: '@AgroSaaNuu_BJ',      color: '#1da1f2', bg: '#e8f5fe' },
+                   { icon: Radio,         label: 'Instagram', handle: '@agrosaanuu.com',      color: '#e1306c', bg: '#fde8f0' },
+                  { icon: Mail,          label: 'Email',     handle: 'contact@agrosaanuu.com', color: '#1a5c2a', bg: '#f0fdf4' },
                 ].map((s, i) => {
                   const Icon = s.icon;
                   return (

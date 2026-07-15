@@ -165,8 +165,8 @@ CORS_ALLOW_CREDENTIALS = True
 
 # ===== SPECTACULAR =====
 SPECTACULAR_SETTINGS = {
-    'TITLE':       'AgroConnect API',
-    'DESCRIPTION': 'API AgroConnect — Bénin',
+    'TITLE':       'AgroSaaNuu API',
+    'DESCRIPTION': 'API AgroSaaNuu — Bénin',
     'VERSION':     '1.0.0',
 }
 
