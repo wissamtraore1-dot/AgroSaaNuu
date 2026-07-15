@@ -228,16 +228,27 @@ export default function AddProduct() {
               )}
             </div>
 
-            {/* Quantité disponible */}
+            {/* Quantité + Unité côte à côte : même unité que le prix, modifiable ici aussi */}
             <div style={{ marginBottom: '1rem' }}>
               <label style={labelStyle}>Quantité disponible *</label>
-              <div style={{ position: 'relative' }}>
-                <Package size={15} color="#9ca3af" style={iconLeft} />
-                <input name="quantite" type="number" value={form.quantite} onChange={handleChange}
-                  onFocus={() => setFocused('quantite')} onBlur={() => setFocused('')}
-                  placeholder="Ex : 500" min="1"
-                  style={inputStyle(focused, 'quantite', errors.quantite)}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ position: 'relative' }}>
+                  <Package size={15} color="#9ca3af" style={iconLeft} />
+                  <input name="quantite" type="number" value={form.quantite} onChange={handleChange}
+                    onFocus={() => setFocused('quantite')} onBlur={() => setFocused('')}
+                    placeholder="Ex : 500" min="1"
+                    style={inputStyle(focused, 'quantite', errors.quantite)}
+                  />
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <Package size={15} color="#9ca3af" style={iconLeft} />
+                  <select name="unite" value={form.unite} onChange={handleChange}
+                    onFocus={() => setFocused('unite')} onBlur={() => setFocused('')}
+                    style={{ ...inputStyle(focused, 'unite', false), appearance: 'none', cursor: 'pointer' }}
+                  >
+                    {UNITES.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+                  </select>
+                </div>
               </div>
               {errors.quantite
                 ? <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '4px', display: 'block' }}>{errors.quantite}</span>

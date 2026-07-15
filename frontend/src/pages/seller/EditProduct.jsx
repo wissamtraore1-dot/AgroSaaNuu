@@ -148,12 +148,19 @@ export default function EditProduct() {
             </p>
           )}
 
-          {/* QUANTITÉ */}
-          <Field label="Quantité disponible" error={errors.quantite}>
-            <input type="number" name="quantite" value={form.quantite} onChange={handleChange} placeholder="Ex : 500" style={inputStyle(errors.quantite)} />
-          </Field>
+          {/* QUANTITÉ + UNITÉ : même unité que le prix, modifiable ici aussi */}
+          <div style={{ marginBottom: '0.3rem' }}>
+            <label style={{ display: 'block', fontSize: '0.83rem', fontWeight: '600', color: '#374151', marginBottom: '5px' }}>Quantité disponible</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <input type="number" name="quantite" value={form.quantite} onChange={handleChange} placeholder="Ex : 500" style={inputStyle(errors.quantite)} />
+              <select name="unite" value={form.unite} onChange={handleChange} style={inputStyle(errors.unite)}>
+                {UNITES.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+              </select>
+            </div>
+            {errors.quantite && <div style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '4px' }}>{errors.quantite}</div>}
+          </div>
           {!errors.quantite && form.quantite > 0 && (
-            <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '-0.6rem 0 1rem' }}>
+            <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0 0 1rem' }}>
               → {Number(form.quantite).toLocaleString('fr-FR')} {form.quantite == 1 ? uniteInfo.singulier : uniteInfo.pluriel} disponible{form.quantite == 1 ? '' : 's'}
             </p>
           )}
