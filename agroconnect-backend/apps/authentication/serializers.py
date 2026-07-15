@@ -230,7 +230,7 @@ class SellerProfileSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'id', 'user', 'note_moyenne', 'total_ventes',
+            'id', 'user', 'note_moyenne', 'total_ventes', 'est_certifie',
             'kyc_status', 'kyc_verified_at', 'created_at', 'updated_at'
         ]
 
@@ -249,7 +249,7 @@ class TransporterProfileSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'id', 'user', 'note_moyenne', 'total_missions',
+            'id', 'user', 'note_moyenne', 'total_missions', 'est_certifie',
             'kyc_status', 'kyc_verified_at', 'created_at', 'updated_at'
         ]
 
