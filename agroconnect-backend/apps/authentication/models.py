@@ -145,6 +145,7 @@ class OTPCode(TimeStampedModel):
 
     class Type(models.TextChoices):
         INSCRIPTION = 'INSCRIPTION', _('Inscription')
+        CONNEXION   = 'CONNEXION',   _('Connexion')
         PAIEMENT    = 'PAIEMENT',    _('Paiement')
         REINIT_MDP  = 'REINIT_MDP',  _('Réinitialisation')
 

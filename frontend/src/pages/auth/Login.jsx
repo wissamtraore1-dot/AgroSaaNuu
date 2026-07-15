@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import AuthService from '../../services/auth.service';
 import api from '../../services/api';
-import { Eye, EyeOff, AlertCircle, Lock, Loader, User, Shield, TrendingUp, Truck } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, Lock, Loader, User, Shield, TrendingUp, Truck, Phone, Check } from 'lucide-react';
 import logo from '../../assets/images/logo.jpeg';
 
 const GREEN = '#1a5c2a';
@@ -41,6 +41,22 @@ export default function Login() {
   const [loading,      setLoading]      = useState(false);
   const [error,        setError]        = useState('');
   const [focused,      setFocused]      = useState('');
+
+  // ── Connexion par téléphone + OTP ──────────────────────────────
+  const [loginMode, setLoginMode] = useState('password'); // 'password' | 'sms'
+  const [smsStep,   setSmsStep]   = useState('phone');    // 'phone' | 'otp'
+  const [smsPhone,  setSmsPhone]  = useState('');
+  const [otp,       setOtp]       = useState(Array(6).fill(''));
+  const [timer,     setTimer]     = useState(0);
+  const [devOtp,    setDevOtp]    = useState('');
+
+  useEffect(() => {
+    if (timer <= 0) return;
+    const id = setTimeout(() => setTimer(t => t - 1), 1000);
+    return () => clearTimeout(id);
+  }, [timer]);
+
+  const fmtTimer = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
   const [liveStats, setLiveStats] = useState({ vendeurs: 500, acheteurs: 12000, satisfaction: 98 });
 
@@ -79,6 +95,47 @@ export default function Login() {
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Identifiant ou mot de passe incorrect');
     } finally { setLoading(false); }
+  };
+
+  const handleSendOtp = async e => {
+    e.preventDefault();
+    if (smsPhone.length !== 10) { setError('Le numéro doit contenir exactement 10 chiffres.'); return; }
+    setLoading(true); clearError();
+    try {
+      const res = await AuthService.requestOTP(smsPhone);
+      setTimer(300);
+      if (res.code_dev) { setDevOtp(res.code_dev); setOtp(res.code_dev.split('')); }
+      else              { setDevOtp(''); setOtp(Array(6).fill('')); }
+      setSmsStep('otp');
+    } catch (err) {
+      setError(err.response?.data?.message || "Erreur lors de l'envoi du code");
+    } finally { setLoading(false); }
+  };
+
+  const handleVerifyOtpLogin = async e => {
+    e.preventDefault();
+    const code = otp.join('');
+    if (code.length !== 6) { setError('Entrez les 6 chiffres'); return; }
+    setLoading(true); clearError();
+    try {
+      const res = await AuthService.phoneLogin(smsPhone, code);
+      const u = res.user;
+      if (!u?.role) throw new Error('Données utilisateur invalides');
+      updateUser(u);
+      navigate(`/${u.role.toLowerCase()}/dashboard`, { replace: true });
+    } catch (err) {
+      setError(err.response?.data?.message || 'Code invalide ou expiré');
+    } finally { setLoading(false); }
+  };
+
+  const handleResendOtp = async () => {
+    clearError();
+    try {
+      const res = await AuthService.resendOTP(smsPhone);
+      setTimer(300);
+      if (res.code_dev) { setDevOtp(res.code_dev); setOtp(res.code_dev.split('')); }
+      else              { setDevOtp(''); setOtp(Array(6).fill('')); }
+    } catch { setError('Impossible de renvoyer le code'); }
   };
 
   const inp = name => ({
@@ -170,7 +227,28 @@ export default function Login() {
           <div style={{ background: 'white', borderRadius: '24px', padding: '2.4rem 2.2rem', boxShadow: '0 4px 32px rgba(0,0,0,0.09)', border: '1px solid #e5e7eb' }}>
 
             <h2 style={{ fontSize: '1.4rem', fontWeight: '900', color: '#1a2e10', marginBottom: '0.3rem' }}>Bon retour</h2>
-            <p style={{ fontSize: '0.87rem', color: '#6b7280', marginBottom: '1.6rem' }}>Connectez-vous à votre compte</p>
+            <p style={{ fontSize: '0.87rem', color: '#6b7280', marginBottom: '1.2rem' }}>Connectez-vous à votre compte</p>
+
+            {/* Sélecteur de mode de connexion */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '1.4rem', background: '#f3f4f6', borderRadius: '12px', padding: '4px' }}>
+              {[
+                { id: 'password', label: 'Mot de passe' },
+                { id: 'sms',      label: 'Code SMS' },
+              ].map(m => (
+                <button key={m.id} type="button"
+                  onClick={() => { setLoginMode(m.id); setSmsStep('phone'); clearError(); }}
+                  style={{
+                    flex: 1, padding: '0.55rem', borderRadius: '9px', border: 'none', cursor: 'pointer',
+                    fontSize: '0.85rem', fontWeight: '700',
+                    background: loginMode === m.id ? 'white' : 'transparent',
+                    color: loginMode === m.id ? GREEN : '#6b7280',
+                    boxShadow: loginMode === m.id ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
+                    transition: 'all 0.15s',
+                  }}>
+                  {m.label}
+                </button>
+              ))}
+            </div>
 
             <AnimatePresence>
               {error && (
@@ -181,6 +259,7 @@ export default function Login() {
               )}
             </AnimatePresence>
 
+            {loginMode === 'password' && (
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
               <div style={FW}>
                 <label style={LB}>Email ou numéro de téléphone</label>
@@ -233,14 +312,94 @@ export default function Login() {
                   )}
                 </AnimatePresence>
               </motion.button>
-
-              <p style={{ textAlign: 'center', fontSize: '0.84rem', color: '#6b7280', margin: '0.4rem 0 0' }}>
-                Pas encore de compte ?{' '}
-                <Link to="/auth/register" style={{ color: GREEN, fontWeight: '700', textDecoration: 'none' }}>
-                  S'inscrire gratuitement
-                </Link>
-              </p>
             </form>
+            )}
+
+            {loginMode === 'sms' && smsStep === 'phone' && (
+              <form onSubmit={handleSendOtp} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                <div style={FW}>
+                  <label style={LB}>Numéro de téléphone</label>
+                  <div style={{ position: 'relative' }}>
+                    <Phone size={15} color="#9ca3af" style={IL} />
+                    <input type="text" inputMode="numeric" maxLength={10} value={smsPhone}
+                      onChange={e => { setSmsPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); clearError(); }}
+                      onFocus={() => setFocused('smsPhone')} onBlur={() => setFocused('')}
+                      placeholder="0700000000"
+                      style={inp('smsPhone')} autoComplete="tel" autoFocus />
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '3px', display: 'block' }}>{smsPhone.length}/10 chiffres</span>
+                </div>
+
+                <motion.button type="submit"
+                  style={{ ...btnPrimary, opacity: (loading || smsPhone.length !== 10) ? 0.65 : 1 }}
+                  disabled={loading || smsPhone.length !== 10} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  {loading
+                    ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div> Envoi du code…</>
+                    : 'Envoyer le code'
+                  }
+                </motion.button>
+              </form>
+            )}
+
+            {loginMode === 'sms' && smsStep === 'otp' && (
+              <form onSubmit={handleVerifyOtpLogin}>
+                <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1rem' }}>
+                  Code envoyé au <strong style={{ color: '#1a2e10' }}>{smsPhone}</strong>
+                </p>
+
+                {devOtp && (
+                  <div style={{ background: '#fefce8', border: '1px solid #fde047', borderRadius: '10px', padding: '0.6rem 1rem', marginBottom: '1rem', textAlign: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#92400e', display: 'block', marginBottom: '2px' }}>Code (serveur local)</span>
+                    <strong style={{ fontSize: '1.3rem', letterSpacing: '0.2em', color: '#713f12' }}>{devOtp}</strong>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '1.2rem' }}>
+                  {otp.map((d, i) => (
+                    <input key={i} id={`login-otp-${i}`} type="text" inputMode="numeric" maxLength="1" value={d}
+                      onChange={e => {
+                        if (!/^\d?$/.test(e.target.value)) return;
+                        const next = [...otp]; next[i] = e.target.value; setOtp(next);
+                        if (e.target.value && i < 5) document.getElementById(`login-otp-${i + 1}`)?.focus();
+                      }}
+                      onKeyDown={e => { if (e.key === 'Backspace' && !d && i > 0) document.getElementById(`login-otp-${i - 1}`)?.focus(); }}
+                      autoFocus={i === 0}
+                      style={{ width: '46px', height: '52px', fontSize: '1.3rem', fontWeight: '800', textAlign: 'center', border: `2px solid ${d ? GREEN : '#e5e7eb'}`, borderRadius: '10px', outline: 'none', color: '#1a2e10', background: d ? '#f0fdf4' : '#fafafa' }}
+                    />
+                  ))}
+                </div>
+
+                <div style={{ textAlign: 'center', marginBottom: '1.2rem', minHeight: '20px' }}>
+                  {timer > 0
+                    ? <span style={{ fontSize: '0.83rem', color: '#6b7280' }}>Expire dans <strong style={{ color: GREEN }}>{fmtTimer(timer)}</strong></span>
+                    : <button type="button" onClick={handleResendOtp} style={{ background: 'none', border: 'none', color: GREEN, cursor: 'pointer', fontWeight: '600', fontSize: '0.85rem', textDecoration: 'underline' }}>Renvoyer le code</button>
+                  }
+                </div>
+
+                <motion.button type="submit"
+                  style={{ ...btnPrimary, opacity: (loading || otp.join('').length !== 6) ? 0.65 : 1 }}
+                  disabled={loading || otp.join('').length !== 6} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  {loading
+                    ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div> Connexion…</>
+                    : <><Check size={16} /> Se connecter</>
+                  }
+                </motion.button>
+
+                <p style={{ textAlign: 'center', fontSize: '0.83rem', color: '#9ca3af', marginTop: '1rem', marginBottom: 0 }}>
+                  <button type="button" onClick={() => { setSmsStep('phone'); clearError(); }}
+                    style={{ background: 'none', border: 'none', color: GREEN, cursor: 'pointer', fontWeight: '600', fontSize: '0.83rem' }}>
+                    ← Modifier le numéro
+                  </button>
+                </p>
+              </form>
+            )}
+
+            <p style={{ textAlign: 'center', fontSize: '0.84rem', color: '#6b7280', margin: '1rem 0 0' }}>
+              Pas encore de compte ?{' '}
+              <Link to="/auth/register" style={{ color: GREEN, fontWeight: '700', textDecoration: 'none' }}>
+                S'inscrire gratuitement
+              </Link>
+            </p>
           </div>
         </motion.div>
       </div>

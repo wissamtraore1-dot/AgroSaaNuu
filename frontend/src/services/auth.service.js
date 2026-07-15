@@ -80,9 +80,10 @@ const AuthService = {
     return response.data;
   },
 
-  async verifyOTPAndRegister(data) {
-    // data: { phone, code, role, password? }
-    const response = await api.post('/auth/sms/verify-and-register/', data);
+  async registerPhone(data) {
+    // data: { phone, role, nom_complet, password, ville?, email? }
+    // Crée le compte directement, sans OTP (la vérification du numéro se fait à la connexion).
+    const response = await api.post('/auth/sms/register/', data);
     const { tokens, user } = response.data;
     localStorage.setItem('access_token',  tokens.access);
     localStorage.setItem('refresh_token', tokens.refresh);

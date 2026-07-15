@@ -20,8 +20,9 @@ urlpatterns = [
     path('confirmer-reinitialisation/', views.ConfirmerReinitialisationView.as_view(), name='confirmer-reinitialisation'),
     
     # ===== NOUVELLES ROUTES SMS/PHONE AUTH =====
+    # OTP requis à la connexion par téléphone, plus à l'inscription.
+    path('sms/register/',             sms_auth_views.RegisterView.as_view(), name='register-phone'),
     path('sms/request-otp/',          sms_auth_views.RequestOTPView.as_view(), name='request-otp'),
-    path('sms/verify-and-register/',  sms_auth_views.VerifyOTPAndCreateAccountView.as_view(), name='verify-otp'),
     path('sms/phone-login/',          sms_auth_views.PhoneLoginView.as_view(), name='phone-login'),
     path('sms/resend-otp/',           sms_auth_views.ResendOTPView.as_view(), name='resend-otp'),
     path('complete-profile/',         sms_auth_views.CompleteProfileView.as_view(), name='complete-profile'),

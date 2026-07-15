@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
@@ -30,21 +30,10 @@ export default function Register() {
   const [pwd,        setPwd]        = useState('');
   const [pwdConfirm, setPwdConfirm] = useState('');
   const [showPwd,    setShowPwd]    = useState(false);
-  const [otpStep,    setOtpStep]    = useState(false);
-  const [otp,        setOtp]        = useState(Array(6).fill(''));
-  const [timer,      setTimer]      = useState(0);
-  const [devOtp,     setDevOtp]     = useState('');
   const [loading,    setLoading]    = useState(false);
   const [error,      setError]      = useState('');
   const [focused,    setFocused]    = useState('');
 
-  useEffect(() => {
-    if (timer <= 0) return;
-    const id = setTimeout(() => setTimer(t => t - 1), 1000);
-    return () => clearTimeout(id);
-  }, [timer]);
-
-  const fmtTimer   = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   const clearError = () => setError('');
 
   const handlePhoneChange = e => {
@@ -67,26 +56,8 @@ export default function Register() {
     if (pwd !== pwdConfirm) return setError('Les mots de passe ne correspondent pas');
     setLoading(true); clearError();
     try {
-      const cleaned = phone.replace(/\s/g, '');
-      const res = await AuthService.requestOTP(cleaned);
-      if (res.existing) return setError('Ce numéro est déjà enregistré. Connectez-vous.');
-      setTimer(300);
-      if (res.code_dev) { setDevOtp(res.code_dev); setOtp(res.code_dev.split('')); }
-      else              { setDevOtp(''); setOtp(Array(6).fill('')); }
-      setOtpStep(true);
-    } catch (err) {
-      setError(err.response?.data?.message || "Erreur lors de l'envoi du SMS");
-    } finally { setLoading(false); }
-  };
-
-  const handleVerifyOTP = async e => {
-    e.preventDefault();
-    const code = otp.join('');
-    if (code.length !== 6) return setError('Entrez les 6 chiffres');
-    setLoading(true); clearError();
-    try {
-      const res = await AuthService.verifyOTPAndRegister({
-        phone: phone.replace(/\s/g, ''), code, role,
+      const res = await AuthService.registerPhone({
+        phone: phone.replace(/\s/g, ''), role,
         nom_complet: nomComplet.trim(), email: email.trim(), password: pwd,
       });
       const u = res.user;
@@ -94,19 +65,8 @@ export default function Register() {
       updateUser(u);
       navigate(`/${u.role.toLowerCase()}/dashboard`, { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || 'Code invalide ou expiré');
-      if (err.response?.data?.message?.includes('expiré')) setOtpStep(false);
+      setError(err.response?.data?.message || "Erreur lors de la création du compte");
     } finally { setLoading(false); }
-  };
-
-  const handleResend = async () => {
-    clearError();
-    try {
-      const res = await AuthService.resendOTP(phone.replace(/\s/g, ''));
-      setTimer(300);
-      if (res.code_dev) { setDevOtp(res.code_dev); setOtp(res.code_dev.split('')); }
-      else              { setDevOtp(''); setOtp(Array(6).fill('')); }
-    } catch { setError('Impossible de renvoyer le code'); }
   };
 
   const inp = name => ({
@@ -133,83 +93,6 @@ export default function Register() {
   };
 
   const roleInfo = ROLES.find(r => r.id === role);
-
-  // ── Écran OTP ────────────────────────────────────────────────
-  if (otpStep) {
-    return (
-      <div style={{ minHeight: '100vh', background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
-          style={{ width: '100%', maxWidth: '420px', background: 'white', borderRadius: '24px', padding: '2.4rem 2rem', boxShadow: '0 4px 32px rgba(0,0,0,0.09)', border: '1px solid #e5e7eb' }}>
-
-          <div style={{ textAlign: 'center', marginBottom: '1.4rem' }}>
-            <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#f0fdf4', border: `2px solid ${GREEN}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.8rem' }}>
-              <Phone size={26} color={GREEN} />
-            </div>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#1a2e10', margin: 0 }}>Vérification du numéro</h3>
-            <p style={{ fontSize: '0.87rem', color: '#6b7280', marginTop: '0.4rem', marginBottom: 0 }}>
-              Code envoyé au <strong style={{ color: '#1a2e10' }}>{phone}</strong>
-            </p>
-          </div>
-
-          {devOtp && (
-            <div style={{ background: '#fefce8', border: '1px solid #fde047', borderRadius: '10px', padding: '0.6rem 1rem', marginBottom: '1rem', textAlign: 'center' }}>
-              <span style={{ fontSize: '0.75rem', color: '#92400e', display: 'block', marginBottom: '2px' }}>Code (serveur local)</span>
-              <strong style={{ fontSize: '1.3rem', letterSpacing: '0.2em', color: '#713f12' }}>{devOtp}</strong>
-            </div>
-          )}
-
-          <AnimatePresence>
-            {error && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '0.7rem 1rem', marginBottom: '1rem', fontSize: '0.85rem', color: '#dc2626' }}>
-                <AlertCircle size={15} /> {error}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <form onSubmit={handleVerifyOTP}>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '1.2rem' }}>
-              {otp.map((d, i) => (
-                <input key={i} id={`otp-${i}`} type="text" inputMode="numeric" maxLength="1" value={d}
-                  onChange={e => {
-                    if (!/^\d?$/.test(e.target.value)) return;
-                    const next = [...otp]; next[i] = e.target.value; setOtp(next);
-                    if (e.target.value && i < 5) document.getElementById(`otp-${i + 1}`)?.focus();
-                  }}
-                  onKeyDown={e => { if (e.key === 'Backspace' && !d && i > 0) document.getElementById(`otp-${i - 1}`)?.focus(); }}
-                  autoFocus={i === 0}
-                  style={{ width: '52px', height: '58px', fontSize: '1.5rem', fontWeight: '800', textAlign: 'center', border: `2px solid ${d ? GREEN : '#e5e7eb'}`, borderRadius: '12px', outline: 'none', color: '#1a2e10', background: d ? '#f0fdf4' : '#fafafa', transition: 'all 0.15s' }}
-                />
-              ))}
-            </div>
-
-            <div style={{ textAlign: 'center', marginBottom: '1.2rem', minHeight: '22px' }}>
-              {timer > 0
-                ? <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Expire dans <strong style={{ color: GREEN }}>{fmtTimer(timer)}</strong></span>
-                : <button type="button" onClick={handleResend} style={{ background: 'none', border: 'none', color: GREEN, cursor: 'pointer', fontWeight: '600', fontSize: '0.88rem', textDecoration: 'underline' }}>Renvoyer le code</button>
-              }
-            </div>
-
-            <motion.button type="submit" style={{ ...btnPrimary, opacity: (loading || otp.join('').length !== 6) ? 0.65 : 1 }}
-              disabled={loading || otp.join('').length !== 6}
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              {loading
-                ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div> Création du compte…</>
-                : <><Check size={16} /> Créer mon compte</>
-              }
-            </motion.button>
-
-            <p style={{ textAlign: 'center', fontSize: '0.83rem', color: '#9ca3af', marginTop: '1rem', marginBottom: 0 }}>
-              <button type="button" onClick={() => { setOtpStep(false); clearError(); }}
-                style={{ background: 'none', border: 'none', color: GREEN, cursor: 'pointer', fontWeight: '600', fontSize: '0.83rem' }}>
-                ← Modifier mes informations
-              </button>
-            </p>
-          </form>
-        </motion.div>
-      </div>
-    );
-  }
 
   // ── Layout deux panneaux ─────────────────────────────────────
   return (
@@ -391,7 +274,7 @@ export default function Register() {
                 <motion.button type="submit" style={{ ...btnPrimary, marginTop: '0.4rem', opacity: loading ? 0.75 : 1 }}
                   disabled={loading} whileHover={{ scale: loading ? 1 : 1.02 }} whileTap={{ scale: loading ? 1 : 0.98 }}>
                   {loading
-                    ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div> Envoi du code SMS…</>
+                    ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={16} /></motion.div> Création du compte…</>
                     : <><Check size={15} /> S'inscrire</>
                   }
                 </motion.button>

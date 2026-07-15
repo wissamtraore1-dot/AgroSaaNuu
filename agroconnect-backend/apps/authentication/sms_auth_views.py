@@ -1,5 +1,6 @@
 # authentication/sms_auth_views.py
 
+import re
 from datetime import timedelta
 from rest_framework import status
 from rest_framework.views import APIView
@@ -28,7 +29,8 @@ def get_tokens_for_user(user):
 class RequestOTPView(APIView):
     """
     POST /api/v1/auth/sms/request-otp/
-    Envoie un OTP par SMS. Retourne `existing: bool`.
+    Envoie un OTP par SMS pour la connexion par téléphone.
+    Le compte doit déjà exister (l'inscription ne passe plus par l'OTP).
     """
     permission_classes = [AllowAny]
 
@@ -38,7 +40,9 @@ class RequestOTPView(APIView):
             return Response({'success': False, 'message': 'Numéro de téléphone requis'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        existing = User.objects.filter(telephone=phone).exists()
+        if not User.objects.filter(telephone=phone).exists():
+            return Response({'success': False, 'message': 'Aucun compte avec ce numéro. Inscrivez-vous d\'abord.'},
+                            status=status.HTTP_404_NOT_FOUND)
 
         OTPCode.objects.filter(phone=phone, est_utilise=False).update(est_utilise=True)
 
@@ -46,7 +50,7 @@ class RequestOTPView(APIView):
         otp = OTPCode.objects.create(
             phone=phone,
             code=otp_code,
-            type=OTPCode.Type.INSCRIPTION,
+            type=OTPCode.Type.CONNEXION,
             expire_at=timezone.now() + timedelta(minutes=5)
         )
 
@@ -59,23 +63,23 @@ class RequestOTPView(APIView):
             'success':    True,
             'message':    f'Code envoyé à {phone}',
             'otp_id':     str(otp.id),
-            'existing':   existing,
             'expires_in': 300,
             'code_dev':   otp_code if not sms_ok else None,
         }, status=status.HTTP_201_CREATED)
 
 
-class VerifyOTPAndCreateAccountView(APIView):
+class RegisterView(APIView):
     """
-    POST /api/v1/auth/sms/verify-and-register/
-    Champs requis : phone, code, role
-    Champs optionnels : prenom, nom, ville, password, email
+    POST /api/v1/auth/sms/register/
+    Crée le compte directement, sans vérification OTP du numéro
+    (la vérification du téléphone se fait désormais à la connexion).
+    Champs requis : phone, role, nom_complet, password
+    Champs optionnels : ville, email
     """
     permission_classes = [AllowAny]
 
     def post(self, request):
         phone         = request.data.get('phone',         '').strip()
-        otp_code      = request.data.get('code',          '').strip()
         role          = request.data.get('role',          'BUYER').strip()
         nom_complet   = request.data.get('nom_complet',   '').strip()
         ville         = request.data.get('ville',         '').strip()
@@ -85,42 +89,30 @@ class VerifyOTPAndCreateAccountView(APIView):
         nom_boutique  = request.data.get('nom_boutique',  '').strip()  # Vendeur
         type_vehicule = request.data.get('type_vehicule', '').strip()  # Transporteur
 
-        if not all([phone, otp_code, role]):
-            return Response({'success': False, 'message': 'Téléphone, code et rôle requis'},
+        if not all([phone, role, nom_complet, password]):
+            return Response({'success': False, 'message': 'Téléphone, nom, rôle et mot de passe requis'},
                             status=status.HTTP_400_BAD_REQUEST)
 
         if role not in [User.Role.BUYER, User.Role.SELLER, User.Role.TRANSPORTER]:
             return Response({'success': False, 'message': 'Rôle invalide'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        # DEV bypass : code magique 000000 accepté si DEBUG=True
-        dev_bypass = settings.DEBUG and otp_code == '000000'
+        if not re.match(r'^\d{10}$', ''.join(c for c in phone if c.isdigit())):
+            return Response({'success': False, 'message': 'Le numéro de téléphone doit contenir exactement 10 chiffres.'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
-        if not dev_bypass:
-            try:
-                otp = OTPCode.objects.filter(
-                    phone=phone, code=otp_code,
-                    type=OTPCode.Type.INSCRIPTION, est_utilise=False
-                ).latest('created_at')
-
-                if otp.expire_at < timezone.now():
-                    return Response({'success': False, 'message': 'Code OTP expiré'},
-                                    status=status.HTTP_400_BAD_REQUEST)
-            except OTPCode.DoesNotExist:
-                return Response({'success': False, 'message': 'Code OTP invalide'},
-                                status=status.HTTP_400_BAD_REQUEST)
-        else:
-            otp = None  # pas d'OTP à marquer utilisé
+        if len(password) < 8:
+            return Response({'success': False, 'message': 'Le mot de passe doit contenir au moins 8 caractères.'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         if User.objects.filter(telephone=phone).exists():
             return Response({'success': False, 'message': 'Un compte existe déjà avec ce numéro'},
                             status=status.HTTP_400_BAD_REQUEST)
 
         # Valider et déterminer l'email
-        import re as _re
         clean_phone = ''.join(c for c in phone if c.isdigit())
         if email_input:
-            if not _re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email_input):
+            if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email_input):
                 return Response({'success': False, 'message': 'Adresse email invalide'},
                                 status=status.HTTP_400_BAD_REQUEST)
             if User.objects.filter(email=email_input).exists():
@@ -166,10 +158,6 @@ class VerifyOTPAndCreateAccountView(APIView):
                 )
                 notifier_demande_verification(user)
 
-            if otp:
-                otp.est_utilise = True
-                otp.save()
-
             return Response({
                 'success': True,
                 'message': 'Compte créé avec succès',
@@ -207,7 +195,7 @@ class PhoneLoginView(APIView):
             try:
                 otp = OTPCode.objects.filter(
                     phone=phone, code=otp_code,
-                    type=OTPCode.Type.INSCRIPTION, est_utilise=False
+                    type=OTPCode.Type.CONNEXION, est_utilise=False
                 ).latest('created_at')
 
                 if otp.expire_at < timezone.now():
@@ -232,7 +220,7 @@ class PhoneLoginView(APIView):
 
 
 class ResendOTPView(APIView):
-    """POST /api/v1/auth/sms/resend-otp/"""
+    """POST /api/v1/auth/sms/resend-otp/ — renvoi du code de connexion"""
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -241,13 +229,17 @@ class ResendOTPView(APIView):
             return Response({'success': False, 'message': 'Numéro requis'},
                             status=status.HTTP_400_BAD_REQUEST)
 
+        if not User.objects.filter(telephone=phone).exists():
+            return Response({'success': False, 'message': 'Aucun compte avec ce numéro.'},
+                            status=status.HTTP_404_NOT_FOUND)
+
         OTPCode.objects.filter(phone=phone, est_utilise=False).update(est_utilise=True)
 
         otp_code = generate_otp()
         otp = OTPCode.objects.create(
             phone=phone,
             code=otp_code,
-            type=OTPCode.Type.INSCRIPTION,
+            type=OTPCode.Type.CONNEXION,
             expire_at=timezone.now() + timedelta(minutes=5)
         )
 

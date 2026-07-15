@@ -209,3 +209,89 @@ class ThrottleLoginTestCase(APITestCase):
             self.assertNotEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
         response = self.client.post(self.url, payload, format='json')
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+
+class InscriptionParTelephoneTestCase(APITestCase):
+    """
+    L'OTP a été déplacé de l'inscription vers la connexion : l'inscription par
+    téléphone crée le compte directement, sans code à vérifier.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+        self.url    = '/api/v1/auth/sms/register/'
+
+    def test_inscription_directe_sans_otp(self):
+        response = self.client.post(self.url, {
+            'phone': '0197000020', 'role': 'BUYER',
+            'nom_complet': 'Test Direct', 'password': 'testpass123',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data['success'])
+        self.assertIn('tokens', response.data)
+        self.assertEqual(User.objects.filter(telephone='0197000020').count(), 1)
+
+    def test_inscription_telephone_deja_utilise(self):
+        User.objects.create_user(
+            email='deja@agrosaanuu.com', password='testpass123',
+            telephone='0197000021', prenom='Deja', nom='Existant',
+            cip='30000001', role='BUYER',
+        )
+        response = self.client.post(self.url, {
+            'phone': '0197000021', 'role': 'BUYER',
+            'nom_complet': 'Nouveau', 'password': 'testpass123',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_inscription_mdp_trop_court_refusee(self):
+        response = self.client.post(self.url, {
+            'phone': '0197000022', 'role': 'BUYER',
+            'nom_complet': 'Test', 'password': 'court',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(User.objects.filter(telephone='0197000022').count(), 0)
+
+
+class ConnexionParOTPTestCase(APITestCase):
+    """La vérification du téléphone se fait désormais à chaque connexion par SMS."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user   = User.objects.create_user(
+            email='otpuser@agrosaanuu.com', password='testpass123',
+            telephone='0197000030', prenom='Otp', nom='User',
+            cip='30000010', role='BUYER',
+        )
+
+    def test_demande_otp_sur_numero_inexistant_refusee(self):
+        response = self.client.post('/api/v1/auth/sms/request-otp/', {'phone': '0197099999'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_connexion_par_otp_bout_en_bout(self):
+        # 1. Demande du code
+        response = self.client.post('/api/v1/auth/sms/request-otp/', {'phone': '0197000030'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        code = response.data.get('code_dev')
+        self.assertIsNotNone(code, "Le code de dev doit être renvoyé en environnement de test (SMS non configuré).")
+
+        # 2. Connexion avec le code reçu
+        response = self.client.post('/api/v1/auth/sms/phone-login/', {
+            'phone': '0197000030', 'code': code,
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('tokens', response.data)
+
+    def test_connexion_par_otp_code_invalide_refusee(self):
+        self.client.post('/api/v1/auth/sms/request-otp/', {'phone': '0197000030'}, format='json')
+        response = self.client.post('/api/v1/auth/sms/phone-login/', {
+            'phone': '0197000030', 'code': '000001',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_code_otp_reutilise_refuse(self):
+        response = self.client.post('/api/v1/auth/sms/request-otp/', {'phone': '0197000030'}, format='json')
+        code = response.data.get('code_dev')
+        self.client.post('/api/v1/auth/sms/phone-login/', {'phone': '0197000030', 'code': code}, format='json')
+        # Deuxième tentative avec le même code, déjà consommé
+        response = self.client.post('/api/v1/auth/sms/phone-login/', {'phone': '0197000030', 'code': code}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
