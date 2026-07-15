@@ -29,10 +29,10 @@ export default function AddProduct() {
   const navigate = useNavigate();
 
   const UNITES = [
-    { value: 'KG',       label: 'Kilogramme (kg)'  },
-    { value: 'TONNE',    label: 'Tonne (t)'         },
-    { value: 'SAC_50KG', label: 'Sac 50 kg'         },
-    { value: 'SAC_100KG',label: 'Sac 100 kg'        },
+    { value: 'KG',        label: 'Kilogramme (kg)', parUnite: 'le kilogramme', singulier: 'kilogramme',    pluriel: 'kilogrammes'    },
+    { value: 'TONNE',     label: 'Tonne (t)',        parUnite: 'la tonne',      singulier: 'tonne',          pluriel: 'tonnes'         },
+    { value: 'SAC_50KG',  label: 'Sac 50 kg',        parUnite: 'le sac de 50 kg',  singulier: 'sac de 50 kg',  pluriel: 'sacs de 50 kg'  },
+    { value: 'SAC_100KG', label: 'Sac 100 kg',       parUnite: 'le sac de 100 kg', singulier: 'sac de 100 kg', pluriel: 'sacs de 100 kg' },
   ];
 
   const [form, setForm] = useState({
@@ -44,6 +44,8 @@ export default function AddProduct() {
   const [errors,     setErrors]     = useState({});
   const [focused,    setFocused]    = useState('');
   const [profilAlert, setProfilAlert] = useState(false);
+
+  const uniteInfo = UNITES.find(u => u.value === form.unite) || UNITES[0];
 
   const handleChange = e => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -198,20 +200,27 @@ export default function AddProduct() {
 
             {/* Prix */}
             <div style={{ marginBottom: '1rem' }}>
-              <label style={labelStyle}>Prix (FCFA) *</label>
+              <label style={labelStyle}>Prix par {uniteInfo.singulier} (FCFA) *</label>
               <div style={{ position: 'relative' }}>
                 <DollarSign size={15} color="#9ca3af" style={iconLeft} />
                 <input name="prix" type="number" value={form.prix} onChange={handleChange}
                   onFocus={() => setFocused('prix')} onBlur={() => setFocused('')}
-                  placeholder="Ex : 15000" min="1"
+                  placeholder="Ex : 1500" min="1"
                   style={inputStyle(focused, 'prix', errors.prix)}
                 />
               </div>
-              {errors.prix && <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '4px', display: 'block' }}>{errors.prix}</span>}
+              {errors.prix
+                ? <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '4px', display: 'block' }}>{errors.prix}</span>
+                : form.prix > 0 && (
+                  <span style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '4px', display: 'block' }}>
+                    Soit {Number(form.prix).toLocaleString('fr-FR')} FCFA {uniteInfo.parUnite}
+                  </span>
+                )
+              }
             </div>
 
             {/* Quantité + Unité côte à côte */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '0.4rem' }}>
               <div>
                 <label style={labelStyle}>Quantité disponible *</label>
                 <div style={{ position: 'relative' }}>
@@ -237,6 +246,13 @@ export default function AddProduct() {
                 </div>
               </div>
             </div>
+            {form.quantite > 0 && (
+              <div style={{ marginBottom: '1rem' }}>
+                <span style={{ fontSize: '0.78rem', color: '#6b7280' }}>
+                  → {Number(form.quantite).toLocaleString('fr-FR')} {form.quantite == 1 ? uniteInfo.singulier : uniteInfo.pluriel} disponible{form.quantite == 1 ? '' : 's'}
+                </span>
+              </div>
+            )}
 
 
             {/* Ville + Localisation */}

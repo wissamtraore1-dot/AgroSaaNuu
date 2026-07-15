@@ -9,12 +9,19 @@ import { useNotificationContext } from '../../context/NotificationContext';
 const GREEN  = '#1a5c2a';
 const fadeUp = { hidden: { y: 20, opacity: 0 }, show: { y: 0, opacity: 1 } };
 
+const UNITES = [
+  { value: 'KG',        label: 'Kilogramme (kg)', parUnite: 'le kilogramme', singulier: 'kilogramme',    pluriel: 'kilogrammes'    },
+  { value: 'TONNE',     label: 'Tonne (t)',        parUnite: 'la tonne',      singulier: 'tonne',          pluriel: 'tonnes'         },
+  { value: 'SAC_50KG',  label: 'Sac 50 kg',        parUnite: 'le sac de 50 kg',  singulier: 'sac de 50 kg',  pluriel: 'sacs de 50 kg'  },
+  { value: 'SAC_100KG', label: 'Sac 100 kg',       parUnite: 'le sac de 100 kg', singulier: 'sac de 100 kg', pluriel: 'sacs de 100 kg' },
+];
+
 export default function EditProduct() {
   const { id }   = useParams();
   const navigate = useNavigate();
   const { success, error: notifError } = useNotificationContext();
 
-  const [form,       setForm]       = useState({ name: '', description: '', price: '', stock: '', category: '' });
+  const [form,       setForm]       = useState({ nom: '', description: '', prix: '', quantite: '', unite: 'KG', categorie: '' });
   const [image,      setImage]      = useState(null);
   const [preview,    setPreview]    = useState(null);
   const [categories, setCategories] = useState([]);
@@ -28,11 +35,12 @@ export default function EditProduct() {
       ProductService.getCategories(),
     ]).then(([produit, cats]) => {
       setForm({
-        name:        produit.nom        || produit.name        || '',
-        description: produit.description                        || '',
-        price:       produit.prix       || produit.price       || '',
-        stock:       produit.stock                              || '',
-        category:    produit.categorie  || produit.category    || '',
+        nom:         produit.nom         || '',
+        description: produit.description || '',
+        prix:        produit.prix        || '',
+        quantite:    produit.quantite    || '',
+        unite:       produit.unite       || 'KG',
+        categorie:   produit.categorie   || '',
       });
       setPreview(produit.image || null);
       setCategories(Array.isArray(cats) ? cats : cats.results || []);
@@ -40,6 +48,8 @@ export default function EditProduct() {
       notifError('Impossible de charger le produit');
     }).finally(() => setFetching(false));
   }, [id]);
+
+  const uniteInfo = UNITES.find(u => u.value === form.unite) || UNITES[0];
 
   const handleChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -117,23 +127,40 @@ export default function EditProduct() {
           </div>
 
           {/* NOM */}
-          <Field label="Nom du produit" error={errors.name || errors.nom}>
-            <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="Ex : Maïs blanc 2T" style={inputStyle(errors.name)} />
+          <Field label="Nom du produit" error={errors.nom}>
+            <input type="text" name="nom" value={form.nom} onChange={handleChange} placeholder="Ex : Maïs blanc 2T" style={inputStyle(errors.nom)} />
           </Field>
 
           {/* PRIX */}
-          <Field label="Prix (FCFA)" error={errors.price || errors.prix}>
-            <input type="number" name="price" value={form.price} onChange={handleChange} placeholder="Ex : 150000" style={inputStyle(errors.price)} />
+          <Field label={`Prix par ${uniteInfo.singulier} (FCFA)`} error={errors.prix}>
+            <input type="number" name="prix" value={form.prix} onChange={handleChange} placeholder="Ex : 1500" style={inputStyle(errors.prix)} />
           </Field>
+          {!errors.prix && form.prix > 0 && (
+            <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '-0.6rem 0 1rem' }}>
+              Soit {Number(form.prix).toLocaleString('fr-FR')} FCFA {uniteInfo.parUnite}
+            </p>
+          )}
 
-          {/* STOCK */}
-          <Field label="Quantité en stock (kg ou tonnes)" error={errors.stock}>
-            <input type="number" name="stock" value={form.stock} onChange={handleChange} placeholder="Ex : 500" style={inputStyle(errors.stock)} />
-          </Field>
+          {/* QUANTITÉ + UNITÉ */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <Field label="Quantité disponible" error={errors.quantite}>
+              <input type="number" name="quantite" value={form.quantite} onChange={handleChange} placeholder="Ex : 500" style={inputStyle(errors.quantite)} />
+            </Field>
+            <Field label="Unité" error={errors.unite}>
+              <select name="unite" value={form.unite} onChange={handleChange} style={inputStyle(errors.unite)}>
+                {UNITES.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+              </select>
+            </Field>
+          </div>
+          {form.quantite > 0 && (
+            <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '-0.6rem 0 1rem' }}>
+              → {Number(form.quantite).toLocaleString('fr-FR')} {form.quantite == 1 ? uniteInfo.singulier : uniteInfo.pluriel} disponible{form.quantite == 1 ? '' : 's'}
+            </p>
+          )}
 
           {/* CATÉGORIE */}
-          <Field label="Catégorie" error={errors.category || errors.categorie}>
-            <select name="category" value={form.category} onChange={handleChange} style={inputStyle(errors.category)}>
+          <Field label="Catégorie" error={errors.categorie}>
+            <select name="categorie" value={form.categorie} onChange={handleChange} style={inputStyle(errors.categorie)}>
               <option value="">Sélectionner une catégorie</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.nom || c.name}</option>)}
             </select>
