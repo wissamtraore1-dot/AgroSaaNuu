@@ -198,43 +198,18 @@ export default function AddProduct() {
               {errors.nom && <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '4px', display: 'block' }}>{errors.nom}</span>}
             </div>
 
-            {/* Prix */}
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={labelStyle}>Prix par {uniteInfo.singulier} (FCFA) *</label>
-              <div style={{ position: 'relative' }}>
-                <DollarSign size={15} color="#9ca3af" style={iconLeft} />
-                <input name="prix" type="number" value={form.prix} onChange={handleChange}
-                  onFocus={() => setFocused('prix')} onBlur={() => setFocused('')}
-                  placeholder="Ex : 1500" min="1"
-                  style={inputStyle(focused, 'prix', errors.prix)}
-                />
-              </div>
-              {errors.prix
-                ? <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '4px', display: 'block' }}>{errors.prix}</span>
-                : form.prix > 0 && (
-                  <span style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '4px', display: 'block' }}>
-                    Soit {Number(form.prix).toLocaleString('fr-FR')} FCFA {uniteInfo.parUnite}
-                  </span>
-                )
-              }
-            </div>
-
-            {/* Quantité + Unité côte à côte */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '0.4rem' }}>
-              <div>
-                <label style={labelStyle}>Quantité disponible *</label>
+            {/* Prix + Unité côte à côte : le vendeur choisit l'unité qui s'applique au prix */}
+            <div style={{ marginBottom: '0.4rem' }}>
+              <label style={labelStyle}>Prix par unité *</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div style={{ position: 'relative' }}>
-                  <Package size={15} color="#9ca3af" style={iconLeft} />
-                  <input name="quantite" type="number" value={form.quantite} onChange={handleChange}
-                    onFocus={() => setFocused('quantite')} onBlur={() => setFocused('')}
-                    placeholder="Ex : 500" min="1"
-                    style={inputStyle(focused, 'quantite', errors.quantite)}
+                  <DollarSign size={15} color="#9ca3af" style={iconLeft} />
+                  <input name="prix" type="number" value={form.prix} onChange={handleChange}
+                    onFocus={() => setFocused('prix')} onBlur={() => setFocused('')}
+                    placeholder="Ex : 1500" min="1"
+                    style={inputStyle(focused, 'prix', errors.prix)}
                   />
                 </div>
-                {errors.quantite && <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '4px', display: 'block' }}>{errors.quantite}</span>}
-              </div>
-              <div>
-                <label style={labelStyle}>Unité *</label>
                 <div style={{ position: 'relative' }}>
                   <Package size={15} color="#9ca3af" style={iconLeft} />
                   <select name="unite" value={form.unite} onChange={handleChange}
@@ -245,14 +220,34 @@ export default function AddProduct() {
                   </select>
                 </div>
               </div>
-            </div>
-            {form.quantite > 0 && (
-              <div style={{ marginBottom: '1rem' }}>
-                <span style={{ fontSize: '0.78rem', color: '#6b7280' }}>
-                  → {Number(form.quantite).toLocaleString('fr-FR')} {form.quantite == 1 ? uniteInfo.singulier : uniteInfo.pluriel} disponible{form.quantite == 1 ? '' : 's'}
+              {errors.prix && <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '4px', display: 'block' }}>{errors.prix}</span>}
+              {!errors.prix && form.prix > 0 && (
+                <span style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '4px', display: 'block' }}>
+                  Soit {Number(form.prix).toLocaleString('fr-FR')} FCFA {uniteInfo.parUnite}
                 </span>
+              )}
+            </div>
+
+            {/* Quantité disponible */}
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={labelStyle}>Quantité disponible *</label>
+              <div style={{ position: 'relative' }}>
+                <Package size={15} color="#9ca3af" style={iconLeft} />
+                <input name="quantite" type="number" value={form.quantite} onChange={handleChange}
+                  onFocus={() => setFocused('quantite')} onBlur={() => setFocused('')}
+                  placeholder="Ex : 500" min="1"
+                  style={inputStyle(focused, 'quantite', errors.quantite)}
+                />
               </div>
-            )}
+              {errors.quantite
+                ? <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '4px', display: 'block' }}>{errors.quantite}</span>
+                : form.quantite > 0 && (
+                  <span style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '4px', display: 'block' }}>
+                    → {Number(form.quantite).toLocaleString('fr-FR')} {form.quantite == 1 ? uniteInfo.singulier : uniteInfo.pluriel} disponible{form.quantite == 1 ? '' : 's'}
+                  </span>
+                )
+              }
+            </div>
 
 
             {/* Ville + Localisation */}
