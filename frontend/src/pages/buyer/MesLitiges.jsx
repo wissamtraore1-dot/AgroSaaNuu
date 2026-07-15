@@ -35,6 +35,40 @@ function StatutBadge({ statut }) {
   );
 }
 
+function CompteARebours({ dateLimite }) {
+  const [restant, setRestant] = useState(() => new Date(dateLimite) - new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setRestant(new Date(dateLimite) - new Date()), 60000);
+    return () => clearInterval(id);
+  }, [dateLimite]);
+
+  if (restant <= 0) {
+    return (
+      <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: '600' }}>
+        Délai indicatif dépassé — notre équipe reste mobilisée sur votre dossier
+      </span>
+    );
+  }
+
+  const totalHeures    = Math.floor(restant / (1000 * 60 * 60));
+  const jours           = Math.floor(totalHeures / 24);
+  const heuresRestantes = totalHeures % 24;
+  const minutes         = Math.floor((restant % (1000 * 60 * 60)) / (1000 * 60));
+  const urgent           = restant < 1000 * 60 * 60 * 12; // moins de 12h restantes
+
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: '4px',
+      fontSize: '0.75rem', fontWeight: '700',
+      color: urgent ? '#d97706' : '#6b7280',
+    }}>
+      <Clock size={12} />
+      {jours > 0 ? `${jours}j ${heuresRestantes}h` : `${heuresRestantes}h ${minutes}min`} avant traitement (délai indicatif)
+    </span>
+  );
+}
+
 function LitigeCard({ litige }) {
   const [ouvert, setOuvert] = useState(false);
 
@@ -66,6 +100,11 @@ function LitigeCard({ litige }) {
           <div style={{ fontSize: '0.80rem', color: '#6b7280', marginTop: '2px' }}>
             {litige.commande_produit} · Vendeur : {litige.vendeur_nom}
           </div>
+          {(litige.statut === 'OUVERT' || litige.statut === 'EN_COURS') && litige.date_limite_traitement && (
+            <div style={{ marginTop: '4px' }}>
+              <CompteARebours dateLimite={litige.date_limite_traitement} />
+            </div>
+          )}
         </div>
 
         <div style={{ textAlign: 'right', flexShrink: 0 }}>

@@ -1,5 +1,7 @@
+from datetime import timedelta
 from decimal import Decimal
 
+from django.utils.dateparse import parse_datetime
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 
@@ -65,6 +67,18 @@ class LitigeResolutionTestCase(APITestCase):
         self.client.force_authenticate(user=self.acheteur)
         response = self.client.get(self.liste_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_date_limite_traitement_est_72h_apres_creation(self):
+        _, litige = self._creer_commande_et_litige()
+        self.client.force_authenticate(user=self.acheteur)
+        response = self.client.get('/api/v1/orders/mes-problemes/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        item = response.data['results'][0] if 'results' in response.data else response.data[0]
+        attendu = litige.created_at + timedelta(hours=72)
+        self.assertEqual(
+            parse_datetime(item['date_limite_traitement']),
+            attendu,
+        )
 
     def test_liste_litiges_visible_par_admin(self):
         _, litige = self._creer_commande_et_litige()

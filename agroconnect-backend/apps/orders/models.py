@@ -1,3 +1,4 @@
+from datetime import timedelta
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from apps.common.models import TimeStampedModel
@@ -120,6 +121,8 @@ class Message(TimeStampedModel):
 
 class LitigeCommande(TimeStampedModel):
 
+    DELAI_TRAITEMENT_HEURES = 72
+
     class Statut(models.TextChoices):
         OUVERT   = 'OUVERT',   _('Ouvert')
         EN_COURS = 'EN_COURS', _('En cours d\'examen')
@@ -139,6 +142,11 @@ class LitigeCommande(TimeStampedModel):
 
     def __str__(self):
         return f"Litige {self.commande.reference}"
+
+    @property
+    def date_limite_traitement(self):
+        """Échéance indicative de traitement par l'équipe (purement informative)."""
+        return self.created_at + timedelta(hours=self.DELAI_TRAITEMENT_HEURES)
 
 
 class Paiement(TimeStampedModel):

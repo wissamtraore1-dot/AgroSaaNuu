@@ -159,12 +159,13 @@ class LitigeSerializer(serializers.ModelSerializer):
 
 
 class LitigeDetailSerializer(serializers.ModelSerializer):
-    commande_reference = serializers.CharField(source='commande.reference', read_only=True)
-    commande_produit   = serializers.CharField(source='commande.produit.nom', read_only=True)
-    commande_montant   = serializers.DecimalField(source='commande.montant_total', max_digits=12, decimal_places=2, read_only=True)
-    plaignant_nom      = serializers.CharField(source='plaignant.nom_complet', read_only=True)
-    vendeur_nom        = serializers.CharField(source='commande.vendeur.nom_complet', read_only=True)
-    commande_id        = serializers.UUIDField(source='commande.id', read_only=True)
+    commande_reference     = serializers.CharField(source='commande.reference', read_only=True)
+    commande_produit       = serializers.CharField(source='commande.produit.nom', read_only=True)
+    commande_montant       = serializers.DecimalField(source='commande.montant_total', max_digits=12, decimal_places=2, read_only=True)
+    plaignant_nom          = serializers.CharField(source='plaignant.nom_complet', read_only=True)
+    vendeur_nom            = serializers.CharField(source='commande.vendeur.nom_complet', read_only=True)
+    commande_id            = serializers.UUIDField(source='commande.id', read_only=True)
+    date_limite_traitement = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model  = LitigeCommande
@@ -172,6 +173,7 @@ class LitigeDetailSerializer(serializers.ModelSerializer):
             'id', 'commande_id', 'commande_reference', 'commande_produit',
             'commande_montant', 'plaignant_nom', 'vendeur_nom',
             'description', 'statut', 'resolution', 'date_resolution', 'created_at',
+            'date_limite_traitement',
         ]
         read_only_fields = fields
 
