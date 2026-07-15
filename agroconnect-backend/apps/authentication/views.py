@@ -158,7 +158,7 @@ class MonProfilView(APIView):
     def get(self, request):
         return Response({
             'success': True,
-            'user':    UserSerializer(request.user).data,
+            'user':    UserSerializer(request.user, context={'request': request}).data,
         })
 
     def put(self, request):
@@ -170,7 +170,7 @@ class MonProfilView(APIView):
             return Response({
                 'success': True,
                 'message': 'Profil mis à jour.',
-                'user':    UserSerializer(request.user).data,
+                'user':    UserSerializer(request.user, context={'request': request}).data,
             })
         return Response({
             'success': False,

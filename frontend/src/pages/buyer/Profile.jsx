@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -59,6 +59,10 @@ export default function BuyerProfile() {
   const [loadCmds,   setLoadCmds]   = useState(false);
   const [stats,      setStats]      = useState({ total: 0, enCours: 0, livrees: 0, depenses: 0 });
   const [loadStats,  setLoadStats]  = useState(true);
+
+  const photoInputRef = useRef(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoError,     setPhotoError]     = useState('');
 
   const [notifs, setNotifs] = useState({
     commandeConfirmee: true,
@@ -130,6 +134,36 @@ export default function BuyerProfile() {
     }
   };
 
+  const handlePhotoSelect = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setPhotoError('Sélectionnez une image valide (JPG, PNG).');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError('L\'image ne doit pas dépasser 5 MB.');
+      return;
+    }
+
+    setPhotoError('');
+    setUploadingPhoto(true);
+    try {
+      const fd = new FormData();
+      fd.append('photo', file);
+      await AuthService.modifierProfil(fd);
+      await chargerUtilisateur();
+      setSuccessMsg('Photo de profil mise à jour !');
+      setTimeout(() => setSuccessMsg(''), 3500);
+    } catch {
+      setPhotoError('Impossible de mettre à jour la photo. Réessayez.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const handlePwdChange = (e) => { setPwdForm(prev => ({ ...prev, [e.target.name]: e.target.value })); setPwdError(''); };
 
   const handlePwdSave = async () => {
@@ -164,11 +198,30 @@ export default function BuyerProfile() {
 
             <div style={S.avatarWrap}>
               <div style={S.avatar}>
-                <span style={S.avatarInitiale}>{prenom[0]}{nom[0]}</span>
+                {user?.photo
+                  ? <img src={user.photo} alt="Photo de profil" style={S.avatarImg} />
+                  : <span style={S.avatarInitiale}>{prenom[0]}{nom[0]}</span>
+                }
               </div>
-              <motion.button style={S.cameraBtn} whileHover={{ scale: 1.1 }}>
-                <Camera size={14} color="white" />
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoSelect}
+                style={{ display: 'none' }}
+              />
+              <motion.button
+                style={{ ...S.cameraBtn, opacity: uploadingPhoto ? 0.7 : 1, cursor: uploadingPhoto ? 'not-allowed' : 'pointer' }}
+                onClick={() => !uploadingPhoto && photoInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                whileHover={{ scale: uploadingPhoto ? 1 : 1.1 }}
+              >
+                {uploadingPhoto
+                  ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}><Loader size={14} color="white" /></motion.div>
+                  : <Camera size={14} color="white" />
+                }
               </motion.button>
+              {photoError && <div style={S.photoErrorBubble}>{photoError}</div>}
             </div>
 
             <div style={S.heroInfos}>
@@ -505,7 +558,9 @@ const S = {
   avatarWrap:     { position: 'relative', flexShrink: 0 },
   avatar:         { width: '90px', height: '90px', borderRadius: '50%', background: 'linear-gradient(135deg, #60a5fa, #93c5fd)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid rgba(255,255,255,0.4)', overflow: 'hidden' },
   avatarInitiale: { fontSize: '1.8rem', fontWeight: '900', color: 'white' },
+  avatarImg:      { width: '100%', height: '100%', objectFit: 'cover' },
   cameraBtn:      { position: 'absolute', bottom: '0', right: '0', background: BLEU, border: '2px solid white', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' },
+  photoErrorBubble: { position: 'absolute', top: '100%', left: 0, marginTop: '8px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '8px', padding: '6px 10px', fontSize: '0.72rem', fontWeight: '600', whiteSpace: 'nowrap', zIndex: 2 },
   heroInfos:      { flex: 1, minWidth: '200px' },
   heroNom:        { color: 'white', fontWeight: '900', fontSize: '1.4rem', margin: '0 0 6px' },
   heroMeta:       { display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem' },

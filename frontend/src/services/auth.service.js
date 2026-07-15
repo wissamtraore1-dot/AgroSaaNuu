@@ -40,7 +40,11 @@ const AuthService = {
   },
 
   async modifierProfil(data) {
-    const response = await api.put('/auth/profil/', data);
+    const isFormData = data instanceof FormData;
+    const response = await api.put('/auth/profil/', data, isFormData
+      ? { headers: { 'Content-Type': 'multipart/form-data' } }
+      : undefined
+    );
     return response.data;
   },
 
