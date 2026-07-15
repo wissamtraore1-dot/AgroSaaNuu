@@ -88,6 +88,9 @@ class ConnexionUnifieeView(APIView):
     Accepte email OU numéro de téléphone + mot de passe
     """
     permission_classes = [AllowAny]
+    # Applique le scope 'login' (5/min, voir DEFAULT_THROTTLE_RATES) pour
+    # limiter le brute force sur cet endpoint, le plus sensible de l'API.
+    throttle_scope = 'login'
 
     def post(self, request):
         identifiant = request.data.get('identifiant', '').strip()
