@@ -10,10 +10,10 @@ const GREEN  = '#1a5c2a';
 const fadeUp = { hidden: { y: 20, opacity: 0 }, show: { y: 0, opacity: 1 } };
 
 const UNITES = [
-  { value: 'KG',        label: 'Kilogramme (kg)', parUnite: 'le kilogramme', singulier: 'kilogramme',    pluriel: 'kilogrammes'    },
-  { value: 'TONNE',     label: 'Tonne (t)',        parUnite: 'la tonne',      singulier: 'tonne',          pluriel: 'tonnes'         },
-  { value: 'SAC_50KG',  label: 'Sac 50 kg',        parUnite: 'le sac de 50 kg',  singulier: 'sac de 50 kg',  pluriel: 'sacs de 50 kg'  },
-  { value: 'SAC_100KG', label: 'Sac 100 kg',       parUnite: 'le sac de 100 kg', singulier: 'sac de 100 kg', pluriel: 'sacs de 100 kg' },
+  { value: 'KG',       label: 'Kilogramme (kg)'  },
+  { value: 'TONNE',    label: 'Tonne (t)'         },
+  { value: 'SAC_50KG', label: 'Sac 50 kg'         },
+  { value: 'SAC_100KG',label: 'Sac 100 kg'        },
 ];
 
 export default function EditProduct() {
@@ -48,8 +48,6 @@ export default function EditProduct() {
       notifError('Impossible de charger le produit');
     }).finally(() => setFetching(false));
   }, [id]);
-
-  const uniteInfo = UNITES.find(u => u.value === form.unite) || UNITES[0];
 
   const handleChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -131,39 +129,22 @@ export default function EditProduct() {
             <input type="text" name="nom" value={form.nom} onChange={handleChange} placeholder="Ex : Maïs blanc 2T" style={inputStyle(errors.nom)} />
           </Field>
 
-          {/* PRIX + UNITÉ : le vendeur choisit l'unité qui s'applique au prix */}
-          <div style={{ marginBottom: '0.3rem' }}>
-            <label style={{ display: 'block', fontSize: '0.83rem', fontWeight: '600', color: '#374151', marginBottom: '5px' }}>Prix par unité</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <input type="number" name="prix" value={form.prix} onChange={handleChange} placeholder="Ex : 1500" style={inputStyle(errors.prix)} />
-              <select name="unite" value={form.unite} onChange={handleChange} style={inputStyle(errors.unite)}>
-                {UNITES.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
-              </select>
-            </div>
-            {errors.prix && <div style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '4px' }}>{errors.prix}</div>}
-          </div>
-          {!errors.prix && form.prix > 0 && (
-            <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0 0 1rem' }}>
-              Soit {Number(form.prix).toLocaleString('fr-FR')} FCFA {uniteInfo.parUnite}
-            </p>
-          )}
+          {/* PRIX */}
+          <Field label="Prix (FCFA)" error={errors.prix}>
+            <input type="number" name="prix" value={form.prix} onChange={handleChange} placeholder="Ex : 1500" style={inputStyle(errors.prix)} />
+          </Field>
 
-          {/* QUANTITÉ + UNITÉ : même unité que le prix, modifiable ici aussi */}
-          <div style={{ marginBottom: '0.3rem' }}>
-            <label style={{ display: 'block', fontSize: '0.83rem', fontWeight: '600', color: '#374151', marginBottom: '5px' }}>Quantité disponible</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          {/* QUANTITÉ + UNITÉ */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <Field label="Quantité disponible" error={errors.quantite}>
               <input type="number" name="quantite" value={form.quantite} onChange={handleChange} placeholder="Ex : 500" style={inputStyle(errors.quantite)} />
+            </Field>
+            <Field label="Unité" error={errors.unite}>
               <select name="unite" value={form.unite} onChange={handleChange} style={inputStyle(errors.unite)}>
                 {UNITES.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
               </select>
-            </div>
-            {errors.quantite && <div style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '4px' }}>{errors.quantite}</div>}
+            </Field>
           </div>
-          {!errors.quantite && form.quantite > 0 && (
-            <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0 0 1rem' }}>
-              → {Number(form.quantite).toLocaleString('fr-FR')} {form.quantite == 1 ? uniteInfo.singulier : uniteInfo.pluriel} disponible{form.quantite == 1 ? '' : 's'}
-            </p>
-          )}
 
           {/* CATÉGORIE */}
           <Field label="Catégorie" error={errors.categorie}>
