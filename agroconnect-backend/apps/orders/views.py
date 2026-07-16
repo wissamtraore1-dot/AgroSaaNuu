@@ -798,13 +798,32 @@ class FedaPayWebhookView(APIView):
     """
     POST /api/v1/orders/payment/webhook/
     Reçoit le callback FedaPay et met à jour le statut du paiement.
+
+    FedaPay envoie un objet Event : { id, name (ex: 'transaction.approved'),
+    entity: { id, status, ... } } — pas un objet transaction à plat. On reste
+    tolérant sur la forme exacte (certaines intégrations envoient directement
+    l'objet transaction) pour éviter de dépendre d'un format non documenté.
     """
     permission_classes = [AllowAny]
 
     def post(self, request):
-        data           = request.data
-        transaction_id = str(data.get('id', ''))
-        fedapay_status = data.get('status', '')
+        import logging
+        data   = request.data
+        entity = data.get('entity') or data
+        event_type = data.get('name') or data.get('type') or ''
+
+        transaction_id = str(entity.get('id') or data.get('id') or '')
+        fedapay_status = entity.get('status') or ''
+        if not fedapay_status and event_type:
+            if 'approved' in event_type:
+                fedapay_status = 'approved'
+            elif 'declined' in event_type or 'canceled' in event_type:
+                fedapay_status = 'declined'
+
+        logging.getLogger(__name__).warning(
+            'FedaPay webhook reçu : type=%s transaction_id=%s status=%s payload=%s',
+            event_type, transaction_id, fedapay_status, data,
+        )
 
         if not transaction_id:
             return Response({'success': False, 'message': 'transaction_id manquant.'}, status=400)
