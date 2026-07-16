@@ -95,7 +95,6 @@ function SearchBar({ onSearch }) {
               background:   '#f4f6f4',
               border:       'none',
               borderRight:  '1px solid #e5e7eb',
-              padding:      '0 16px',
               height:       '48px',
               cursor:       'pointer',
               fontSize:     '0.88rem',
@@ -104,8 +103,9 @@ function SearchBar({ onSearch }) {
               whiteSpace:   'nowrap',
               borderRadius: '50px 0 0 50px',
             }}
+            className="px-2 px-sm-3"
           >
-            <span>{categorie === 'Toutes catégories' ? 'Toutes' : categorie}</span>
+            <span className="d-none d-sm-inline">{categorie === 'Toutes catégories' ? 'Toutes' : categorie}</span>
             <ChevronDown size={14} color="#9ca3af" style={{ transform: catOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
           </button>
 
@@ -193,7 +193,6 @@ function SearchBar({ onSearch }) {
           style={{
             flexShrink:    0,
             height:        '48px',
-            padding:       '0 24px',
             background:    'linear-gradient(135deg, #1a5c2a 0%, #2d8c47 100%)',
             border:        'none',
             borderRadius:  '0 50px 50px 0',
@@ -207,11 +206,12 @@ function SearchBar({ onSearch }) {
             letterSpacing: '0.02em',
             transition:    'filter 0.2s',
           }}
+          className="px-3 px-sm-4"
           onMouseEnter={(e) => e.currentTarget.style.filter = 'brightness(1.1)'}
           onMouseLeave={(e) => e.currentTarget.style.filter = 'brightness(1)'}
         >
           <Search size={16} />
-          Chercher
+          <span className="d-none d-sm-inline">Chercher</span>
         </button>
       </div>
 
@@ -301,7 +301,7 @@ export default function Navbar() {
         className="px-4 px-lg-5 py-3"
         style={{
           display:             'grid',
-          gridTemplateColumns: 'auto 1fr auto',
+          gridTemplateColumns: 'auto minmax(0, 1fr) auto',
           gridTemplateRows:    'auto auto',
           columnGap:           '12px',
           rowGap:              '10px',
@@ -318,7 +318,7 @@ export default function Navbar() {
         </Link>
 
         {/* ── Col 2 ligne 1 : Barre de recherche ── */}
-        <div style={{ gridColumn: 2, gridRow: 1 }}>
+        <div style={{ gridColumn: 2, gridRow: 1, minWidth: 0 }}>
           <SearchBar onSearch={handleSearch} />
         </div>
 
