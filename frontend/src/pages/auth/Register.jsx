@@ -94,12 +94,17 @@ export default function Register() {
 
   const roleInfo = ROLES.find(r => r.id === role);
 
-  // ── Layout deux panneaux ─────────────────────────────────────
+  // ── Layout deux panneaux : empilés sur mobile, côte à côte à partir de lg ──
   return (
-    <div style={{ minHeight: '100vh', display: 'flex' }}>
+    <div className="d-flex flex-column flex-lg-row" style={{ minHeight: '100vh' }}>
+      <style>{`
+        @media (min-width: 992px) {
+          .register-left-panel { flex: 0 0 38%; }
+        }
+      `}</style>
 
       {/* ── Panneau gauche : sélecteur de rôle ── */}
-      <div style={{ flex: '0 0 38%', background: BG, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '3rem 2.5rem', borderRight: '1px solid #e5e7eb' }}>
+      <div className="register-left-panel px-4 px-lg-5 py-4 py-lg-5" style={{ background: BG, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: '1px solid #e5e7eb' }}>
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}>
 
           <h2 style={{ fontSize: '1.7rem', fontWeight: '900', color: '#1a2e10', marginBottom: '0.35rem' }}>Créer un compte</h2>
@@ -150,7 +155,7 @@ export default function Register() {
       </div>
 
       {/* ── Panneau droit : formulaire ── */}
-      <div style={{ flex: 1, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3rem 4rem', overflowY: 'auto' }}>
+      <div className="px-3 px-lg-5 py-4 py-lg-5" style={{ flex: 1, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', overflowY: 'auto' }}>
         <div style={{ width: '100%', maxWidth: '520px' }}>
 
           <AnimatePresence mode="wait">
