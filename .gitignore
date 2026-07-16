@@ -82,6 +82,8 @@ credentials/
 
 # Pyenv / Python version
 .python-version
+# ... sauf celui du backend, lu par Render pour épingler la version Python en déploiement
+!agroconnect-backend/.python-version
 
 # direnv
 .envrc
