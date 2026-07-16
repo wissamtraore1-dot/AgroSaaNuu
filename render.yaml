@@ -54,18 +54,3 @@ services:
         sync: false
       - key: DEFAULT_FROM_EMAIL
         sync: false
-
-  - type: web
-    name: agrosaanuu-frontend
-    runtime: static
-    rootDir: frontend
-    buildCommand: "npm install && npm run build"
-    staticPublishPath: dist
-    envVars:
-      # À remplir avec l'URL du service backend une fois connue, ex: https://agrosaanuu-backend.onrender.com/api/v1
-      - key: VITE_API_URL
-        sync: false
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
