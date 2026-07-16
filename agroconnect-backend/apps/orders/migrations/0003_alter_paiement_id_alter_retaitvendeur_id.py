@@ -11,12 +11,17 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AlterField(
+        # AlterField ne peut pas convertir bigint -> uuid sur PostgreSQL (pas de cast valide),
+        # contrairement à SQLite qui laissait passer silencieusement. Ces tables étant vides
+        # à ce stade de l'historique des migrations, on supprime puis recrée la colonne id.
+        migrations.RemoveField(model_name='paiement', name='id'),
+        migrations.AddField(
             model_name='paiement',
             name='id',
             field=models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False),
         ),
-        migrations.AlterField(
+        migrations.RemoveField(model_name='retaitvendeur', name='id'),
+        migrations.AddField(
             model_name='retaitvendeur',
             name='id',
             field=models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False),
