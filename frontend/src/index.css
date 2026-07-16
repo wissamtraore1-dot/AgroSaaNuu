@@ -2,3 +2,16 @@ html, body, #root {
   max-width: 100vw;
   overflow-x: hidden;
 }
+
+/* Mise en page "contenu + résumé" (panier, checkout) : empilée sur mobile,
+   colonne fixe pour le résumé à partir du breakpoint lg. */
+.split-main-sidebar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+@media (min-width: 992px) {
+  .split-main-sidebar {
+    grid-template-columns: 1fr 320px;
+  }
+}

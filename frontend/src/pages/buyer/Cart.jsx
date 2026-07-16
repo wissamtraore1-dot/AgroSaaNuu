@@ -101,7 +101,7 @@ export default function Cart() {
             </button>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '20px', alignItems: 'start' }}>
+          <div className="split-main-sidebar" style={{ alignItems: 'start' }}>
 
             {/* Articles */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
