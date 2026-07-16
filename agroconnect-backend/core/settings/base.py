@@ -241,6 +241,30 @@ EMAIL_HOST_USER     = env('EMAIL_HOST_USER',     default='')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL  = env('DEFAULT_FROM_EMAIL',  default='AgroSaaNuu <noreply@agrosaanuu.com>')
 
+# ── Logging ───────────────────────────────────────────────────────────────────
+# Par défaut, Django n'affiche la trace des erreurs 500 sur la console que si
+# DEBUG=True (le handler mail_admins prend le relais en prod, inutile sans SMTP
+# configuré). On force l'affichage console dans tous les cas pour voir les
+# tracebacks dans les logs Render.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {'class': 'logging.StreamHandler'},
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        'django.request': {
+            'handlers':  ['console'],
+            'level':     'ERROR',
+            'propagate': False,
+        },
+    },
+}
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # SQLITE — ACTIVER CONTRAINTES DE CLÉS ÉTRANGÈRES
 # ═══════════════════════════════════════════════════════════════════════════════
