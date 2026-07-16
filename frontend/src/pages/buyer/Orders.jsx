@@ -102,7 +102,17 @@ export default function BuyerOrders() {
         public_key: res.public_key,
         transaction: { id: res.transaction_id },
         onComplete: (reason) => {
-          if (reason === window.FedaPay.CHECKOUT_COMPLETED) setPaySuccess(true);
+          if (reason === window.FedaPay.CHECKOUT_COMPLETED) {
+            setPaySuccess(true);
+          } else {
+            // Mobile Money : l'approbation (USSD) peut arriver après la fermeture
+            // de la fenêtre FedaPay. On ne réaffiche pas le formulaire de paiement —
+            // on ferme et on rafraîchit pour refléter le vrai statut dès que le
+            // webhook FedaPay confirme la transaction côté serveur.
+            setModalCmd(null);
+            charger();
+            setTimeout(charger, 5000);
+          }
         },
       }).open();
     } catch (err) {
