@@ -153,8 +153,8 @@ const OrderService = {
     return response.data;
   },
 
-  async initierPaiementFedaPay({ commande_id, mode_paiement, telephone }) {
-    const response = await api.post('/orders/payment/initiate/', { commande_id, mode_paiement, telephone });
+  async initierPaiementFedaPay({ commande_id }) {
+    const response = await api.post('/orders/payment/initiate/', { commande_id });
     return response.data;
   },
 
@@ -173,13 +173,13 @@ const OrderService = {
     return response.data;
   },
 
-  async initierPaiementGroupeVendeur(groupeVendeurId, { telephone, reseau }) {
-    const response = await api.post(`/orders/groupe/${groupeVendeurId}/initier-paiement/`, { telephone, reseau });
+  async initierPaiementGroupeVendeur(groupeVendeurId) {
+    const response = await api.post(`/orders/groupe/${groupeVendeurId}/initier-paiement/`);
     return response.data;
   },
 
-  async initierPaiementPanier(panierId, { telephone, reseau }) {
-    const response = await api.post(`/orders/panier/${panierId}/initier-paiement/`, { telephone, reseau });
+  async initierPaiementPanier(panierId) {
+    const response = await api.post(`/orders/panier/${panierId}/initier-paiement/`);
     return response.data;
   },
 

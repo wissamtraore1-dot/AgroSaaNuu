@@ -3,6 +3,7 @@ from rest_framework import status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
@@ -508,13 +509,15 @@ class ResoudreLitigeView(APIView):
 # ===== ESCROW & PAYMENT ENDPOINTS =====
 
 class InitiatePaiementView(APIView):
-    """POST /api/v1/orders/payment/initiate/ — Acheteur initie paiement FedaPay"""
+    """
+    POST /api/v1/orders/payment/initiate/ — Crée la transaction FedaPay.
+    Le paiement est ensuite finalisé côté frontend par le widget Checkout.js
+    (transaction_id + public_key retournés ici).
+    """
     permission_classes = [IsBuyer]
 
     def post(self, request):
-        commande_id   = request.data.get('commande_id')
-        mode_paiement = request.data.get('mode_paiement')
-        telephone     = request.data.get('telephone', request.user.telephone or '')
+        commande_id = request.data.get('commande_id')
 
         try:
             commande = Commande.objects.get(id=commande_id, acheteur=request.user)
@@ -523,10 +526,6 @@ class InitiatePaiementView(APIView):
 
         if commande.statut != Commande.Statut.PAIEMENT_EN_ATTENTE:
             return Response({'success': False, 'message': 'Commande non en attente de paiement.'}, status=400)
-
-        if mode_paiement:
-            commande.mode_paiement = mode_paiement
-            commande.save(update_fields=['mode_paiement'])
 
         paiement, _ = Paiement.objects.get_or_create(
             commande=commande,
@@ -537,26 +536,22 @@ class InitiatePaiementView(APIView):
             }
         )
 
-        # Appel FedaPay (Mobile Money)
-        payment_url = None
-        transaction_id = None
-        if commande.mode_paiement in ['MTN', 'MOOV', 'CELTIS']:
-            from .fedapay_service import initier_paiement_mobile
-            result = initier_paiement_mobile(commande, telephone)
-            if result.get('success'):
-                transaction_id = result.get('reference')
-                payment_url    = result.get('payment_url')
-                paiement.reference_transaction = transaction_id
-                paiement.save(update_fields=['reference_transaction'])
+        from .fedapay_service import creer_transaction
+        result = creer_transaction(commande)
+        if not result.get('success'):
+            return Response({'success': False, 'message': result.get('message', 'Erreur FedaPay.')}, status=400)
+
+        transaction_id = result['transaction_id']
+        paiement.reference_transaction = str(transaction_id)
+        paiement.save(update_fields=['reference_transaction'])
 
         return Response({
-            'success':         True,
-            'message':         'Paiement initié.',
-            'paiement_id':     str(paiement.id),
-            'montant':         str(paiement.montant),
-            'mode_paiement':   commande.mode_paiement,
-            'payment_url':     payment_url,
-            'transaction_id':  transaction_id,
+            'success':        True,
+            'message':        'Transaction créée.',
+            'paiement_id':    str(paiement.id),
+            'montant':        str(paiement.montant),
+            'transaction_id': transaction_id,
+            'public_key':     settings.FEDAPAY_PUBLIC_KEY,
         }, status=status.HTTP_201_CREATED)
 
 
@@ -1191,7 +1186,7 @@ class GroupeVendeurInitierPaiementView(APIView):
     """
     POST /api/v1/orders/groupe/<groupe_vendeur_id>/initier-paiement/
     Crée UNE transaction FedaPay pour toutes les commandes du groupe.
-    Body: { telephone, reseau }
+    Le paiement est finalisé côté frontend via le widget Checkout.js.
     """
     permission_classes = [IsBuyer]
 
@@ -1207,48 +1202,36 @@ class GroupeVendeurInitierPaiementView(APIView):
         if not commandes:
             return Response({'success': False, 'message': 'Aucune commande en attente pour ce groupe.'}, status=400)
 
-        telephone = request.data.get('telephone', '').strip()
-        reseau    = request.data.get('reseau', 'MTN').strip()
-
-        if not telephone:
-            return Response({'success': False, 'message': 'Numéro de téléphone requis.'}, status=400)
-
-        reseaux_valides = ['MTN', 'MOOV', 'CELTIS']
-        if reseau not in reseaux_valides:
-            return Response({'success': False, 'message': f'Réseau invalide. Choisir parmi {reseaux_valides}.'}, status=400)
-
         # Créer un objet Commande virtuel pour le montant total
         montant_total = sum(c.montant_total for c in commandes)
         principale    = commandes[0]
-        principale.montant_total  = montant_total
-        principale.mode_paiement  = reseau
+        principale.montant_total = montant_total
 
-        from .fedapay_service import initier_paiement_mobile
-        result = initier_paiement_mobile(principale, telephone)
+        from .fedapay_service import creer_transaction
+        result = creer_transaction(principale)
 
         if not result.get('success'):
             return Response({'success': False, 'message': result.get('message', 'Erreur FedaPay.')}, status=400)
 
-        transaction_id = result.get('reference')
+        transaction_id = result['transaction_id']
 
         for commande in commandes:
             paiement, _ = Paiement.objects.get_or_create(
                 commande=commande,
                 defaults={
                     'montant':       commande.montant_total,
-                    'mode_paiement': reseau,
+                    'mode_paiement': commande.mode_paiement,
                     'statut':        Paiement.Statut.EN_ATTENTE,
                 }
             )
-            paiement.mode_paiement         = reseau
-            paiement.reference_transaction = transaction_id
-            paiement.save(update_fields=['mode_paiement', 'reference_transaction'])
+            paiement.reference_transaction = str(transaction_id)
+            paiement.save(update_fields=['reference_transaction'])
 
         return Response({
             'success':        True,
-            'message':        'Paiement initié. Approuvez sur votre téléphone.',
+            'message':        'Transaction créée.',
             'transaction_id': transaction_id,
-            'payment_url':    result.get('payment_url', ''),
+            'public_key':     settings.FEDAPAY_PUBLIC_KEY,
             'montant_total':  float(montant_total),
         }, status=201)
 
@@ -1257,7 +1240,7 @@ class PanierInitierPaiementView(APIView):
     """
     POST /api/v1/orders/panier/<panier_id>/initier-paiement/
     Crée UNE transaction FedaPay pour toutes les commandes du panier.
-    Body: { telephone, reseau }
+    Le paiement est finalisé côté frontend via le widget Checkout.js.
     """
     permission_classes = [IsBuyer]
 
@@ -1273,46 +1256,34 @@ class PanierInitierPaiementView(APIView):
         if not commandes:
             return Response({'success': False, 'message': 'Aucune commande en attente pour ce panier.'}, status=400)
 
-        telephone = request.data.get('telephone', '').strip()
-        reseau    = request.data.get('reseau', 'MTN').strip()
-
-        if not telephone:
-            return Response({'success': False, 'message': 'Numéro de téléphone requis.'}, status=400)
-
-        reseaux_valides = ['MTN', 'MOOV', 'CELTIS']
-        if reseau not in reseaux_valides:
-            return Response({'success': False, 'message': f'Réseau invalide. Choisir parmi {reseaux_valides}.'}, status=400)
-
         montant_total = sum(c.montant_total for c in commandes)
         principale    = commandes[0]
         principale.montant_total = montant_total
-        principale.mode_paiement = reseau
 
-        from .fedapay_service import initier_paiement_mobile
-        result = initier_paiement_mobile(principale, telephone)
+        from .fedapay_service import creer_transaction
+        result = creer_transaction(principale)
 
         if not result.get('success'):
             return Response({'success': False, 'message': result.get('message', 'Erreur FedaPay.')}, status=400)
 
-        transaction_id = result.get('reference')
+        transaction_id = result['transaction_id']
 
         for commande in commandes:
             paiement, _ = Paiement.objects.get_or_create(
                 commande=commande,
                 defaults={
                     'montant':       commande.montant_total,
-                    'mode_paiement': reseau,
+                    'mode_paiement': commande.mode_paiement,
                     'statut':        Paiement.Statut.EN_ATTENTE,
                 }
             )
-            paiement.mode_paiement         = reseau
-            paiement.reference_transaction = transaction_id
-            paiement.save(update_fields=['mode_paiement', 'reference_transaction'])
+            paiement.reference_transaction = str(transaction_id)
+            paiement.save(update_fields=['reference_transaction'])
 
         return Response({
             'success':        True,
-            'message':        'Paiement initié. Approuvez sur votre téléphone.',
+            'message':        'Transaction créée.',
             'transaction_id': transaction_id,
-            'payment_url':    result.get('payment_url', ''),
+            'public_key':     settings.FEDAPAY_PUBLIC_KEY,
             'montant_total':  float(montant_total),
         }, status=201)
