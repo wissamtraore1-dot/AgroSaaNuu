@@ -4,7 +4,7 @@
 // ============================================================
 import React, { useEffect, useState } from 'react';
 import { ClipboardList } from 'lucide-react';
-import TransactionItem from '../../components/finance/TransactionItem';
+import TransactionItem from '../../Components/finance/TransactionItem';
 import useWallet from '../../hooks/useWallet';
 import { TRANSACTION_TYPE, TRANSACTION_TYPE_LABELS } from '../../utils/constants';
 

@@ -5,7 +5,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock } from 'lucide-react';
-import PaymentMethodSelector from '../../components/finance/PaymentMethodSelector';
+import PaymentMethodSelector from '../../Components/finance/PaymentMethodSelector';
 import useWallet from '../../hooks/useWallet';
 import { WALLET_LIMITS } from '../../config/paymentConfig';
 import { formatPrice } from '../../utils/formatPrice';
